@@ -37,13 +37,10 @@ export default function PanelStatusPage() {
   const [lag,      setLag]      = useState(OFFLINE);
   const [internal, setInternal] = useState(OFFLINE);
   const [loading,  setLoading]  = useState(true);
-  const [rawResp,  setRawResp]  = useState<any>(null);
-  const [invokeErr, setInvokeErr] = useState('');
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
   const loadStats = async () => {
     setLoading(true);
-    setInvokeErr('');
     try {
       // Use direct fetch so it works regardless of auth state
       const res = await fetch(
@@ -60,17 +57,14 @@ export default function PanelStatusPage() {
       );
 
       if (!res.ok) {
-        setInvokeErr(`HTTP ${res.status}: ${await res.text()}`);
         setLoading(false);
         setLastRefresh(new Date());
         return;
       }
 
       const data = await res.json();
-      setRawResp(data);
 
       if (!data?.lag && !data?.internal) {
-        setInvokeErr('Unexpected response: ' + JSON.stringify(data).slice(0, 100));
         setLoading(false);
         setLastRefresh(new Date());
         return;
@@ -80,7 +74,6 @@ export default function PanelStatusPage() {
       setInternal(normalizeApp(data.internal));
 
     } catch (e) {
-      setInvokeErr(`Network error: ${String(e)}`);
     }
 
     setLoading(false);
@@ -154,25 +147,7 @@ export default function PanelStatusPage() {
 
 
 
-        {/* Error display */}
-        {invokeErr && (
-          <div className="mt-3 p-3 rounded-xl bg-red-500/8 border border-red-500/20">
-            <p className="text-[11px] text-red-400 font-semibold mb-1">⚠ Function error</p>
-            <p className="text-[10px] text-red-300/70 break-words">{invokeErr}</p>
-          </div>
-        )}
 
-        {/* Raw response debug — always visible so you can see what came back */}
-        {rawResp !== null && !loading && (
-          <details className="mt-3">
-            <summary className="text-[10px] text-white/20 cursor-pointer hover:text-white/40 select-none">
-              Show raw response (debug)
-            </summary>
-            <pre className="mt-2 p-3 rounded-lg bg-white/3 text-[10px] text-white/40 overflow-x-auto whitespace-pre-wrap break-words">
-              {JSON.stringify(rawResp, null, 2)}
-            </pre>
-          </details>
-        )}
       </div>
 
       {/* Services */}

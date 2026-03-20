@@ -146,15 +146,11 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       user: null,
-      // ── Start everyone at $0 balance ──
       balance: 0,
       bonusPoints: 0,
       lastBonusClaim: null,
-      // ── Empty — no fake transactions ──
       transactions: [],
-      // ── Empty — no fake licenses ──
       licenses: [],
-      // ── Default chat messages ──
       chatMessages: [
         {
           id: 'c1',
@@ -177,7 +173,6 @@ export const useAppStore = create<AppState>()(
           timestamp: new Date().toISOString(),
         },
       ],
-      // ── Edit your announcements here ──
       announcements: [
         {
           id: 'a1',

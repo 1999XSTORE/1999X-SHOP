@@ -232,7 +232,6 @@ export default function LicensesPage() {
   const [loading, setLoading]       = useState(false);
   const [hwidTarget, setHwidTarget] = useState<string | null>(null);
   const [errorMsg, setErrorMsg]     = useState('');
-  const [debugInfo, setDebugInfo]   = useState<any>(null);
 
   const trimmedKey = keyValue.trim();
   const isReady    = trimmedKey.length >= 6;
@@ -249,24 +248,25 @@ export default function LicensesPage() {
   const handleActivate = async () => {
     if (!isReady) { toast.error('Enter a license key'); return; }
     if (!user)    { toast.error('Please login first'); return; }
-    setErrorMsg(''); setDebugInfo(null);
+    setErrorMsg('');
 
     const exists = licenses.find(l => l.key.replace('_INTERNAL', '') === trimmedKey);
     if (exists) { toast.error('This key is already activated'); return; }
 
     setLoading(true);
     try {
-      // Call each app independently — old "both" mode mixed up errors
-      const [lagData, intData] = await Promise.all([
+      // Call each app independently
+      const [lagRaw, intRaw] = await Promise.all([
         callValidateApp(trimmedKey, 'lag'),
         callValidateApp(trimmedKey, 'internal'),
       ]);
 
-      setDebugInfo({ lag: lagData, internal: intData });
+      // Normalize response: old deployed function always returns {lag:{...}, internal:{...}}
+      // regardless of appName param. New function returns {success, message, info} directly.
+      // Unwrap if nested.
+      const lagData = lagRaw?.lag ?? lagRaw;
+      const intData = intRaw?.internal ?? intRaw;
 
-      // Normalize: both old format {success,message,info} and new format are handled
-      // Old format returns {success:bool, message:string, info:{...}}
-      // New format same structure per-app — identical handling
       const lagOk = lagData?.success === true;
       const intOk = intData?.success === true;
 
@@ -319,7 +319,7 @@ export default function LicensesPage() {
       if (activated === 2)      toast.success('🎉 Both panels activated!');
       else if (activated === 1) toast.success(`✅ ${lagOk ? 'Fake Lag' : 'Internal'} activated!`);
 
-      setKeyValue(''); setErrorMsg(''); setDebugInfo(null);
+      setKeyValue(''); setErrorMsg('');
     } catch (e) {
       setErrorMsg(`Error: ${String(e)}`);
       toast.error('Something went wrong');
@@ -373,12 +373,7 @@ export default function LicensesPage() {
               <p className="text-xs font-bold text-red-400">Activation Failed</p>
             </div>
             <p className="text-xs text-red-300/70 break-words mt-1">{errorMsg}</p>
-            {debugInfo && (
-              <details className="mt-2">
-                <summary className="text-[10px] text-white/30 cursor-pointer hover:text-white/50">Show debug info</summary>
-                <pre className="text-[10px] text-white/30 mt-1 overflow-x-auto whitespace-pre-wrap break-words">{JSON.stringify(debugInfo, null, 2)}</pre>
-              </details>
-            )}
+
           </div>
         )}
       </div>

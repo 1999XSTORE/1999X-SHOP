@@ -52,7 +52,6 @@ async function getStats(ownerid: string, appName: string, version: string) {
       onlineUsers,
       version:     ver,
       // include raw for debugging
-      _raw:        statsData,
     };
   } catch (e) {
     return { status: 'offline', numUsers: '0', numKeys: '0', onlineUsers: '0', version: '—', error: String(e) };
