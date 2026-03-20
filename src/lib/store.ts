@@ -102,27 +102,42 @@ const generateKey = () => {
 
 const generateId = () => Math.random().toString(36).substring(2, 10);
 
-const DEMO_PRODUCTS: Product[] = [
+// ─────────────────────────────────────────────
+//  ✏️  EDIT YOUR PRODUCTS HERE
+// ─────────────────────────────────────────────
+export const PRODUCTS: Product[] = [
   {
-    id: 'p1', name: 'Starter Pack', price: 4.99, duration: '30 days',
-    description: 'Perfect for beginners. Get access to basic features and start your journey.',
-    features: ['Anti-Cheat Bypass', 'Auto Updates', 'Basic Aimbot', '24/7 Support'],
-    badge: 'ACTIVE', badgeType: 'green',
-    image: ''
+    id: 'p1',
+    name: 'Lag Bypass 1 Day',
+    price: 1.99,
+    duration: '1 day',
+    description: 'Perfect for trying out. Full lag bypass for 1 day.',
+    features: ['Lag Bypass', 'Auto Updates', '24/7 Support'],
+    badge: 'TRIAL',
+    badgeType: 'green',
+    image: '',
   },
   {
-    id: 'p2', name: 'Premium Pack', price: 14.99, duration: '30 days',
-    description: 'Unlock the full power. All features enabled with priority support.',
-    features: ['All Starter Features', 'ESP & Wallhack', 'Speed Hack', 'Priority Support', 'HWID Spoofer'],
-    badge: 'POPULAR', badgeType: 'gold',
-    image: ''
+    id: 'p2',
+    name: 'Lag Bypass 30 Days',
+    price: 9.99,
+    duration: '30 days',
+    description: 'Full access for 30 days. Most popular choice.',
+    features: ['Lag Bypass', 'HWID Spoofer', 'Auto Updates', 'Priority Support'],
+    badge: 'POPULAR',
+    badgeType: 'gold',
+    image: '',
   },
   {
-    id: 'p3', name: 'Lifetime Pack', price: 39.99, duration: 'Lifetime',
-    description: 'One-time purchase. Lifetime access to every current and future feature.',
-    features: ['All Premium Features', 'Lifetime Updates', 'Custom Scripts', 'VIP Discord', 'Dedicated Support'],
-    badge: 'BEST VALUE', badgeType: 'indigo',
-    image: ''
+    id: 'p3',
+    name: 'Lag Bypass Lifetime',
+    price: 49.99,
+    duration: 'Lifetime',
+    description: 'One-time purchase. Never pay again.',
+    features: ['Lag Bypass', 'HWID Spoofer', 'Lifetime Updates', 'VIP Support', 'All Future Features'],
+    badge: 'BEST VALUE',
+    badgeType: 'indigo',
+    image: '',
   },
 ];
 
@@ -130,40 +145,62 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       user: null,
-      balance: 25.00,
-      bonusPoints: 120,
+      // ── Start everyone at $0 balance ──
+      balance: 0,
+      bonusPoints: 0,
       lastBonusClaim: null,
-      transactions: [
-        { id: '1', amount: 10, method: 'bkash', transactionId: 'TXN123456', status: 'approved', createdAt: '2025-03-18T10:30:00Z' },
-        { id: '2', amount: 15, method: 'paypal', transactionId: 'PAY789012', status: 'pending', createdAt: '2025-03-19T14:20:00Z' },
-      ],
-      licenses: [
-        {
-          id: 'l1', productId: 'p1', productName: 'Starter Pack',
-          key: 'S99X-ABCD-EFGH-1234', hwid: 'HW-9F3A2B1C',
-          lastLogin: '2025-03-20T08:15:00Z', expiresAt: '2025-04-19T08:15:00Z',
-          status: 'active', ip: '192.168.1.42', device: 'Windows 11 PC',
-          hwidResetsUsed: 0, hwidResetMonth: 3,
-        }
-      ],
+      // ── Empty — no fake transactions ──
+      transactions: [],
+      // ── Empty — no fake licenses ──
+      licenses: [],
+      // ── Default chat messages ──
       chatMessages: [
-        { id: 'c1', userId: 'admin1', userName: 'Admin', userAvatar: '', userRole: 'admin', message: 'Welcome to the community! 🎉', timestamp: '2025-03-20T06:00:00Z' },
-        { id: 'c2', userId: 'u2', userName: 'Alex', userAvatar: '', userRole: 'user', message: 'Hey everyone! Just got my key, works perfectly!', timestamp: '2025-03-20T06:15:00Z' },
-        { id: 'c3', userId: 'sup1', userName: 'Support Team', userAvatar: '', userRole: 'support', message: 'Glad to hear! Let us know if you need anything.', timestamp: '2025-03-20T06:20:00Z' },
+        {
+          id: 'c1',
+          userId: 'admin1',
+          userName: 'Admin',
+          userAvatar: '',
+          userRole: 'admin',
+          message: 'Welcome to 1999X! 🎉 Need help? Contact support.',
+          timestamp: new Date().toISOString(),
+        },
       ],
       supportMessages: [
-        { id: 's1', userId: 'sup1', userName: 'Support Team', userAvatar: '', userRole: 'support', message: 'Hello! How can we help you today?', timestamp: '2025-03-20T06:00:00Z' },
+        {
+          id: 's1',
+          userId: 'sup1',
+          userName: 'Support Team',
+          userAvatar: '',
+          userRole: 'support',
+          message: 'Hello! How can we help you today?',
+          timestamp: new Date().toISOString(),
+        },
       ],
+      // ── Edit your announcements here ──
       announcements: [
-        { id: 'a1', title: 'v2.5 Update Released', content: 'New anti-detection engine and improved ESP system. All keys updated automatically.', createdAt: '2025-03-19T12:00:00Z', type: 'update' },
-        { id: 'a2', title: 'Scheduled Maintenance', content: 'Brief maintenance window on March 22 from 2-4 AM UTC.', createdAt: '2025-03-18T09:00:00Z', type: 'maintenance' },
+        {
+          id: 'a1',
+          title: 'Welcome to 1999X Panel',
+          content: 'Our new panel is live! Purchase a key and start using our software today.',
+          createdAt: new Date().toISOString(),
+          type: 'update',
+        },
       ],
       systemStatus: 'online',
-      lastStatusUpdate: '2025-03-20T08:00:00Z',
+      lastStatusUpdate: new Date().toISOString(),
       isAuthenticated: false,
 
       login: (user) => set({ user, isAuthenticated: true }),
-      logout: () => set({ user: null, isAuthenticated: false }),
+      logout: () => set({
+        user: null,
+        isAuthenticated: false,
+        // Reset user-specific data on logout
+        balance: 0,
+        bonusPoints: 0,
+        lastBonusClaim: null,
+        transactions: [],
+        licenses: [],
+      }),
       addBalance: (amount) => set((s) => ({ balance: s.balance + amount })),
       addTransaction: (tx) => set((s) => ({
         transactions: [{ ...tx, id: generateId(), createdAt: new Date().toISOString() }, ...s.transactions]
@@ -176,14 +213,14 @@ export const useAppStore = create<AppState>()(
           productId: product.id,
           productName: product.name,
           key: generateKey(),
-          hwid: 'HW-' + generateId().toUpperCase(),
+          hwid: '',
           lastLogin: new Date().toISOString(),
           expiresAt: product.duration === 'Lifetime'
             ? '2099-12-31T23:59:59Z'
-            : new Date(Date.now() + 30 * 86400000).toISOString(),
+            : new Date(Date.now() + parseInt(product.duration) * 86400000).toISOString(),
           status: 'active',
-          ip: '192.168.' + Math.floor(Math.random() * 255) + '.' + Math.floor(Math.random() * 255),
-          device: 'Windows 11 PC',
+          ip: '',
+          device: '',
           hwidResetsUsed: 0,
           hwidResetMonth: new Date().getMonth(),
         };
@@ -232,5 +269,3 @@ export const useAppStore = create<AppState>()(
     { name: '1999x-store' }
   )
 );
-
-export const PRODUCTS = DEMO_PRODUCTS;

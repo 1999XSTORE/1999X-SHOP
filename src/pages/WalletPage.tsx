@@ -7,8 +7,8 @@ import { toast } from 'sonner';
 
 const AMOUNTS = [5, 10, 15, 25, 50, 100];
 const METHODS = [
-  { id: 'bkash' as const, label: 'bKash', desc: 'Send to: 01712345678', icon: '📱' },
-  { id: 'binance' as const, label: 'Binance / Crypto', desc: 'USDT TRC20: TXyz...abc', icon: '₿' },
+  { id: 'bkash' as const, label: 'bKash', desc: 'Send to: YOUR_BKASH_NUMBER', icon: '📱' },
+  { id: 'binance' as const, label: 'Binance / Crypto', desc: 'USDT TRC20: YOUR_WALLET_ADDRESS', icon: '₿' },
   { id: 'paypal' as const, label: 'PayPal', desc: 'Auto payment via PayPal', icon: '💳' },
 ];
 
