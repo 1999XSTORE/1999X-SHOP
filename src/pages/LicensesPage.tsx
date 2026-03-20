@@ -3,9 +3,37 @@ import { Key, Copy, RefreshCw, Globe, Clock, Shield, Download, CheckCircle, Load
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 
-const FF_IMAGE = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1400&q=80';
+const SUPABASE_URL     = 'https://wkjqrjafogufqeasfeev.supabase.co';
+const SUPABASE_ANON    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
+const FF_IMAGE         = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1400&q=80';
+
+// ── Call validate-key edge function directly via fetch ──────────
+async function callValidateKey(key: string): Promise<any> {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/validate-key`, {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${SUPABASE_ANON}`,
+      'apikey':        SUPABASE_ANON,
+    },
+    body: JSON.stringify({ key, appName: 'both' }),
+  });
+  return res.json();
+}
+
+// ── Parse unix seconds → ISO, fallback +30 days ────────────────
+function toISO(unixSec: any): string {
+  const ms = parseInt(String(unixSec ?? '0')) * 1000;
+  return ms > 100000 ? new Date(ms).toISOString() : new Date(Date.now() + 30 * 86400000).toISOString();
+}
+
+// ── Extract best expiry from KeyAuth info ───────────────────────
+function getExpiry(info: any): string {
+  const fromSub = info?.subscriptions?.[0]?.expiry;
+  const direct  = info?.expiry;
+  return toISO(fromSub ?? direct ?? '0');
+}
 
 function ExpiryCountdown({ expiresAt }: { expiresAt: string }) {
   const [timeLeft, setTimeLeft] = useState('');
@@ -56,7 +84,6 @@ const handleActivateRef = { current: null as (() => void) | null };
 function LicenseInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [show, setShow] = useState(false);
   const masked = value ? '·'.repeat(value.length) : '';
-
   return (
     <div className="relative flex items-center">
       <input
@@ -77,11 +104,10 @@ function LicenseInput({ value, onChange }: { value: string; onChange: (v: string
         className="absolute right-3 text-white/25 hover:text-white/55 transition-colors"
         tabIndex={-1}
       >
-        {show ? (
-          <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        )}
+        {show
+          ? <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          : <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        }
       </button>
     </div>
   );
@@ -133,20 +159,14 @@ function DownloadSection() {
 function LicenseCard({ lic, i, onCopy, onReset, accentColor }: {
   lic: any; i: number; onCopy: (k: string) => void; onReset: (id: string) => void; accentColor: 'purple' | 'blue';
 }) {
-  const isPurple  = accentColor === 'purple';
+  const isPurple   = accentColor === 'purple';
   const displayKey = lic.key.endsWith('_INTERNAL') ? lic.key.replace('_INTERNAL', '') : lic.key;
-  const daysLeft  = Math.max(0, Math.floor((new Date(lic.expiresAt).getTime() - Date.now()) / 86400000));
-  const isExpired = new Date(lic.expiresAt).getTime() < Date.now();
+  const daysLeft   = Math.max(0, Math.floor((new Date(lic.expiresAt).getTime() - Date.now()) / 86400000));
+  const isExpired  = new Date(lic.expiresAt).getTime() < Date.now();
 
   return (
-    <div
-      className="rounded-2xl overflow-hidden border border-white/10 bg-white/3"
-      style={{
-        animationDelay: `${i * 100}ms`,
-        boxShadow: isPurple ? '0 0 40px rgba(124,58,237,0.08)' : '0 0 40px rgba(59,130,246,0.08)',
-      }}
-    >
-      {/* Header */}
+    <div className="rounded-2xl overflow-hidden border border-white/10 bg-white/3"
+      style={{ boxShadow: isPurple ? '0 0 40px rgba(124,58,237,0.08)' : '0 0 40px rgba(59,130,246,0.08)' }}>
       <div className="flex items-center justify-between p-5 border-b border-white/5">
         <div className="flex items-center gap-3">
           <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center', isPurple ? 'bg-purple-500/15' : 'bg-blue-500/15')}>
@@ -163,62 +183,42 @@ function LicenseCard({ lic, i, onCopy, onReset, accentColor }: {
               {daysLeft}d left
             </span>
           )}
-          <span className={cn(
-            'text-[10px] font-bold px-3 py-1 rounded-full uppercase flex items-center gap-1.5 border',
-            isExpired
-              ? 'bg-red-500/10 text-red-400 border-red-500/20'
-              : isPurple
-                ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                : 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-          )}>
+          <span className={cn('text-[10px] font-bold px-3 py-1 rounded-full uppercase flex items-center gap-1.5 border',
+            isExpired ? 'bg-red-500/10 text-red-400 border-red-500/20'
+              : isPurple ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+              : 'bg-blue-500/10 text-blue-400 border-blue-500/20')}>
             <span className={cn('w-1.5 h-1.5 rounded-full', isExpired ? 'bg-red-400' : isPurple ? 'bg-purple-400 animate-pulse' : 'bg-blue-400 animate-pulse')} />
             {isExpired ? 'Expired' : 'Active'}
           </span>
         </div>
       </div>
-
-      {/* Key display */}
       <div className="px-5 py-4">
         <div className="flex items-center gap-2 p-4 rounded-xl bg-white/3 border border-white/5">
           <code className="flex-1 text-sm font-mono text-white tracking-[2px] font-semibold truncate">{displayKey}</code>
-          <button
-            onClick={() => onCopy(displayKey)}
-            className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors flex items-center gap-1.5 active:scale-[0.95] flex-shrink-0"
-          >
+          <button onClick={() => onCopy(displayKey)} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors flex items-center gap-1.5 active:scale-[0.95] flex-shrink-0">
             <Copy className="w-3.5 h-3.5 text-white/40" />
             <span className="text-[10px] font-semibold text-white/40">Copy</span>
           </button>
         </div>
       </div>
-
-      {/* Info grid */}
       <div className="px-5 pb-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { icon: Shield, label: 'HWID',       value: lic.hwid      || 'Not bound' },
-          { icon: Globe,  label: 'IP',          value: lic.ip        || 'Unknown' },
+          { icon: Globe,  label: 'IP',          value: lic.ip        || 'Unknown'   },
           { icon: Clock,  label: 'Last Login',  value: lic.lastLogin ? new Date(lic.lastLogin).toLocaleDateString() : '—' },
         ].map(({ icon: Icon, label, value }) => (
           <div key={label} className="p-3 rounded-xl bg-white/3 border border-white/5">
-            <p className="text-[10px] text-white/30 mb-1 flex items-center gap-1 uppercase tracking-wider font-semibold">
-              <Icon className="w-2.5 h-2.5" /> {label}
-            </p>
+            <p className="text-[10px] text-white/30 mb-1 flex items-center gap-1 uppercase tracking-wider font-semibold"><Icon className="w-2.5 h-2.5" /> {label}</p>
             <p className="text-sm font-bold text-white truncate">{value}</p>
           </div>
         ))}
         <div className="p-3 rounded-xl bg-white/3 border border-white/5">
-          <p className="text-[10px] text-white/30 mb-1 flex items-center gap-1 uppercase tracking-wider font-semibold">
-            <Clock className="w-2.5 h-2.5" /> Expiry
-          </p>
+          <p className="text-[10px] text-white/30 mb-1 flex items-center gap-1 uppercase tracking-wider font-semibold"><Clock className="w-2.5 h-2.5" /> Expiry</p>
           <p className="text-sm font-bold"><ExpiryCountdown expiresAt={lic.expiresAt} /></p>
         </div>
       </div>
-
-      {/* Reset HWID */}
       <div className="px-5 pb-5">
-        <button
-          onClick={() => onReset(lic.id)}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/5 text-xs font-semibold text-white/60 hover:bg-white/8 transition-all border border-white/5"
-        >
+        <button onClick={() => onReset(lic.id)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/5 text-xs font-semibold text-white/60 hover:bg-white/8 transition-all border border-white/5">
           <RefreshCw className="w-3.5 h-3.5" /> Reset HWID ({2 - (lic.hwidResetsUsed ?? 0)} left)
         </button>
       </div>
@@ -251,103 +251,103 @@ export default function LicensesPage() {
     if (!user)    { toast.error('Please login first'); return; }
     setErrorMsg(''); setDebugInfo(null);
 
-    // Check if already added (compare raw key, ignoring _INTERNAL suffix)
     const exists = licenses.find(l => l.key.replace('_INTERNAL', '') === trimmedKey);
     if (exists) { toast.error('This key is already activated'); return; }
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('validate-key', {
-        body: { key: trimmedKey, appName: 'both' },
-      });
-
-      if (error) {
-        setErrorMsg(`Server error: ${error.message}`);
-        toast.error('Connection error');
-        setLoading(false);
-        return;
-      }
-
-      if (!data) {
-        setErrorMsg('No response from server — is the edge function deployed?');
-        setLoading(false);
-        return;
-      }
-
+      const data = await callValidateKey(trimmedKey);
       setDebugInfo(data);
 
-      const lagData = data?.lag;
-      const intData = data?.internal;
+      // ── Handle BOTH response formats ──────────────────────
+      // New format: { lag: {...}, internal: {...}, anySuccess: bool }
+      // Old format: { success: bool, message: string, info: {...} }
 
-      if (!data?.anySuccess) {
-        // Build clean error — show what KeyAuth actually said
-        const lagMsg = lagData?.message ?? '';
-        const intMsg = intData?.message ?? '';
-        setErrorMsg(data?.message || lagMsg || intMsg || 'Invalid license key');
-        toast.error('Activation failed');
-        setLoading(false);
-        return;
-      }
+      const isNewFormat = 'lag' in data || 'internal' in data;
 
-      let activated = 0;
+      if (isNewFormat) {
+        // New multi-app format
+        const lagData = data?.lag;
+        const intData = data?.internal;
+        const anySuccess = lagData?.success === true || intData?.success === true;
 
-      // Helper: parse unix timestamp seconds → ISO string, fallback to +30days
-      const toISO = (unixSec: string | number | undefined): string => {
-        const ms = parseInt(String(unixSec ?? '0')) * 1000;
-        return ms > 0 ? new Date(ms).toISOString() : new Date(Date.now() + 30 * 86400000).toISOString();
-      };
+        if (!anySuccess) {
+          const lagMsg = lagData?.message ?? '';
+          const intMsg = intData?.message ?? '';
+          // Show the most meaningful error (not generic ones)
+          const generic = ['Key not found', 'not configured', 'missing config'];
+          const lagBad  = generic.some(g => lagMsg.includes(g));
+          const intBad  = generic.some(g => intMsg.includes(g));
+          setErrorMsg((!lagBad ? lagMsg : '') || (!intBad ? intMsg : '') || lagMsg || intMsg || 'Invalid license key');
+          toast.error('Activation failed');
+          setLoading(false);
+          return;
+        }
 
-      // Add LAG license card
-      if (lagData?.success === true) {
-        const info = lagData.info ?? {};
-        // Expiry: prefer subscriptions[0].expiry, fallback to info.expiry
-        const expiryRaw = info.subscriptions?.[0]?.expiry ?? info.expiry ?? '0';
+        let activated = 0;
+
+        if (lagData?.success === true) {
+          addLicense({
+            id: `lag_${Math.random().toString(36).slice(2, 10)}`,
+            productId: 'keyauth-lag', productName: 'Fake Lag',
+            key: trimmedKey,
+            hwid:      lagData.info?.hwid     ?? '',
+            lastLogin: toISO(lagData.info?.lastlogin),
+            expiresAt: getExpiry(lagData.info),
+            status: 'active',
+            ip:     lagData.info?.ip  ?? '',
+            device: '', hwidResetsUsed: 0, hwidResetMonth: new Date().getMonth(),
+          });
+          activated++;
+        }
+
+        if (intData?.success === true) {
+          addLicense({
+            id: `int_${Math.random().toString(36).slice(2, 10)}`,
+            productId: 'keyauth-internal', productName: 'Internal',
+            key: trimmedKey + '_INTERNAL',
+            hwid:      intData.info?.hwid     ?? '',
+            lastLogin: toISO(intData.info?.lastlogin),
+            expiresAt: getExpiry(intData.info),
+            status: 'active',
+            ip:     intData.info?.ip  ?? '',
+            device: '', hwidResetsUsed: 0, hwidResetMonth: new Date().getMonth(),
+          });
+          activated++;
+        }
+
+        if (activated === 2)      toast.success('🎉 Both panels activated!');
+        else if (activated === 1) toast.success(`✅ ${lagData?.success ? 'Fake Lag' : 'Internal'} activated!`);
+
+      } else {
+        // Old/single format: { success, message, info }
+        if (!data?.success) {
+          setErrorMsg(data?.message || 'Invalid license key');
+          toast.error('Activation failed');
+          setLoading(false);
+          return;
+        }
+
+        // Old function doesn't tell us which app — guess from key prefix
+        const isInternal = trimmedKey.toLowerCase().includes('internal') || trimmedKey.toLowerCase().includes('int');
         addLicense({
-          id:             `lag_${Math.random().toString(36).slice(2, 10)}`,
-          productId:      'keyauth-lag',
-          productName:    'Fake Lag',
-          key:            trimmedKey,
-          hwid:           info.hwid      ?? '',
-          lastLogin:      toISO(info.lastlogin),
-          expiresAt:      toISO(expiryRaw),
-          status:         'active',
-          ip:             info.ip        ?? '',
-          device:         '',
-          hwidResetsUsed: 0,
-          hwidResetMonth: new Date().getMonth(),
+          id: `${isInternal ? 'int' : 'lag'}_${Math.random().toString(36).slice(2, 10)}`,
+          productId:   isInternal ? 'keyauth-internal' : 'keyauth-lag',
+          productName: isInternal ? 'Internal' : 'Fake Lag',
+          key:         isInternal ? trimmedKey + '_INTERNAL' : trimmedKey,
+          hwid:        data.info?.hwid     ?? '',
+          lastLogin:   toISO(data.info?.lastlogin),
+          expiresAt:   getExpiry(data.info),
+          status: 'active',
+          ip:     data.info?.ip  ?? '',
+          device: '', hwidResetsUsed: 0, hwidResetMonth: new Date().getMonth(),
         });
-        activated++;
+        toast.success('✅ License activated!');
       }
 
-      // Add INTERNAL license card
-      if (intData?.success === true) {
-        const info = intData.info ?? {};
-        const expiryRaw = info.subscriptions?.[0]?.expiry ?? info.expiry ?? '0';
-        addLicense({
-          id:             `int_${Math.random().toString(36).slice(2, 10)}`,
-          productId:      'keyauth-internal',
-          productName:    'Internal',
-          key:            trimmedKey + '_INTERNAL',
-          hwid:           info.hwid      ?? '',
-          lastLogin:      toISO(info.lastlogin),
-          expiresAt:      toISO(expiryRaw),
-          status:         'active',
-          ip:             info.ip        ?? '',
-          device:         '',
-          hwidResetsUsed: 0,
-          hwidResetMonth: new Date().getMonth(),
-        });
-        activated++;
-      }
-
-      if (activated === 2)      toast.success('🎉 Both panels activated!');
-      else if (activated === 1) toast.success(`✅ ${lagData?.success ? 'Fake Lag' : 'Internal'} activated!`);
-
-      setKeyValue('');
-      setErrorMsg('');
-      setDebugInfo(null);
+      setKeyValue(''); setErrorMsg(''); setDebugInfo(null);
     } catch (e) {
-      setErrorMsg(`Unexpected error: ${String(e)}`);
+      setErrorMsg(`Error: ${String(e)}`);
       toast.error('Something went wrong');
     }
     setLoading(false);
@@ -355,14 +355,9 @@ export default function LicensesPage() {
 
   handleActivateRef.current = handleActivate;
 
-  // Filter cards: lag = productId keyauth-lag, internal = keyauth-internal or key ends with _INTERNAL
-  const lagLicenses = licenses.filter(l =>
-    l.productId === 'keyauth-lag' || (l.productId === 'keyauth' && !l.key.endsWith('_INTERNAL'))
-  );
-  const intLicenses = licenses.filter(l =>
-    l.productId === 'keyauth-internal' || l.key.endsWith('_INTERNAL')
-  );
-  const hasAny = licenses.length > 0;
+  const lagLicenses = licenses.filter(l => l.productId === 'keyauth-lag' || (l.productId === 'keyauth' && !l.key.endsWith('_INTERNAL')));
+  const intLicenses = licenses.filter(l => l.productId === 'keyauth-internal' || l.key.endsWith('_INTERNAL'));
+  const hasAny      = licenses.length > 0;
 
   return (
     <div className="space-y-8 w-full">
@@ -388,17 +383,13 @@ export default function LicensesPage() {
         <button
           onClick={handleActivate}
           disabled={loading || !isReady}
-          className="w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] disabled:opacity-40 relative overflow-hidden"
+          className="w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] disabled:opacity-40"
           style={{
             background: 'linear-gradient(135deg, #7c3aed, #6d28d9, #5b21b6)',
-            boxShadow: isReady && !loading
-              ? '0 0 40px rgba(124,58,237,0.45), 0 4px 20px rgba(0,0,0,0.4)'
-              : '0 4px 20px rgba(0,0,0,0.3)',
+            boxShadow: isReady && !loading ? '0 0 40px rgba(124,58,237,0.45), 0 4px 20px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.3)',
           }}
         >
-          {loading
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> Validating...</>
-            : <><Key className="w-4 h-4" /> Activate License Key</>}
+          {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Validating...</> : <><Key className="w-4 h-4" /> Activate License Key</>}
         </button>
 
         {errorMsg && (
@@ -411,9 +402,7 @@ export default function LicensesPage() {
             {debugInfo && (
               <details className="mt-2">
                 <summary className="text-[10px] text-white/30 cursor-pointer hover:text-white/50">Show debug info</summary>
-                <pre className="text-[10px] text-white/30 mt-1 overflow-x-auto whitespace-pre-wrap break-words">
-                  {JSON.stringify(debugInfo, null, 2)}
-                </pre>
+                <pre className="text-[10px] text-white/30 mt-1 overflow-x-auto whitespace-pre-wrap break-words">{JSON.stringify(debugInfo, null, 2)}</pre>
               </details>
             )}
           </div>
@@ -427,9 +416,7 @@ export default function LicensesPage() {
             <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
             <h3 className="text-sm font-bold text-white tracking-wide uppercase">1999X Internal Panel</h3>
           </div>
-          {intLicenses.map((lic, i) => (
-            <LicenseCard key={lic.id} lic={lic} i={i} onCopy={copyKey} onReset={setHwidTarget} accentColor="blue" />
-          ))}
+          {intLicenses.map((lic, i) => <LicenseCard key={lic.id} lic={lic} i={i} onCopy={copyKey} onReset={setHwidTarget} accentColor="blue" />)}
         </div>
       )}
 
@@ -440,9 +427,7 @@ export default function LicensesPage() {
             <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
             <h3 className="text-sm font-bold text-white tracking-wide uppercase">1999X Fake Lag Panel</h3>
           </div>
-          {lagLicenses.map((lic, i) => (
-            <LicenseCard key={lic.id} lic={lic} i={i} onCopy={copyKey} onReset={setHwidTarget} accentColor="purple" />
-          ))}
+          {lagLicenses.map((lic, i) => <LicenseCard key={lic.id} lic={lic} i={i} onCopy={copyKey} onReset={setHwidTarget} accentColor="purple" />)}
         </div>
       )}
 

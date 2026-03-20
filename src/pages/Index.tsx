@@ -25,33 +25,27 @@ const pageComponents: Record<string, React.FC> = {
   '/announcements': AnnouncementsPage,
 };
 
-// Look up email in user_roles table → returns 'admin' | 'support' | 'user'
 async function fetchRole(email: string): Promise<'admin' | 'support' | 'user'> {
   try {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('user_roles')
       .select('role')
       .eq('email', email)
       .maybeSingle();
-
-    if (error || !data) return 'user';
-    if (data.role === 'admin' || data.role === 'support') return data.role;
-  } catch {
-    // table may not exist yet — fall back to user
-  }
+    if (data?.role === 'admin' || data?.role === 'support') return data.role;
+  } catch {}
   return 'user';
 }
 
 export default function Index() {
-  const { isAuthenticated, login, logout } = useAppStore();
+  const { isAuthenticated, user, login, logout } = useAppStore();
   const [currentPath, setCurrentPath] = useState('/');
   const intentionalLogout = useRef(false);
 
   useEffect(() => {
-    // Helper: build user object with role from Supabase table
     const loginWithRole = async (session: any) => {
-      const email  = session.user.email ?? '';
-      const role   = await fetchRole(email);
+      const email = session.user.email ?? '';
+      const role  = await fetchRole(email);
       login({
         id:     session.user.id,
         email,
@@ -61,19 +55,21 @@ export default function Index() {
       });
     };
 
-    // Check existing session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (intentionalLogout.current || !session?.user) return;
       if (!isAuthenticated) loginWithRole(session);
     });
 
-    // Listen for auth changes (Google OAuth redirect comes through here)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
-        intentionalLogout.current = true;
+        // Only clear state if WE triggered it
+        if (intentionalLogout.current) {
+          logout();
+          intentionalLogout.current = false;
+        }
         return;
       }
-      if (intentionalLogout.current || !session?.user) return;
+      if (!session?.user) return;
       await loginWithRole(session);
     });
 
@@ -82,9 +78,12 @@ export default function Index() {
 
   const handleLogout = async () => {
     intentionalLogout.current = true;
-    await supabase.auth.signOut();
+    // Always clear local state immediately
     logout();
-    setTimeout(() => { intentionalLogout.current = false; }, 3000);
+    // Only call Supabase signOut for real OAuth users (not role-based staff)
+    if (!user?.id?.startsWith('staff_')) {
+      try { await supabase.auth.signOut(); } catch {}
+    }
   };
 
   if (!isAuthenticated) return <LoginPage />;
