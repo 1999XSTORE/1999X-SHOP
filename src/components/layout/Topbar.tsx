@@ -73,7 +73,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             background: 'rgba(10, 10, 20, 0.65)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
-            maxWidth: '900px',
+            maxWidth: '1200px',
             width: '100%',
           }}
         >

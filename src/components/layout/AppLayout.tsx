@@ -11,8 +11,8 @@ export default function AppLayout({ children, currentPath, onNavigate, onLogout 
   return (
     <div className="min-h-screen bg-background">
       <Topbar currentPath={currentPath} onNavigate={onNavigate} onLogout={onLogout} />
-      <main className="pt-20 px-4 pb-12">
-        <div className="max-w-4xl mx-auto">
+      <main className="pt-20 px-6 pb-12">
+        <div className="max-w-6xl mx-auto">
           {children}
         </div>
       </main>
