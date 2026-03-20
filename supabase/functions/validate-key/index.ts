@@ -1,73 +1,164 @@
-const corsHeaders = {
+// ============================================================
+//  KeyAuth Validator — Multi-App Profile Edition
+//  Each panel_type maps to its own isolated credentials.
+//  The edge function NEVER mixes credentials between apps.
+//
+//  Required Supabase secrets:
+//    KA_LAG_APPNAME   — Fake Lag app name (exact, case-sensitive)
+//    KA_LAG_OWNERID   — Fake Lag owner ID
+//    KA_LAG_VERSION   — Fake Lag app version (e.g. "1.0")
+//
+//    KA_INT_APPNAME   — Internal app name (exact, case-sensitive)
+//    KA_INT_OWNERID   — Internal owner ID
+//    KA_INT_VERSION   — Internal app version (e.g. "1.0")
+//
+//  Request body: { key: string, panel_type: "lag" | "internal" }
+// ============================================================
+
+const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-async function validateKey(key: string, appName: string, version: string, ownerid: string) {
-  if (!ownerid || !appName) {
-    return { success: false, message: `App not configured: appName="${appName}"` };
+// ── Application profile — all credentials for one KeyAuth app ──
+interface AppProfile {
+  appName:  string;
+  ownerid:  string;
+  version:  string;
+  label:    string;
+}
+
+// ── Load profile from env — completely isolated per app ─────────
+function loadProfile(panelType: 'lag' | 'internal'): AppProfile {
+  if (panelType === 'lag') {
+    return {
+      appName: Deno.env.get('KA_LAG_APPNAME')  ?? '',
+      ownerid: Deno.env.get('KA_LAG_OWNERID')  ?? '',
+      version: Deno.env.get('KA_LAG_VERSION')  ?? '1.0',
+      label:   'Fake Lag',
+    };
+  }
+  return {
+    appName: Deno.env.get('KA_INT_APPNAME')  ?? '',
+    ownerid: Deno.env.get('KA_INT_OWNERID')  ?? '',
+    version: Deno.env.get('KA_INT_VERSION')  ?? '1.0',
+    label:   'Internal',
+  };
+}
+
+// ── Validate a key against one specific app profile ─────────────
+async function validateAgainstProfile(key: string, profile: AppProfile) {
+  const { appName, ownerid, version, label } = profile;
+
+  // Guard — profile must be fully configured
+  if (!appName || !ownerid) {
+    return {
+      success: false,
+      message: `${label} app is not configured. Set KA_${label === 'Fake Lag' ? 'LAG' : 'INT'}_APPNAME and KA_${label === 'Fake Lag' ? 'LAG' : 'INT'}_OWNERID in Supabase secrets.`,
+    };
   }
 
-  // Step 1: Init — get sessionid
-  const initUrl = `https://keyauth.win/api/1.3/?type=init&ver=${version}&name=${encodeURIComponent(appName)}&ownerid=${encodeURIComponent(ownerid)}`;
-  const initText = await (await fetch(initUrl)).text();
-  let init: any;
-  try { init = JSON.parse(initText); } catch { return { success: false, message: 'Init parse error: ' + initText.slice(0, 80) }; }
-  if (!init.success) return { success: false, message: 'Init failed: ' + (init.message ?? 'unknown') };
+  // ── Step 1: Init this specific app — get a fresh sessionid ────
+  let initData: any;
+  try {
+    const url = new URL('https://keyauth.win/api/1.3/');
+    url.searchParams.set('type',    'init');
+    url.searchParams.set('ver',     version);
+    url.searchParams.set('name',    appName);
+    url.searchParams.set('ownerid', ownerid);
+    const text = await (await fetch(url.toString())).text();
+    initData = JSON.parse(text);
+  } catch (e) {
+    return { success: false, message: `${label}: init request failed — ${String(e)}` };
+  }
 
-  // Step 2: License — validate key (no hwid param)
-  const licUrl = `https://keyauth.win/api/1.3/?type=license&key=${encodeURIComponent(key)}&sessionid=${init.sessionid}&name=${encodeURIComponent(appName)}&ownerid=${encodeURIComponent(ownerid)}`;
-  const licText = await (await fetch(licUrl)).text();
-  let lic: any;
-  try { lic = JSON.parse(licText); } catch { return { success: false, message: 'License parse error: ' + licText.slice(0, 80) }; }
-  if (!lic.success) return { success: false, message: lic.message ?? 'Invalid key' };
+  if (!initData?.success) {
+    return { success: false, message: `${label}: ${initData?.message ?? 'Init failed'}` };
+  }
 
-  const subs   = lic.info?.subscriptions ?? [];
-  const expiry = subs[0]?.expiry ?? lic.info?.expiry ?? '0';
+  // ── Step 2: License check using THIS app's sessionid only ──────
+  let licData: any;
+  try {
+    const url = new URL('https://keyauth.win/api/1.3/');
+    url.searchParams.set('type',      'license');
+    url.searchParams.set('key',       key);
+    url.searchParams.set('sessionid', initData.sessionid);
+    url.searchParams.set('name',      appName);
+    url.searchParams.set('ownerid',   ownerid);
+    // Do NOT send hwid — empty string causes rejection on some configs
+    const text = await (await fetch(url.toString())).text();
+    licData = JSON.parse(text);
+  } catch (e) {
+    return { success: false, message: `${label}: license request failed — ${String(e)}` };
+  }
+
+  if (!licData?.success) {
+    return { success: false, message: licData?.message ?? 'Invalid key' };
+  }
+
+  // ── Extract subscription & expiry ──────────────────────────────
+  const subs   = licData.info?.subscriptions ?? [];
+  const expiry = String(subs[0]?.expiry ?? licData.info?.expiry ?? '0');
 
   return {
     success: true,
     message: 'Activated!',
     info: {
-      username:      lic.info?.username   ?? '',
-      ip:            lic.info?.ip         ?? '',
-      hwid:          lic.info?.hwid       ?? '',
-      lastlogin:     lic.info?.lastlogin  ?? '',
-      createdate:    lic.info?.createdate ?? '',
-      expiry:        String(expiry),
+      username:      licData.info?.username   ?? '',
+      ip:            licData.info?.ip         ?? '',
+      hwid:          licData.info?.hwid       ?? '',
+      lastlogin:     licData.info?.lastlogin  ?? '',
+      createdate:    licData.info?.createdate ?? '',
+      expiry,
       subscriptions: subs,
     },
   };
 }
 
+// ── Main handler ───────────────────────────────────────────────
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
-  const json = (data: any, status = 200) =>
-    new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+
+  const respond = (data: unknown, status = 200) =>
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    });
 
   try {
-    const { key, appName } = await req.json();
-    if (!key) return json({ success: false, message: 'No key provided' }, 400);
+    const body = await req.json();
+    const key        = (body.key        ?? '').trim();
+    const panelType  = (body.panel_type ?? body.appName ?? '').trim().toLowerCase();
 
-    const SHARED = Deno.env.get('KA_OWNERID') ?? '';
-    const LAG_OID = Deno.env.get('KA_LAG_OWNERID') ?? SHARED;
-    const LAG_APP = Deno.env.get('KA_LAG_APPID')   ?? '';
-    const LAG_VER = Deno.env.get('KA_LAG_VERSION')  ?? '1.0';
-    const INT_OID = Deno.env.get('KA_INT_OWNERID') ?? SHARED;
-    const INT_APP = Deno.env.get('KA_INT_APPID')   ?? '';
-    const INT_VER = Deno.env.get('KA_INT_VERSION')  ?? '1.0';
+    if (!key) return respond({ success: false, message: 'No key provided' }, 400);
 
-    if (appName === 'lag')      return json(await validateKey(key, LAG_APP, LAG_VER, LAG_OID));
-    if (appName === 'internal') return json(await validateKey(key, INT_APP, INT_VER, INT_OID));
+    // ── Single panel mode: validate against ONLY the requested app ─
+    if (panelType === 'lag') {
+      const profile = loadProfile('lag');
+      const result  = await validateAgainstProfile(key, profile);
+      return respond(result);
+    }
 
-    // both
-    const [lag, internal] = await Promise.all([
-      validateKey(key, LAG_APP, LAG_VER, LAG_OID),
-      validateKey(key, INT_APP, INT_VER, INT_OID),
+    if (panelType === 'internal') {
+      const profile = loadProfile('internal');
+      const result  = await validateAgainstProfile(key, profile);
+      return respond(result);
+    }
+
+    // ── Both mode: validate each app independently in parallel ─────
+    // Each uses its OWN credentials — zero cross-contamination
+    const [lagResult, intResult] = await Promise.all([
+      validateAgainstProfile(key, loadProfile('lag')),
+      validateAgainstProfile(key, loadProfile('internal')),
     ]);
-    return json({ lag, internal, anySuccess: lag.success || internal.success });
 
-  } catch (e) {
-    return json({ success: false, message: 'Server error: ' + String(e) }, 500);
+    return respond({
+      lag:        lagResult,
+      internal:   intResult,
+      anySuccess: lagResult.success || intResult.success,
+    });
+
+  } catch (err) {
+    return respond({ success: false, message: 'Server error: ' + String(err) }, 500);
   }
 });

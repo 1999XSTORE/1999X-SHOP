@@ -4,31 +4,55 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
 
-const SUPABASE_URL     = 'https://wkjqrjafogufqeasfeev.supabase.co';
-const SUPABASE_ANON    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
-const FF_IMAGE         = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1400&q=80';
+const SUPABASE_URL  = 'https://wkjqrjafogufqeasfeev.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
+const FF_IMAGE      = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1400&q=80';
 
-// ── Call validate-key for a single app ─────────────────────────
-async function callValidateApp(key: string, appName: 'lag' | 'internal'): Promise<any> {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/validate-key`, {
-    method: 'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${SUPABASE_ANON}`,
-      'apikey':        SUPABASE_ANON,
-    },
-    body: JSON.stringify({ key, appName }),
-  });
-  return res.json();
+// ── Validate key against ONE specific panel using its own credentials ──
+// panel_type tells the edge function which AppName + OwnerID + Version to use.
+// The edge function isolates each app completely — no credential mixing.
+async function validatePanel(key: string, panelType: 'lag' | 'internal'): Promise<{
+  success: boolean;
+  message: string;
+  info: any;
+}> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/validate-key`, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'apikey':        SUPABASE_ANON,
+      },
+      // panel_type is the new param — edge function uses it to pick the right profile
+      // appName kept as fallback for old deployed function compatibility
+      body: JSON.stringify({ key, panel_type: panelType, appName: panelType }),
+    });
+
+    const data = await res.json();
+
+    // New function returns flat { success, message, info } for single panel calls
+    if (typeof data.success === 'boolean') {
+      return { success: data.success, message: data.message ?? '', info: data.info ?? null };
+    }
+
+    // Old function returns { lag:{...}, internal:{...} } — extract by panel type
+    const nested = data[panelType === 'lag' ? 'lag' : 'internal'];
+    if (nested && typeof nested.success === 'boolean') {
+      return { success: nested.success, message: nested.message ?? '', info: nested.info ?? null };
+    }
+
+    return { success: false, message: 'Unexpected response from server', info: null };
+  } catch (e) {
+    return { success: false, message: `Connection error: ${String(e)}`, info: null };
+  }
 }
 
-// ── Parse unix seconds → ISO, fallback +30 days ────────────────
 function toISO(unixSec: any): string {
   const ms = parseInt(String(unixSec ?? '0')) * 1000;
   return ms > 100000 ? new Date(ms).toISOString() : new Date(Date.now() + 30 * 86400000).toISOString();
 }
 
-// ── Extract best expiry from KeyAuth info ───────────────────────
 function getExpiry(info: any): string {
   const fromSub = info?.subscriptions?.[0]?.expiry;
   const direct  = info?.expiry;
@@ -203,9 +227,9 @@ function LicenseCard({ lic, i, onCopy, onReset, accentColor }: {
       </div>
       <div className="px-5 pb-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { icon: Shield, label: 'HWID',       value: lic.hwid      || 'Not bound' },
-          { icon: Globe,  label: 'IP',          value: lic.ip        || 'Unknown'   },
-          { icon: Clock,  label: 'Last Login',  value: lic.lastLogin ? new Date(lic.lastLogin).toLocaleDateString() : '—' },
+          { icon: Shield, label: 'HWID',      value: lic.hwid      || 'Not bound' },
+          { icon: Globe,  label: 'IP',         value: lic.ip        || 'Unknown'   },
+          { icon: Clock,  label: 'Last Login', value: lic.lastLogin ? new Date(lic.lastLogin).toLocaleDateString() : '—' },
         ].map(({ icon: Icon, label, value }) => (
           <div key={label} className="p-3 rounded-xl bg-white/3 border border-white/5">
             <p className="text-[10px] text-white/30 mb-1 flex items-center gap-1 uppercase tracking-wider font-semibold"><Icon className="w-2.5 h-2.5" /> {label}</p>
@@ -228,15 +252,15 @@ function LicenseCard({ lic, i, onCopy, onReset, accentColor }: {
 
 export default function LicensesPage() {
   const { licenses, resetHwid, addLicense, user } = useAppStore();
-  const [keyValue, setKeyValue]     = useState('');
-  const [loading, setLoading]       = useState(false);
+  const [keyValue, setKeyValue] = useState('');
+  const [loading, setLoading]   = useState(false);
   const [hwidTarget, setHwidTarget] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg]     = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
   const trimmedKey = keyValue.trim();
-  const isReady    = trimmedKey.length >= 6;
+  const isReady    = trimmedKey.length >= 4;
 
-  const copyKey = (key: string) => { navigator.clipboard.writeText(key); toast.success('Copied!'); };
+  const copyKey = (k: string) => { navigator.clipboard.writeText(k); toast.success('Copied!'); };
 
   const confirmResetHwid = () => {
     if (!hwidTarget) return;
@@ -250,35 +274,31 @@ export default function LicensesPage() {
     if (!user)    { toast.error('Please login first'); return; }
     setErrorMsg('');
 
-    const exists = licenses.find(l => l.key.replace('_INTERNAL', '') === trimmedKey);
-    if (exists) { toast.error('This key is already activated'); return; }
+    // Skip panels where this key is already stored
+    const alreadyLag = licenses.some(l => l.productId === 'keyauth-lag' && l.key === trimmedKey);
+    const alreadyInt = licenses.some(l => l.productId === 'keyauth-internal' && l.key === trimmedKey + '_INTERNAL');
+    if (alreadyLag && alreadyInt) { toast.error('Key already activated'); return; }
 
     setLoading(true);
     try {
-      // Call each app independently
-      const [lagRaw, intRaw] = await Promise.all([
-        callValidateApp(trimmedKey, 'lag'),
-        callValidateApp(trimmedKey, 'internal'),
+      // Call each panel independently using its own isolated credentials.
+      // panel_type = 'lag'      → edge function uses KA_LAG_APPNAME + KA_LAG_OWNERID + KA_LAG_VERSION
+      // panel_type = 'internal' → edge function uses KA_INT_APPNAME + KA_INT_OWNERID + KA_INT_VERSION
+      const [lagResult, intResult] = await Promise.all([
+        alreadyLag ? { success: false, message: 'skip', info: null } : validatePanel(trimmedKey, 'lag'),
+        alreadyInt ? { success: false, message: 'skip', info: null } : validatePanel(trimmedKey, 'internal'),
       ]);
 
-      // Normalize response: old deployed function always returns {lag:{...}, internal:{...}}
-      // regardless of appName param. New function returns {success, message, info} directly.
-      // Unwrap if nested.
-      const lagData = lagRaw?.lag ?? lagRaw;
-      const intData = intRaw?.internal ?? intRaw;
-
-      const lagOk = lagData?.success === true;
-      const intOk = intData?.success === true;
+      const lagOk = lagResult.success === true;
+      const intOk = intResult.success === true;
 
       if (!lagOk && !intOk) {
-        // Show the most useful error — prefer non-generic messages
-        const lagMsg = lagData?.message ?? '';
-        const intMsg = intData?.message ?? '';
-        const generic = ['Invalid license key', 'Key not found', 'not configured', 'missing config'];
-        const lagUseful = !generic.some(g => lagMsg.includes(g));
-        const intUseful = !generic.some(g => intMsg.includes(g));
-        const errMsg = lagUseful ? lagMsg : intUseful ? intMsg : intMsg || lagMsg || 'Invalid license key';
-        setErrorMsg(errMsg);
+        // Show the most meaningful error — skip generic noise messages
+        const noise  = ['Invalid license key', 'Invalid key', 'Key not found', 'skip', 'Connection error', 'Unexpected response'];
+        const lagMsg = lagResult.message ?? '';
+        const intMsg = intResult.message ?? '';
+        const useful = [lagMsg, intMsg].find(m => m && !noise.some(n => m.includes(n)));
+        setErrorMsg(useful || 'Invalid license key');
         toast.error('Activation failed');
         setLoading(false);
         return;
@@ -286,32 +306,40 @@ export default function LicensesPage() {
 
       let activated = 0;
 
+      // Lag app accepted this key with lag credentials → show Fake Lag card
       if (lagOk) {
         addLicense({
-          id: `lag_${Math.random().toString(36).slice(2, 10)}`,
-          productId: 'keyauth-lag', productName: 'Fake Lag',
-          key: trimmedKey,
-          hwid:      lagData.info?.hwid ?? '',
-          lastLogin: toISO(lagData.info?.lastlogin),
-          expiresAt: getExpiry(lagData.info),
-          status: 'active',
-          ip:     lagData.info?.ip ?? '',
-          device: '', hwidResetsUsed: 0, hwidResetMonth: new Date().getMonth(),
+          id:             `lag_${Math.random().toString(36).slice(2, 10)}`,
+          productId:      'keyauth-lag',
+          productName:    'Fake Lag',
+          key:            trimmedKey,
+          hwid:           lagResult.info?.hwid     ?? '',
+          lastLogin:      toISO(lagResult.info?.lastlogin),
+          expiresAt:      getExpiry(lagResult.info),
+          status:         'active',
+          ip:             lagResult.info?.ip        ?? '',
+          device:         '',
+          hwidResetsUsed: 0,
+          hwidResetMonth: new Date().getMonth(),
         });
         activated++;
       }
 
+      // Internal app accepted this key with internal credentials → show Internal card
       if (intOk) {
         addLicense({
-          id: `int_${Math.random().toString(36).slice(2, 10)}`,
-          productId: 'keyauth-internal', productName: 'Internal',
-          key: trimmedKey + '_INTERNAL',
-          hwid:      intData.info?.hwid ?? '',
-          lastLogin: toISO(intData.info?.lastlogin),
-          expiresAt: getExpiry(intData.info),
-          status: 'active',
-          ip:     intData.info?.ip ?? '',
-          device: '', hwidResetsUsed: 0, hwidResetMonth: new Date().getMonth(),
+          id:             `int_${Math.random().toString(36).slice(2, 10)}`,
+          productId:      'keyauth-internal',
+          productName:    'Internal',
+          key:            trimmedKey + '_INTERNAL',
+          hwid:           intResult.info?.hwid     ?? '',
+          lastLogin:      toISO(intResult.info?.lastlogin),
+          expiresAt:      getExpiry(intResult.info),
+          status:         'active',
+          ip:             intResult.info?.ip        ?? '',
+          device:         '',
+          hwidResetsUsed: 0,
+          hwidResetMonth: new Date().getMonth(),
         });
         activated++;
       }
@@ -319,7 +347,8 @@ export default function LicensesPage() {
       if (activated === 2)      toast.success('🎉 Both panels activated!');
       else if (activated === 1) toast.success(`✅ ${lagOk ? 'Fake Lag' : 'Internal'} activated!`);
 
-      setKeyValue(''); setErrorMsg('');
+      setKeyValue('');
+      setErrorMsg('');
     } catch (e) {
       setErrorMsg(`Error: ${String(e)}`);
       toast.error('Something went wrong');
@@ -329,7 +358,7 @@ export default function LicensesPage() {
 
   handleActivateRef.current = handleActivate;
 
-  const lagLicenses = licenses.filter(l => l.productId === 'keyauth-lag' || (l.productId === 'keyauth' && !l.key.endsWith('_INTERNAL')));
+  const lagLicenses = licenses.filter(l => l.productId === 'keyauth-lag');
   const intLicenses = licenses.filter(l => l.productId === 'keyauth-internal' || l.key.endsWith('_INTERNAL'));
   const hasAny      = licenses.length > 0;
 
@@ -337,7 +366,6 @@ export default function LicensesPage() {
     <div className="space-y-8 w-full">
       {hwidTarget && <HwidModal onConfirm={confirmResetHwid} onCancel={() => setHwidTarget(null)} />}
 
-      {/* Activate Card */}
       <div className="rounded-2xl p-8 border border-white/10 bg-white/3">
         <div className="flex items-center gap-3 mb-7">
           <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
@@ -373,12 +401,10 @@ export default function LicensesPage() {
               <p className="text-xs font-bold text-red-400">Activation Failed</p>
             </div>
             <p className="text-xs text-red-300/70 break-words mt-1">{errorMsg}</p>
-
           </div>
         )}
       </div>
 
-      {/* Internal Panel Cards */}
       {intLicenses.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 px-1">
@@ -389,7 +415,6 @@ export default function LicensesPage() {
         </div>
       )}
 
-      {/* Fake Lag Panel Cards */}
       {lagLicenses.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 px-1">
