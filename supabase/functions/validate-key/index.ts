@@ -1,8 +1,8 @@
 // ============================================================
-//  Supabase Edge Function — KeyAuth Key Validator v5
-//  - Validates against both apps independently
-//  - One success = overall success (key belongs to one app)
-//  - No hwid param sent (empty string causes rejection)
+//  KeyAuth Validator v7
+//  - Tries version from env first, then falls back to "1.0"
+//  - Full raw response in debug so you see exactly what KeyAuth says
+//  - _v:7 stamp to confirm new version is deployed
 // ============================================================
 
 const corsHeaders = {
@@ -10,82 +10,95 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+async function tryInit(appName: string, version: string, ownerid: string) {
+  const u = new URL('https://keyauth.win/api/1.3/');
+  u.searchParams.set('type',    'init');
+  u.searchParams.set('ver',     version);
+  u.searchParams.set('name',    appName);
+  u.searchParams.set('ownerid', ownerid);
+  const raw = await (await fetch(u.toString())).text();
+  const data = JSON.parse(raw);
+  return { data, raw };
+}
+
 async function validateKey(
   key: string,
   appName: string,
   version: string,
   ownerid: string,
   label: string,
-): Promise<{ success: boolean; message: string; info?: any; debug?: any }> {
-
+) {
   if (!ownerid || !appName) {
     return {
       success: false,
-      message: `${label} not configured`,
-      debug: { problem: 'Missing env vars', ownerid_set: !!ownerid, appName_val: appName || '(empty)' },
+      message: `${label}: missing config — appName="${appName}" ownerid_len=${ownerid.length}`,
     };
   }
 
-  // Step 1: Init
+  // ── INIT — try configured version, fallback to "1.0" ────
   let initData: any;
   let initRaw = '';
   try {
-    const initUrl = new URL('https://keyauth.win/api/1.3/');
-    initUrl.searchParams.set('type',    'init');
-    initUrl.searchParams.set('ver',     version);
-    initUrl.searchParams.set('name',    appName);
-    initUrl.searchParams.set('ownerid', ownerid);
-    const initRes = await fetch(initUrl.toString());
-    initRaw = await initRes.text();
-    initData = JSON.parse(initRaw);
+    const first = await tryInit(appName, version, ownerid);
+    if (!first.data?.success && version !== '1.0') {
+      // retry with 1.0
+      const second = await tryInit(appName, '1.0', ownerid);
+      initData = second.data;
+      initRaw  = second.raw;
+    } else {
+      initData = first.data;
+      initRaw  = first.raw;
+    }
   } catch (e) {
-    return { success: false, message: `${label} init error`, debug: { error: String(e), raw: initRaw.slice(0, 200) } };
+    return { success: false, message: `${label} init network error: ${String(e)}` };
   }
 
   if (!initData?.success) {
     return {
       success: false,
       message: `${label} init failed: ${initData?.message ?? 'unknown'}`,
-      debug: { initData },
+      debug: { initRaw: initRaw.slice(0, 200) },
     };
   }
 
-  const sessionid = initData.sessionid;
-
-  // Step 2: License check — no hwid param, KeyAuth assigns on first use
+  // ── LICENSE CHECK ────────────────────────────────────────
   let licData: any;
   let licRaw = '';
   try {
-    const licUrl = new URL('https://keyauth.win/api/1.3/');
-    licUrl.searchParams.set('type',      'license');
-    licUrl.searchParams.set('key',       key);
-    licUrl.searchParams.set('sessionid', sessionid);
-    licUrl.searchParams.set('name',      appName);
-    licUrl.searchParams.set('ownerid',   ownerid);
-    const licRes = await fetch(licUrl.toString());
-    licRaw = await licRes.text();
+    const u = new URL('https://keyauth.win/api/1.3/');
+    u.searchParams.set('type',      'license');
+    u.searchParams.set('key',       key);
+    u.searchParams.set('sessionid', initData.sessionid);
+    u.searchParams.set('name',      appName);
+    u.searchParams.set('ownerid',   ownerid);
+    licRaw = await (await fetch(u.toString())).text();
     licData = JSON.parse(licRaw);
   } catch (e) {
-    return { success: false, message: `${label} license error`, debug: { error: String(e), raw: licRaw.slice(0, 200) } };
+    return { success: false, message: `${label} license network error: ${String(e)}` };
   }
 
   if (!licData?.success) {
     return {
       success: false,
       message: licData?.message ?? 'Key not found',
-      debug: { keyauth_response: licData, raw: licRaw.slice(0, 400), key_len: key.length },
+      debug: {
+        keyauth_said: licRaw.slice(0, 300),
+        key_preview:  key.slice(0, 6) + '***',
+        key_length:   key.length,
+      },
     };
   }
 
-  // Extract expiry from subscriptions or direct field
+  // ── EXTRACT INFO ─────────────────────────────────────────
   const subs   = licData.info?.subscriptions ?? [];
-  const expiry = subs.length > 0 ? subs[0].expiry : (licData.info?.expiry ?? '');
+  const expiry = subs.length > 0
+    ? String(subs[0].expiry ?? '0')
+    : String(licData.info?.expiry ?? '0');
 
-  // Only block if expiry is explicitly set AND in the past
   if (expiry && expiry !== '0') {
-    const expiryMs = parseInt(expiry) * 1000;
-    if (!isNaN(expiryMs) && expiryMs > 0 && expiryMs < Date.now()) {
-      return { success: false, message: `${label} key expired`, debug: { expiry } };
+    const ms = parseInt(expiry) * 1000;
+    if (!isNaN(ms) && ms > 0 && ms < Date.now()) {
+      return { success: false, message: `${label} key expired` };
     }
   }
 
@@ -93,25 +106,22 @@ async function validateKey(
     success: true,
     message: 'Activated!',
     info: {
-      username:   licData.info?.username   ?? '',
-      ip:         licData.info?.ip         ?? '',
-      hwid:       licData.info?.hwid       ?? '',
-      createdate: licData.info?.createdate ?? '',
-      lastlogin:  licData.info?.lastlogin  ?? '',
-      expiry:     String(expiry),
+      username:      licData.info?.username   ?? '',
+      ip:            licData.info?.ip         ?? '',
+      hwid:          licData.info?.hwid       ?? '',
+      createdate:    licData.info?.createdate ?? '',
+      lastlogin:     licData.info?.lastlogin  ?? '',
+      expiry,
       subscriptions: subs,
     },
   };
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const body = await req.json();
-    const { key, appName } = body;
+    const { key, appName } = await req.json();
 
     if (!key) {
       return new Response(
@@ -120,45 +130,38 @@ Deno.serve(async (req) => {
       );
     }
 
-    const SHARED_OWNERID = Deno.env.get('KA_OWNERID') ?? '';
-    const LAG_OWNERID    = Deno.env.get('KA_LAG_OWNERID') ?? SHARED_OWNERID;
-    const LAG_APPID      = Deno.env.get('KA_LAG_APPID')   ?? '';
-    const LAG_VERSION    = Deno.env.get('KA_LAG_VERSION')  ?? '1.0';
-    const INT_OWNERID    = Deno.env.get('KA_INT_OWNERID') ?? SHARED_OWNERID;
-    const INT_APPID      = Deno.env.get('KA_INT_APPID')   ?? '';
-    const INT_VERSION    = Deno.env.get('KA_INT_VERSION')  ?? '1.0';
+    const SHARED      = Deno.env.get('KA_OWNERID')      ?? '';
+    const LAG_OWNERID = Deno.env.get('KA_LAG_OWNERID')  ?? SHARED;
+    const LAG_APPID   = Deno.env.get('KA_LAG_APPID')    ?? '';
+    const LAG_VER     = Deno.env.get('KA_LAG_VERSION')  ?? '1.0';
+    const INT_OWNERID = Deno.env.get('KA_INT_OWNERID')  ?? SHARED;
+    const INT_APPID   = Deno.env.get('KA_INT_APPID')    ?? '';
+    const INT_VER     = Deno.env.get('KA_INT_VERSION')  ?? '1.0';
 
-    // Single app mode
     if (appName === 'lag') {
-      const r = await validateKey(key, LAG_APPID, LAG_VERSION, LAG_OWNERID, 'LAG');
+      const r = await validateKey(key, LAG_APPID, LAG_VER, LAG_OWNERID, 'LAG');
       return new Response(JSON.stringify(r), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     if (appName === 'internal') {
-      const r = await validateKey(key, INT_APPID, INT_VERSION, INT_OWNERID, 'INTERNAL');
+      const r = await validateKey(key, INT_APPID, INT_VER, INT_OWNERID, 'INTERNAL');
       return new Response(JSON.stringify(r), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Both mode — validate each independently, one success = good
-    const lagResult = await validateKey(key, LAG_APPID, LAG_VERSION, LAG_OWNERID, 'LAG');
-    const intResult = await validateKey(key, INT_APPID, INT_VERSION, INT_OWNERID, 'INTERNAL');
+    // Both — one success is enough
+    const lagResult  = await validateKey(key, LAG_APPID, LAG_VER, LAG_OWNERID, 'LAG');
+    const intResult  = await validateKey(key, INT_APPID, INT_VER, INT_OWNERID, 'INTERNAL');
     const anySuccess = lagResult.success || intResult.success;
 
-    // If neither succeeded, return the most useful error message
-    let errorMessage = 'Invalid license key';
+    let errMsg = 'Invalid license key';
     if (!anySuccess) {
-      const lagMsg = lagResult.message ?? '';
-      const intMsg = intResult.message ?? '';
-      // Prefer a message that isn't generic
-      const genericMsgs = ['Key not found', 'Invalid license key', 'not configured'];
-      const lagIsGeneric = genericMsgs.some(m => lagMsg.includes(m));
-      const intIsGeneric = genericMsgs.some(m => intMsg.includes(m));
-      if (!lagIsGeneric) errorMessage = lagMsg;
-      else if (!intIsGeneric) errorMessage = intMsg;
-      else errorMessage = `${lagMsg} | ${intMsg}`;
+      const skip = ['Key not found', 'Invalid license key', 'missing config', 'not configured'];
+      const lagOk = !skip.some(s => lagResult.message.includes(s));
+      const intOk = !skip.some(s => intResult.message.includes(s));
+      errMsg = lagOk ? lagResult.message : intOk ? intResult.message : `LAG: ${lagResult.message} | INT: ${intResult.message}`;
     }
 
     return new Response(
-      JSON.stringify({ lag: lagResult, internal: intResult, anySuccess, message: anySuccess ? 'OK' : errorMessage }),
+      JSON.stringify({ _v: 7, lag: lagResult, internal: intResult, anySuccess, message: anySuccess ? 'OK' : errMsg }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
 

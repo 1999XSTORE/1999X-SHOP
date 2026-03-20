@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Globe, Loader2, Zap, Shield, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
-import { useAppStore } from '@/lib/store';
 import { toast } from 'sonner';
 
 const LANGUAGES = [
@@ -26,7 +25,6 @@ const LANGUAGES = [
 
 export default function LoginPage() {
   const { i18n } = useTranslation();
-  const { login } = useAppStore();
   const [langOpen, setLangOpen] = useState(false);
   const [loading, setLoading]   = useState(false);
 
@@ -43,14 +41,13 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      {/* Animated background */}
+      {/* Background */}
       <div className="fixed inset-0 bg-[#0a0a14]" />
       <div className="fixed inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-violet-900/20" />
       <div className="fixed top-1/4 left-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl animate-pulse" />
       <div className="fixed bottom-1/4 right-1/4 w-80 h-80 bg-violet-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
 
       <div className="relative z-10 w-full max-w-sm mx-4">
-        {/* Card */}
         <div className="rounded-2xl p-8 border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl shadow-black/60 animate-fade-up">
 
           {/* Brand */}
@@ -62,7 +59,7 @@ export default function LoginPage() {
             <p className="text-xs text-white/40 tracking-[3px] uppercase">Premium Software Panel</p>
           </div>
 
-          {/* Features row */}
+          {/* Features */}
           <div className="flex items-center justify-center gap-4 mb-8">
             {[
               { icon: Shield, text: 'Undetected' },
@@ -109,7 +106,7 @@ export default function LoginPage() {
             )}
           </div>
 
-          {/* Google Login Button */}
+          {/* Google Login */}
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
@@ -138,7 +135,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Glow effect under card */}
+        {/* Glow */}
         <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-8 bg-purple-600/20 blur-xl rounded-full" />
       </div>
     </div>

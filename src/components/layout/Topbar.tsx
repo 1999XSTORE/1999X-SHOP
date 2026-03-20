@@ -159,13 +159,21 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="flex items-center gap-1.5 p-1 rounded-xl hover:bg-white/5 transition-colors"
               >
-                {user?.avatar ? (
-                  <img src={user.avatar} alt={user.name} className="w-7 h-7 rounded-full object-cover ring-1 ring-purple-500/30" />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-400">
-                    {user?.name?.charAt(0) || 'U'}
-                  </div>
-                )}
+                <div className="relative">
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt={user.name} className="w-7 h-7 rounded-full object-cover ring-1 ring-purple-500/30" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-400">
+                      {user?.name?.charAt(0) || 'U'}
+                    </div>
+                  )}
+                  {user?.role === 'admin' && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border border-[#0a0a14] text-[6px] text-white flex items-center justify-center font-black">A</span>
+                  )}
+                  {user?.role === 'support' && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-blue-500 border border-[#0a0a14] text-[6px] text-white flex items-center justify-center font-black">S</span>
+                  )}
+                </div>
               </button>
               {profileOpen && (
                 <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl border border-white/10 shadow-2xl shadow-black/60 py-1 z-50"
@@ -181,7 +189,9 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-white truncate">{user.name}</p>
-                        <p className="text-[10px] text-white/30 truncate">{user.email}</p>
+                        <p className="text-[10px] truncate font-semibold" style={{color: user.role === 'admin' ? '#f87171' : user.role === 'support' ? '#60a5fa' : 'rgba(255,255,255,0.3)'}}>
+                          {user.role === 'admin' ? '👑 Administrator' : user.role === 'support' ? '🛡 Support Staff' : user.email}
+                        </p>
                       </div>
                     </div>
                   )}

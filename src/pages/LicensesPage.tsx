@@ -291,24 +291,27 @@ export default function LicensesPage() {
 
       let activated = 0;
 
-      // Add LAG license card if lag key validated OK
-      if (lagData?.success === true) {
-        const expiryRaw = lagData.info?.expiry ?? '0';
-        const expiryMs  = parseInt(expiryRaw) * 1000;
-        const expiresAt = expiryMs > 0
-          ? new Date(expiryMs).toISOString()
-          : new Date(Date.now() + 30 * 86400000).toISOString();
+      // Helper: parse unix timestamp seconds → ISO string, fallback to +30days
+      const toISO = (unixSec: string | number | undefined): string => {
+        const ms = parseInt(String(unixSec ?? '0')) * 1000;
+        return ms > 0 ? new Date(ms).toISOString() : new Date(Date.now() + 30 * 86400000).toISOString();
+      };
 
+      // Add LAG license card
+      if (lagData?.success === true) {
+        const info = lagData.info ?? {};
+        // Expiry: prefer subscriptions[0].expiry, fallback to info.expiry
+        const expiryRaw = info.subscriptions?.[0]?.expiry ?? info.expiry ?? '0';
         addLicense({
           id:             `lag_${Math.random().toString(36).slice(2, 10)}`,
           productId:      'keyauth-lag',
           productName:    'Fake Lag',
           key:            trimmedKey,
-          hwid:           lagData.info?.hwid      ?? '',
-          lastLogin:      lagData.info?.lastlogin  ? new Date(parseInt(lagData.info.lastlogin) * 1000).toISOString() : new Date().toISOString(),
-          expiresAt,
+          hwid:           info.hwid      ?? '',
+          lastLogin:      toISO(info.lastlogin),
+          expiresAt:      toISO(expiryRaw),
           status:         'active',
-          ip:             lagData.info?.ip         ?? '',
+          ip:             info.ip        ?? '',
           device:         '',
           hwidResetsUsed: 0,
           hwidResetMonth: new Date().getMonth(),
@@ -316,24 +319,20 @@ export default function LicensesPage() {
         activated++;
       }
 
-      // Add INTERNAL license card if internal key validated OK
+      // Add INTERNAL license card
       if (intData?.success === true) {
-        const expiryRaw = intData.info?.expiry ?? '0';
-        const expiryMs  = parseInt(expiryRaw) * 1000;
-        const expiresAt = expiryMs > 0
-          ? new Date(expiryMs).toISOString()
-          : new Date(Date.now() + 30 * 86400000).toISOString();
-
+        const info = intData.info ?? {};
+        const expiryRaw = info.subscriptions?.[0]?.expiry ?? info.expiry ?? '0';
         addLicense({
           id:             `int_${Math.random().toString(36).slice(2, 10)}`,
           productId:      'keyauth-internal',
           productName:    'Internal',
           key:            trimmedKey + '_INTERNAL',
-          hwid:           intData.info?.hwid      ?? '',
-          lastLogin:      intData.info?.lastlogin  ? new Date(parseInt(intData.info.lastlogin) * 1000).toISOString() : new Date().toISOString(),
-          expiresAt,
+          hwid:           info.hwid      ?? '',
+          lastLogin:      toISO(info.lastlogin),
+          expiresAt:      toISO(expiryRaw),
           status:         'active',
-          ip:             intData.info?.ip         ?? '',
+          ip:             info.ip        ?? '',
           device:         '',
           hwidResetsUsed: 0,
           hwidResetMonth: new Date().getMonth(),

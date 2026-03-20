@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Activity, CheckCircle, AlertTriangle, Clock, Megaphone, Sparkles, Wrench, RefreshCw, Users, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/lib/supabase';
 
 const typeConfig = {
   update:      { icon: Sparkles,      color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
@@ -46,31 +45,42 @@ export default function PanelStatusPage() {
     setLoading(true);
     setInvokeErr('');
     try {
-      const { data, error } = await supabase.functions.invoke('keyauth-stats');
+      // Use direct fetch so it works regardless of auth state
+      const res = await fetch(
+        'https://wkjqrjafogufqeasfeev.supabase.co/functions/v1/keyauth-stats',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok',
+          },
+          body: JSON.stringify({}),
+        }
+      );
 
-      if (error) {
-        setInvokeErr(`Function error: ${error.message}`);
+      if (!res.ok) {
+        setInvokeErr(`HTTP ${res.status}: ${await res.text()}`);
         setLoading(false);
         setLastRefresh(new Date());
         return;
       }
 
-      // Store raw for debug
+      const data = await res.json();
       setRawResp(data);
 
-      if (!data) {
-        setInvokeErr('Function returned no data');
+      if (!data?.lag && !data?.internal) {
+        setInvokeErr('Unexpected response: ' + JSON.stringify(data).slice(0, 100));
         setLoading(false);
         setLastRefresh(new Date());
         return;
       }
 
-      // Normalize — handle any response shape
       setLag(normalizeApp(data.lag));
       setInternal(normalizeApp(data.internal));
 
     } catch (e) {
-      setInvokeErr(`Caught: ${String(e)}`);
+      setInvokeErr(`Network error: ${String(e)}`);
     }
 
     setLoading(false);
