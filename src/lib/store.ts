@@ -90,6 +90,7 @@ interface AppState {
   deleteChatMessage: (id: string) => void;
   highlightChatMessage: (id: string) => void;
   resetHwid: (licenseId: string) => boolean;
+  addLicense: (license: License) => void;
 }
 
 const generateKey = () => {
@@ -248,6 +249,9 @@ export const useAppStore = create<AppState>()(
       })),
       highlightChatMessage: (id) => set((s) => ({
         chatMessages: s.chatMessages.map((m) => m.id === id ? { ...m, highlighted: !m.highlighted } : m)
+      })),
+      addLicense: (license) => set((s) => ({
+        licenses: [license, ...s.licenses.filter(l => l.key !== license.key)],
       })),
       resetHwid: (licenseId) => {
         const state = get();
