@@ -21,7 +21,7 @@ export default function SupportPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
+    <div className="space-y-4 w-full">
       {/* Discord link */}
       <a
         href="https://discord.gg/your-server"

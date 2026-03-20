@@ -34,7 +34,7 @@ export default function WalletPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6 w-full">
       {/* Balance card */}
       <div className="rounded-2xl p-6 border border-purple-500/20 bg-gradient-to-br from-purple-900/20 to-white/3 animate-fade-up">
         <p className="text-xs text-white/40 mb-1">{t('wallet.title')}</p>

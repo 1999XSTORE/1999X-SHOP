@@ -46,7 +46,7 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="space-y-8 w-full">
 
       {/* Products Section */}
       <div>

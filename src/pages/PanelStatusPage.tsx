@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAppStore } from '@/lib/store';
-import { Activity, CheckCircle, AlertTriangle, Clock, Megaphone, Sparkles, Wrench, RefreshCw, Users, Shield, Zap } from 'lucide-react';
+import { Activity, CheckCircle, AlertTriangle, Clock, Megaphone, Sparkles, Wrench, RefreshCw, Users, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 
@@ -10,40 +10,69 @@ const typeConfig = {
   feature:     { icon: AlertTriangle, color: 'text-blue-400',    bg: 'bg-blue-500/10'    },
 };
 
-interface AppStats {
-  status: string;
-  numUsers: string;
-  numKeys: string;
-  onlineUsers: string;
-  version: string;
+const OFFLINE = { status: 'offline', numUsers: '0', numKeys: '0', onlineUsers: '0', version: '—' };
+
+// Safely parse any number-like value from the response
+function safeNum(val: any): number {
+  if (val === null || val === undefined) return 0;
+  const n = parseInt(String(val), 10);
+  return isNaN(n) ? 0 : n;
 }
 
-interface KAStats {
-  lag: AppStats;
-  internal: AppStats;
+// Normalize a single app stat block — handle any field name KeyAuth might return
+function normalizeApp(raw: any): typeof OFFLINE {
+  if (!raw || raw.status === 'offline') return OFFLINE;
+  return {
+    status:      raw.status      ?? 'online',
+    numUsers:    String(safeNum(raw.numUsers    ?? raw.registered ?? raw.users     ?? 0)),
+    numKeys:     String(safeNum(raw.numKeys     ?? raw.keys       ?? 0)),
+    onlineUsers: String(safeNum(raw.onlineUsers ?? raw.numOnlineUsers ?? raw.online ?? 0)),
+    version:     String(raw.version ?? '—'),
+  };
 }
-
-const OFFLINE: AppStats = { status: 'offline', numUsers: '0', numKeys: '0', onlineUsers: '0', version: '—' };
 
 export default function PanelStatusPage() {
   const { systemStatus, lastStatusUpdate, announcements } = useAppStore();
   const isOnline = systemStatus === 'online';
-  const [stats, setStats]       = useState<KAStats | null>(null);
-  const [loading, setLoading]   = useState(true);
+
+  const [lag,      setLag]      = useState(OFFLINE);
+  const [internal, setInternal] = useState(OFFLINE);
+  const [loading,  setLoading]  = useState(true);
+  const [rawResp,  setRawResp]  = useState<any>(null);
+  const [invokeErr, setInvokeErr] = useState('');
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
   const loadStats = async () => {
     setLoading(true);
+    setInvokeErr('');
     try {
       const { data, error } = await supabase.functions.invoke('keyauth-stats');
-      if (!error && data) {
-        setStats(data as KAStats);
-      } else {
-        setStats({ lag: OFFLINE, internal: OFFLINE });
+
+      if (error) {
+        setInvokeErr(`Function error: ${error.message}`);
+        setLoading(false);
+        setLastRefresh(new Date());
+        return;
       }
-    } catch {
-      setStats({ lag: OFFLINE, internal: OFFLINE });
+
+      // Store raw for debug
+      setRawResp(data);
+
+      if (!data) {
+        setInvokeErr('Function returned no data');
+        setLoading(false);
+        setLastRefresh(new Date());
+        return;
+      }
+
+      // Normalize — handle any response shape
+      setLag(normalizeApp(data.lag));
+      setInternal(normalizeApp(data.internal));
+
+    } catch (e) {
+      setInvokeErr(`Caught: ${String(e)}`);
     }
+
     setLoading(false);
     setLastRefresh(new Date());
   };
@@ -54,19 +83,13 @@ export default function PanelStatusPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const lag      = stats?.lag      ?? OFFLINE;
-  const internal = stats?.internal ?? OFFLINE;
+  const totalOnline = safeNum(lag.onlineUsers) + safeNum(internal.onlineUsers);
+  const totalUsers  = safeNum(lag.numUsers)    + safeNum(internal.numUsers);
 
-  const totalOnline = loading ? null
-    : (parseInt(lag.onlineUsers) || 0) + (parseInt(internal.onlineUsers) || 0);
-  const totalUsers  = loading ? null
-    : (parseInt(lag.numUsers)    || 0) + (parseInt(internal.numUsers)    || 0);
-
-  const fmt = (n: number | null) => n !== null ? n.toLocaleString() : '—';
-  const fmtStr = (s: string) => parseInt(s) > 0 ? parseInt(s).toLocaleString() : (loading ? '···' : s);
+  const fmt = (n: number) => n > 0 ? n.toLocaleString() : (loading ? '···' : '0');
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6 w-full">
 
       {/* System Status */}
       <div className="rounded-2xl p-6 text-center border border-white/10 bg-white/3 animate-fade-up">
@@ -76,23 +99,20 @@ export default function PanelStatusPage() {
             ? <CheckCircle className="w-8 h-8 text-emerald-400" />
             : <AlertTriangle className="w-8 h-8 text-orange-400" />}
         </div>
-        <h2 className="text-lg font-bold text-white mb-2">
+        <h2 className="text-lg font-bold text-white mb-3">
           {isOnline ? 'All Systems Operational' : 'Maintenance Mode'}
         </h2>
-
-        {/* OB52 Badge */}
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-3">
           <Shield className="w-4 h-4 text-emerald-400" />
           <span className="text-sm font-bold text-emerald-400">OB52 Undetected</span>
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
         </div>
-
         <p className="text-[10px] text-white/30 flex items-center justify-center gap-1">
           <Clock className="w-3 h-3" /> Last updated: {new Date(lastStatusUpdate).toLocaleString()}
         </p>
       </div>
 
-      {/* Live Stats — Total */}
+      {/* Live Stats */}
       <div className="rounded-2xl p-5 border border-white/10 bg-white/3 animate-fade-up" style={{ animationDelay: '60ms' }}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -106,33 +126,32 @@ export default function PanelStatusPage() {
           </button>
         </div>
 
-        {/* Big total numbers */}
+        {/* Big totals */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="rounded-xl p-4 text-center bg-purple-500/10 border border-purple-500/20">
-            <p className="text-3xl font-black text-purple-400">
-              {loading ? <span className="animate-pulse text-2xl">···</span> : fmt(totalUsers)}
+          <div className="rounded-xl p-5 text-center bg-purple-500/10 border border-purple-500/20">
+            <p className="text-4xl font-black text-purple-400 tabular-nums">
+              {loading ? <span className="animate-pulse text-3xl">···</span> : totalUsers.toLocaleString()}
             </p>
-            <p className="text-[10px] text-white/40 mt-1 font-semibold uppercase tracking-wider">Total Users</p>
+            <p className="text-[10px] text-white/40 mt-1.5 font-semibold uppercase tracking-wider">Total Users</p>
           </div>
-          <div className="rounded-xl p-4 text-center bg-emerald-500/10 border border-emerald-500/20">
-            <p className="text-3xl font-black text-emerald-400">
-              {loading ? <span className="animate-pulse text-2xl">···</span> : fmt(totalOnline)}
+          <div className="rounded-xl p-5 text-center bg-emerald-500/10 border border-emerald-500/20">
+            <p className="text-4xl font-black text-emerald-400 tabular-nums">
+              {loading ? <span className="animate-pulse text-3xl">···</span> : totalOnline.toLocaleString()}
             </p>
-            <p className="text-[10px] text-white/40 mt-1 font-semibold uppercase tracking-wider">Online Now</p>
+            <p className="text-[10px] text-white/40 mt-1.5 font-semibold uppercase tracking-wider">Online Now</p>
           </div>
         </div>
 
         {/* Per-app breakdown */}
         <div className="grid grid-cols-2 gap-3">
           {[
-            { label: 'Fake Lag Panel',  data: lag,      color: 'purple' },
-            { label: 'Internal Panel',  data: internal, color: 'blue'   },
+            { label: 'Fake Lag Panel', data: lag,      color: 'purple' },
+            { label: 'Internal Panel', data: internal, color: 'blue'   },
           ].map(({ label, data, color }) => (
-            <div key={label} className={cn('rounded-xl p-3 border',
-              color === 'purple' ? 'bg-purple-500/5 border-purple-500/15' : 'bg-blue-500/5 border-blue-500/15'
-            )}>
-              <div className="flex items-center justify-between mb-2">
-                <p className={cn('text-xs font-semibold', color === 'purple' ? 'text-purple-300' : 'text-blue-300')}>{label}</p>
+            <div key={label} className={cn('rounded-xl p-4 border',
+              color === 'purple' ? 'bg-purple-500/5 border-purple-500/15' : 'bg-blue-500/5 border-blue-500/15')}>
+              <div className="flex items-center justify-between mb-3">
+                <p className={cn('text-xs font-bold', color === 'purple' ? 'text-purple-300' : 'text-blue-300')}>{label}</p>
                 <span className={cn('text-[10px] font-bold flex items-center gap-1',
                   data.status === 'online' ? 'text-emerald-400' : 'text-red-400')}>
                   <span className={cn('w-1.5 h-1.5 rounded-full',
@@ -140,35 +159,54 @@ export default function PanelStatusPage() {
                   {loading ? '···' : data.status}
                 </span>
               </div>
-              <div className="space-y-1">
-                <div className="flex justify-between">
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
                   <span className="text-[10px] text-white/30">Online</span>
-                  <span className="text-[10px] font-bold text-white">{loading ? '···' : fmtStr(data.onlineUsers)}</span>
+                  <span className="text-sm font-bold text-white tabular-nums">
+                    {loading ? '···' : safeNum(data.onlineUsers).toLocaleString()}
+                  </span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-[10px] text-white/30">Total</span>
-                  <span className="text-[10px] font-bold text-white">{loading ? '···' : fmtStr(data.numUsers)}</span>
+                  <span className="text-sm font-bold text-white tabular-nums">
+                    {loading ? '···' : safeNum(data.numUsers).toLocaleString()}
+                  </span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-[10px] text-white/30">Version</span>
-                  <span className="text-[10px] font-bold text-white">{loading ? '···' : data.version}</span>
+                  <span className="text-[11px] font-bold text-white">{loading ? '···' : data.version}</span>
                 </div>
               </div>
             </div>
           ))}
         </div>
+
+        {/* Error display */}
+        {invokeErr && (
+          <div className="mt-3 p-3 rounded-xl bg-red-500/8 border border-red-500/20">
+            <p className="text-[11px] text-red-400 font-semibold mb-1">⚠ Function error</p>
+            <p className="text-[10px] text-red-300/70 break-words">{invokeErr}</p>
+          </div>
+        )}
+
+        {/* Raw response debug — always visible so you can see what came back */}
+        {rawResp !== null && !loading && (
+          <details className="mt-3">
+            <summary className="text-[10px] text-white/20 cursor-pointer hover:text-white/40 select-none">
+              Show raw response (debug)
+            </summary>
+            <pre className="mt-2 p-3 rounded-lg bg-white/3 text-[10px] text-white/40 overflow-x-auto whitespace-pre-wrap break-words">
+              {JSON.stringify(rawResp, null, 2)}
+            </pre>
+          </details>
+        )}
       </div>
 
       {/* Services */}
       <div className="rounded-2xl p-5 border border-white/10 bg-white/3 animate-fade-up" style={{ animationDelay: '120ms' }}>
         <h3 className="text-sm font-bold text-white mb-3">Services</h3>
         <div className="space-y-1">
-          {[
-            'Authentication Server',
-            'License Server',
-            'Payment Gateway',
-            'Chat Server',
-          ].map(svc => (
+          {['Authentication Server', 'License Server', 'Payment Gateway', 'Chat Server'].map(svc => (
             <div key={svc} className="flex items-center justify-between py-2.5 border-b border-white/5 last:border-0">
               <div className="flex items-center gap-2">
                 <Activity className="w-3.5 h-3.5 text-white/20" />
@@ -194,8 +232,7 @@ export default function PanelStatusPage() {
             {announcements.map((ann, i) => {
               const cfg = typeConfig[ann.type];
               return (
-                <div key={ann.id} className="rounded-xl p-4 border border-white/10 bg-white/3 animate-fade-up"
-                  style={{ animationDelay: `${(i + 3) * 80}ms` }}>
+                <div key={ann.id} className="rounded-xl p-4 border border-white/10 bg-white/3">
                   <div className="flex items-start gap-3">
                     <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', cfg.bg)}>
                       <cfg.icon className={cn('w-3.5 h-3.5', cfg.color)} />
@@ -215,5 +252,14 @@ export default function PanelStatusPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// needed for megaphone icon
+function Megaphone({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>
+    </svg>
   );
 }

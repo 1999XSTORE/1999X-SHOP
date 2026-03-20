@@ -11,8 +11,7 @@ export default function AppLayout({ children, currentPath, onNavigate, onLogout 
   return (
     <div className="min-h-screen bg-background">
       <Topbar currentPath={currentPath} onNavigate={onNavigate} onLogout={onLogout} />
-      {/* Full width, only top padding for floating navbar */}
-      <main className="pt-20 px-4 lg:px-8 pb-10 w-full">
+      <main className="pt-20 px-6 pb-12">
         {children}
       </main>
     </div>

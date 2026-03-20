@@ -115,7 +115,7 @@ export default function ChatPage() {
   const getReplyMsg = (id: string | null) => id ? messages.find(m => m.id === id) : null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-7rem)] max-w-4xl mx-auto gap-3">
+    <div className="flex flex-col h-[calc(100vh-6rem)] w-full gap-3">
       {/* Header */}
       <div className="flex items-center justify-between px-1">
         <h2 className="text-sm font-bold text-white flex items-center gap-2">

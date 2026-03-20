@@ -12,7 +12,7 @@ export default function AnnouncementsPage() {
   const { announcements } = useAppStore();
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
+    <div className="space-y-4 w-full">
       <div className="flex items-center gap-2 mb-5">
         <Megaphone className="w-5 h-5 text-purple-400" />
         <h2 className="text-base font-bold text-white">Announcements</h2>

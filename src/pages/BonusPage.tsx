@@ -35,7 +35,7 @@ export default function BonusPage() {
   const progress = Math.min((bonusPoints % 100) / 100 * 100, 100);
 
   return (
-    <div className="max-w-md mx-auto space-y-4 animate-fade-up">
+    <div className="space-y-4 w-full animate-fade-up">
       {/* Main card */}
       <div className="rounded-2xl p-8 text-center border border-white/10 bg-white/3 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-yellow-900/15 to-transparent" />
