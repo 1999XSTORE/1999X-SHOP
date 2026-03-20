@@ -9,17 +9,21 @@ const SUPABASE_ANON    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 const FF_IMAGE         = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1400&q=80';
 
 // ── Call validate-key for a single app ─────────────────────────
-async function callValidateApp(key: string, appName: 'lag' | 'internal'): Promise<any> {
+async function validateForApp(key: string, appName: 'lag' | 'internal'): Promise<{
+  success: boolean; message: string; info: any;
+}> {
   const res = await fetch(`${SUPABASE_URL}/functions/v1/validate-key`, {
     method: 'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${SUPABASE_ANON}`,
-      'apikey':        SUPABASE_ANON,
-    },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON}`, 'apikey': SUPABASE_ANON },
     body: JSON.stringify({ key, appName }),
   });
-  return res.json();
+  const data = await res.json();
+  // New function returns flat {success, message, info}
+  if (typeof data.success === 'boolean') return { success: data.success, message: data.message ?? '', info: data.info ?? null };
+  // Old function returns {lag:{...}, internal:{...}} — extract the right app
+  const appData = data[appName];
+  if (appData && typeof appData.success === 'boolean') return { success: appData.success, message: appData.message ?? '', info: appData.info ?? null };
+  return { success: false, message: 'Unexpected response', info: null };
 }
 
 // ── Parse unix seconds → ISO, fallback +30 days ────────────────
