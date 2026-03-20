@@ -54,24 +54,19 @@ function HwidModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: (
 // ref so Enter key inside input can trigger activate
 const handleActivateRef = { current: null as (() => void) | null };
 
-// Format key as XXXX-XXXX-XXXX-XXXX while typing (supports variable segment lengths)
-function formatKey(raw: string): string {
-  const clean = raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-  return clean.match(/.{1,4}/g)?.join('-') ?? clean;
-}
-
 function LicenseInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [show, setShow] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(formatKey(e.target.value));
+    // Accept key exactly as typed/pasted — no reformatting
+    onChange(e.target.value);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') handleActivateRef.current?.();
   };
 
-  const masked = value ? value.replace(/[^-]/g, '·') : '';
+  const masked = value ? '·'.repeat(value.length) : '';
 
   return (
     <div className="relative flex items-center">
@@ -80,9 +75,9 @@ function LicenseInput({ value, onChange }: { value: string; onChange: (v: string
         value={show ? value : masked}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        onFocus={e => { if (!show) { e.target.value = value; onChange(value); setShow(true); } }}
+        onFocus={() => setShow(true)}
         onBlur={() => setShow(false)}
-        placeholder="XXXX-XXXX-XXXX-XXXX"
+        placeholder="Paste your license key"
         className="w-full h-12 px-4 pr-12 rounded-xl bg-[#12121f] border border-white/10 text-white/70 font-mono text-sm tracking-widest focus:outline-none focus:border-purple-500/40 focus:bg-[#16162a] transition-all placeholder:text-white/20"
         spellCheck={false}
         autoComplete="off"
@@ -226,9 +221,9 @@ export default function LicensesPage() {
   const [errorMsg, setErrorMsg]     = useState('');
   const [debugInfo, setDebugInfo]   = useState<any>(null);
 
-  // Key with dashes for display, without for length check
-  const cleanKey = keyValue.replace(/-/g, '').toUpperCase();
-  const isReady  = cleanKey.length >= 8;
+  // Use key exactly as entered — no stripping, no reformatting
+  const cleanKey = keyValue.trim();
+  const isReady  = cleanKey.length >= 6;
 
   const copyKey = (key: string) => { navigator.clipboard.writeText(key); toast.success('Copied!'); };
 
@@ -245,7 +240,7 @@ export default function LicensesPage() {
     setErrorMsg(''); setDebugInfo(null);
 
     const alreadyExists = licenses.find(l =>
-      l.key.replace('_INTERNAL', '').replace(/-/g, '').toUpperCase() === cleanKey
+      l.key.replace('_INTERNAL', '').trim() === cleanKey
     );
     if (alreadyExists) { toast.error('Key already activated on this account'); return; }
 
