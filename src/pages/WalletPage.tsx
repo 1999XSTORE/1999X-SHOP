@@ -106,17 +106,25 @@ function AdminPanel() {
 
   const loadTxns = async () => {
     setLoading(true);
-    // Use service-role-compatible query — reads all rows via admin RLS policy
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (error) {
-      toast.error('Failed to load: ' + error.message);
-    } else {
-      setTxns(data ?? []);
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        if (error.message.includes('not found') || error.message.includes('relation')) {
+          toast.error('Run the SQL migrations in Supabase first — see supabase/migrations/ folder.');
+        } else {
+          toast.error('Failed to load: ' + error.message);
+        }
+      } else {
+        setTxns(data ?? []);
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -430,7 +438,7 @@ export default function WalletPage() {
   const [txnId, setTxnId]         = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [myTxns, setMyTxns]       = useState<any[]>([]);
-  const [txnsLoading, setTxnsLoading] = useState(true);
+  const [txnsLoading, setTxnsLoading] = useState(false);
 
   const isAdmin   = user?.role === 'admin';
   const isSupport = user?.role === 'support';
@@ -442,13 +450,18 @@ export default function WalletPage() {
   const loadMyTxns = async () => {
     if (!user) return;
     setTxnsLoading(true);
-    const { data } = await supabase
-      .from('transactions')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-    setMyTxns(data ?? []);
-    setTxnsLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      if (!error) setMyTxns(data ?? []);
+    } catch {
+      // table may not exist yet or network issue
+    } finally {
+      setTxnsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -480,31 +493,43 @@ export default function WalletPage() {
 
   // ── Submit transaction ────────────────────────────────────
   const handleSubmit = async () => {
-    if (!txnId.trim())      { toast.error('Enter your transaction ID'); return; }
-    if (!user)              { toast.error('Please login first'); return; }
-    if (selectedAmount <= 0){ toast.error('Invalid amount'); return; }
+    if (!txnId.trim())       { toast.error('Enter your transaction ID'); return; }
+    if (!user)               { toast.error('Please login first'); return; }
+    if (selectedAmount <= 0) { toast.error('Select a valid amount'); return; }
 
     setSubmitting(true);
-    const { error } = await supabase.from('transactions').insert({
-      user_id:        user.id,
-      user_email:     user.email,
-      user_name:      user.name,
-      amount:         selectedAmount,
-      method:         methodId,
-      transaction_id: txnId.trim(),
-      status:         'pending',
-    });
+    try {
+      const { error } = await supabase.from('transactions').insert({
+        user_id:        user.id,
+        user_email:     user.email,
+        user_name:      user.name,
+        amount:         selectedAmount,
+        method:         methodId,
+        transaction_id: txnId.trim(),
+        status:         'pending',
+      });
 
-    if (error) {
-      toast.error('Submission failed: ' + error.message);
-    } else {
-      toast.success('✅ Payment submitted! Admin will approve shortly.');
-      setStep(1);
-      setTxnId('');
-      setCustomAmount('');
-      loadMyTxns();
+      if (error) {
+        // Common errors explained clearly
+        if (error.message.includes('not found') || error.message.includes('relation')) {
+          toast.error('Database not set up yet. Run the SQL migrations in Supabase first.');
+        } else if (error.message.includes('policy') || error.message.includes('permission')) {
+          toast.error('Permission error. Check Supabase RLS policies.');
+        } else {
+          toast.error('Failed: ' + error.message);
+        }
+      } else {
+        toast.success('✅ Payment submitted! Admin will approve shortly.');
+        setStep(1);
+        setTxnId('');
+        setCustomAmount('');
+        loadMyTxns();
+      }
+    } catch (e) {
+      toast.error('Connection error. Check your internet and try again.');
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   // ── Admin / Support view ──────────────────────────────────
