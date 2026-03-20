@@ -8,8 +8,8 @@ const SUPABASE_URL     = 'https://wkjqrjafogufqeasfeev.supabase.co';
 const SUPABASE_ANON    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
 const FF_IMAGE         = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1400&q=80';
 
-// ── Call validate-key edge function directly via fetch ──────────
-async function callValidateKey(key: string): Promise<any> {
+// ── Call validate-key for a single app ─────────────────────────
+async function callValidateApp(key: string, appName: 'lag' | 'internal'): Promise<any> {
   const res = await fetch(`${SUPABASE_URL}/functions/v1/validate-key`, {
     method: 'POST',
     headers: {
@@ -17,7 +17,7 @@ async function callValidateKey(key: string): Promise<any> {
       'Authorization': `Bearer ${SUPABASE_ANON}`,
       'apikey':        SUPABASE_ANON,
     },
-    body: JSON.stringify({ key, appName: 'both' }),
+    body: JSON.stringify({ key, appName }),
   });
   return res.json();
 }
@@ -256,94 +256,68 @@ export default function LicensesPage() {
 
     setLoading(true);
     try {
-      const data = await callValidateKey(trimmedKey);
-      setDebugInfo(data);
+      // Call each app independently — old "both" mode mixed up errors
+      const [lagData, intData] = await Promise.all([
+        callValidateApp(trimmedKey, 'lag'),
+        callValidateApp(trimmedKey, 'internal'),
+      ]);
 
-      // ── Handle BOTH response formats ──────────────────────
-      // New format: { lag: {...}, internal: {...}, anySuccess: bool }
-      // Old format: { success: bool, message: string, info: {...} }
+      setDebugInfo({ lag: lagData, internal: intData });
 
-      const isNewFormat = 'lag' in data || 'internal' in data;
+      // Normalize: both old format {success,message,info} and new format are handled
+      // Old format returns {success:bool, message:string, info:{...}}
+      // New format same structure per-app — identical handling
+      const lagOk = lagData?.success === true;
+      const intOk = intData?.success === true;
 
-      if (isNewFormat) {
-        // New multi-app format
-        const lagData = data?.lag;
-        const intData = data?.internal;
-        const anySuccess = lagData?.success === true || intData?.success === true;
+      if (!lagOk && !intOk) {
+        // Show the most useful error — prefer non-generic messages
+        const lagMsg = lagData?.message ?? '';
+        const intMsg = intData?.message ?? '';
+        const generic = ['Invalid license key', 'Key not found', 'not configured', 'missing config'];
+        const lagUseful = !generic.some(g => lagMsg.includes(g));
+        const intUseful = !generic.some(g => intMsg.includes(g));
+        const errMsg = lagUseful ? lagMsg : intUseful ? intMsg : intMsg || lagMsg || 'Invalid license key';
+        setErrorMsg(errMsg);
+        toast.error('Activation failed');
+        setLoading(false);
+        return;
+      }
 
-        if (!anySuccess) {
-          const lagMsg = lagData?.message ?? '';
-          const intMsg = intData?.message ?? '';
-          // Show the most meaningful error (not generic ones)
-          const generic = ['Key not found', 'not configured', 'missing config'];
-          const lagBad  = generic.some(g => lagMsg.includes(g));
-          const intBad  = generic.some(g => intMsg.includes(g));
-          setErrorMsg((!lagBad ? lagMsg : '') || (!intBad ? intMsg : '') || lagMsg || intMsg || 'Invalid license key');
-          toast.error('Activation failed');
-          setLoading(false);
-          return;
-        }
+      let activated = 0;
 
-        let activated = 0;
-
-        if (lagData?.success === true) {
-          addLicense({
-            id: `lag_${Math.random().toString(36).slice(2, 10)}`,
-            productId: 'keyauth-lag', productName: 'Fake Lag',
-            key: trimmedKey,
-            hwid:      lagData.info?.hwid     ?? '',
-            lastLogin: toISO(lagData.info?.lastlogin),
-            expiresAt: getExpiry(lagData.info),
-            status: 'active',
-            ip:     lagData.info?.ip  ?? '',
-            device: '', hwidResetsUsed: 0, hwidResetMonth: new Date().getMonth(),
-          });
-          activated++;
-        }
-
-        if (intData?.success === true) {
-          addLicense({
-            id: `int_${Math.random().toString(36).slice(2, 10)}`,
-            productId: 'keyauth-internal', productName: 'Internal',
-            key: trimmedKey + '_INTERNAL',
-            hwid:      intData.info?.hwid     ?? '',
-            lastLogin: toISO(intData.info?.lastlogin),
-            expiresAt: getExpiry(intData.info),
-            status: 'active',
-            ip:     intData.info?.ip  ?? '',
-            device: '', hwidResetsUsed: 0, hwidResetMonth: new Date().getMonth(),
-          });
-          activated++;
-        }
-
-        if (activated === 2)      toast.success('🎉 Both panels activated!');
-        else if (activated === 1) toast.success(`✅ ${lagData?.success ? 'Fake Lag' : 'Internal'} activated!`);
-
-      } else {
-        // Old/single format: { success, message, info }
-        if (!data?.success) {
-          setErrorMsg(data?.message || 'Invalid license key');
-          toast.error('Activation failed');
-          setLoading(false);
-          return;
-        }
-
-        // Old function doesn't tell us which app — guess from key prefix
-        const isInternal = trimmedKey.toLowerCase().includes('internal') || trimmedKey.toLowerCase().includes('int');
+      if (lagOk) {
         addLicense({
-          id: `${isInternal ? 'int' : 'lag'}_${Math.random().toString(36).slice(2, 10)}`,
-          productId:   isInternal ? 'keyauth-internal' : 'keyauth-lag',
-          productName: isInternal ? 'Internal' : 'Fake Lag',
-          key:         isInternal ? trimmedKey + '_INTERNAL' : trimmedKey,
-          hwid:        data.info?.hwid     ?? '',
-          lastLogin:   toISO(data.info?.lastlogin),
-          expiresAt:   getExpiry(data.info),
+          id: `lag_${Math.random().toString(36).slice(2, 10)}`,
+          productId: 'keyauth-lag', productName: 'Fake Lag',
+          key: trimmedKey,
+          hwid:      lagData.info?.hwid ?? '',
+          lastLogin: toISO(lagData.info?.lastlogin),
+          expiresAt: getExpiry(lagData.info),
           status: 'active',
-          ip:     data.info?.ip  ?? '',
+          ip:     lagData.info?.ip ?? '',
           device: '', hwidResetsUsed: 0, hwidResetMonth: new Date().getMonth(),
         });
-        toast.success('✅ License activated!');
+        activated++;
       }
+
+      if (intOk) {
+        addLicense({
+          id: `int_${Math.random().toString(36).slice(2, 10)}`,
+          productId: 'keyauth-internal', productName: 'Internal',
+          key: trimmedKey + '_INTERNAL',
+          hwid:      intData.info?.hwid ?? '',
+          lastLogin: toISO(intData.info?.lastlogin),
+          expiresAt: getExpiry(intData.info),
+          status: 'active',
+          ip:     intData.info?.ip ?? '',
+          device: '', hwidResetsUsed: 0, hwidResetMonth: new Date().getMonth(),
+        });
+        activated++;
+      }
+
+      if (activated === 2)      toast.success('🎉 Both panels activated!');
+      else if (activated === 1) toast.success(`✅ ${lagOk ? 'Fake Lag' : 'Internal'} activated!`);
 
       setKeyValue(''); setErrorMsg(''); setDebugInfo(null);
     } catch (e) {

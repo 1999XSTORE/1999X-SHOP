@@ -152,44 +152,7 @@ export default function PanelStatusPage() {
           </div>
         </div>
 
-        {/* Per-app breakdown */}
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: 'Fake Lag Panel', data: lag,      color: 'purple' },
-            { label: 'Internal Panel', data: internal, color: 'blue'   },
-          ].map(({ label, data, color }) => (
-            <div key={label} className={cn('rounded-xl p-4 border',
-              color === 'purple' ? 'bg-purple-500/5 border-purple-500/15' : 'bg-blue-500/5 border-blue-500/15')}>
-              <div className="flex items-center justify-between mb-3">
-                <p className={cn('text-xs font-bold', color === 'purple' ? 'text-purple-300' : 'text-blue-300')}>{label}</p>
-                <span className={cn('text-[10px] font-bold flex items-center gap-1',
-                  data.status === 'online' ? 'text-emerald-400' : 'text-red-400')}>
-                  <span className={cn('w-1.5 h-1.5 rounded-full',
-                    data.status === 'online' ? 'bg-emerald-400 animate-pulse' : 'bg-red-400')} />
-                  {loading ? '···' : data.status}
-                </span>
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] text-white/30">Online</span>
-                  <span className="text-sm font-bold text-white tabular-nums">
-                    {loading ? '···' : safeNum(data.onlineUsers).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] text-white/30">Total</span>
-                  <span className="text-sm font-bold text-white tabular-nums">
-                    {loading ? '···' : safeNum(data.numUsers).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] text-white/30">Version</span>
-                  <span className="text-[11px] font-bold text-white">{loading ? '···' : data.version}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+
 
         {/* Error display */}
         {invokeErr && (
