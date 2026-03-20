@@ -1,6 +1,6 @@
 // ============================================================
-//  Supabase Edge Function — KeyAuth Key Validator v2
-//  Fixed: proper init flow, correct API params, full error logging
+//  Supabase Edge Function — KeyAuth Key Validator v3
+//  Fixed: removed empty hwid (causes rejection), key sent as-is
 // ============================================================
 
 const corsHeaders = {
@@ -16,7 +16,6 @@ async function validateKey(
   label: string,
 ): Promise<{ success: boolean; message: string; info?: any; debug?: any }> {
 
-  // Guard: if secrets not configured, return clear error
   if (!ownerid || !appName) {
     return {
       success: false,
@@ -26,7 +25,7 @@ async function validateKey(
   }
 
   try {
-    // ── Step 1: Init app to get sessionid ────────────────────────────
+    // Step 1: Init app to get sessionid
     const initUrl = new URL('https://keyauth.win/api/1.3/');
     initUrl.searchParams.set('type',    'init');
     initUrl.searchParams.set('ver',     version);
@@ -36,7 +35,9 @@ async function validateKey(
     const initRes  = await fetch(initUrl.toString(), { method: 'GET' });
     const initText = await initRes.text();
     let initData: any;
-    try { initData = JSON.parse(initText); } catch { return { success: false, message: `${label} init parse error: ${initText.slice(0, 100)}` }; }
+    try { initData = JSON.parse(initText); } catch {
+      return { success: false, message: `${label} init parse error: ${initText.slice(0, 200)}` };
+    }
 
     if (!initData.success) {
       return {
@@ -48,21 +49,22 @@ async function validateKey(
 
     const sessionid = initData.sessionid;
 
-    // ── Step 2: License login with the key ────────────────────────────
-    // type=license checks the key AND logs the user in (binds HWID if not set)
+    // Step 2: License login — DO NOT send hwid param at all.
+    // Sending hwid='' causes KeyAuth to reject with "Key validation failed".
+    // Omitting it lets KeyAuth auto-assign HWID on first use.
     const licUrl = new URL('https://keyauth.win/api/1.3/');
     licUrl.searchParams.set('type',      'license');
     licUrl.searchParams.set('key',       key);
     licUrl.searchParams.set('sessionid', sessionid);
     licUrl.searchParams.set('name',      appName);
     licUrl.searchParams.set('ownerid',   ownerid);
-    // hwid: send empty string so KeyAuth assigns it on first use
-    licUrl.searchParams.set('hwid',      '');
 
     const licRes  = await fetch(licUrl.toString(), { method: 'GET' });
     const licText = await licRes.text();
     let licData: any;
-    try { licData = JSON.parse(licText); } catch { return { success: false, message: `${label} license parse error: ${licText.slice(0, 100)}` }; }
+    try { licData = JSON.parse(licText); } catch {
+      return { success: false, message: `${label} license parse error: ${licText.slice(0, 200)}` };
+    }
 
     if (!licData.success) {
       return {
@@ -72,11 +74,10 @@ async function validateKey(
       };
     }
 
-    // ── Extract subscription info ─────────────────────────────────────
+    // Extract subscription info
     const subs   = licData.info?.subscriptions ?? [];
     const expiry = subs.length > 0 ? subs[0].expiry : (licData.info?.expiry ?? '');
 
-    // Check subscription is not expired
     if (expiry) {
       const expiryMs = parseInt(expiry) * 1000;
       if (expiryMs < Date.now()) {
@@ -92,11 +93,11 @@ async function validateKey(
       success: true,
       message: 'License activated!',
       info: {
-        username:      licData.info?.username      ?? '',
-        ip:            licData.info?.ip            ?? '',
-        hwid:          licData.info?.hwid          ?? '',
-        createdate:    licData.info?.createdate    ?? '',
-        lastlogin:     licData.info?.lastlogin     ?? '',
+        username:      licData.info?.username   ?? '',
+        ip:            licData.info?.ip         ?? '',
+        hwid:          licData.info?.hwid       ?? '',
+        createdate:    licData.info?.createdate ?? '',
+        lastlogin:     licData.info?.lastlogin  ?? '',
         expiry:        String(expiry),
         subscriptions: subs,
       },
@@ -118,7 +119,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body     = await req.json();
+    const body = await req.json();
     const { key, appName } = body;
 
     if (!key) {
@@ -128,8 +129,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Load secrets ─────────────────────────────────────────────────
-    // Support both separate per-app owner IDs and a shared one
     const SHARED_OWNERID = Deno.env.get('KA_OWNERID') ?? '';
 
     const LAG_OWNERID = Deno.env.get('KA_LAG_OWNERID') ?? SHARED_OWNERID;
@@ -140,7 +139,6 @@ Deno.serve(async (req) => {
     const INT_APPID   = Deno.env.get('KA_INT_APPID')   ?? '';
     const INT_VERSION = Deno.env.get('KA_INT_VERSION')  ?? '1.0';
 
-    // ── Single app validation ─────────────────────────────────────────
     if (appName === 'lag') {
       const result = await validateKey(key, LAG_APPID, LAG_VERSION, LAG_OWNERID, 'LAG');
       return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -150,8 +148,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify(result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // ── Both apps — run sequentially to avoid session conflicts ───────
-    // Run sequentially (not parallel) to avoid KeyAuth rate limiting
+    // Both — run sequentially to avoid KeyAuth rate limiting
     const lagResult = await validateKey(key, LAG_APPID, LAG_VERSION, LAG_OWNERID, 'LAG');
     const intResult = await validateKey(key, INT_APPID, INT_VERSION, INT_OWNERID, 'INTERNAL');
 
@@ -159,10 +156,9 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        lag:        lagResult,
-        internal:   intResult,
+        lag:      lagResult,
+        internal: intResult,
         anySuccess,
-        // Surface a useful error message when both fail
         message: anySuccess ? 'OK' : (lagResult.message !== 'Invalid license key' ? lagResult.message : intResult.message),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

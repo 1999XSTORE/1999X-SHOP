@@ -2,7 +2,7 @@ import { useAppStore } from '@/lib/store';
 import { Key, Copy, RefreshCw, Globe, Clock, Shield, Download, CheckCircle, Loader2, AlertCircle, Play, ChevronRight, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 const FF_IMAGE = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1400&q=80';
@@ -29,7 +29,7 @@ function ExpiryCountdown({ expiresAt }: { expiresAt: string }) {
 function HwidModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="rounded-2xl p-6 max-w-sm w-full mx-4 border border-white/10 bg-[#0f0f1f] shadow-2xl animate-fade-up">
+      <div className="rounded-2xl p-6 max-w-sm w-full mx-4 border border-white/10 bg-[#0f0f1f] shadow-2xl">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-orange-500/15 flex items-center justify-center">
             <AlertCircle className="w-5 h-5 text-orange-400" />
@@ -51,66 +51,57 @@ function HwidModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: (
   );
 }
 
-// ── Segmented OTP-style input ─────────────────────────────────────────────────
-const SEG = 5, GROUPS = 4;
+// ref so Enter key inside input can trigger activate
+const handleActivateRef = { current: null as (() => void) | null };
 
-function SegmentedInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const refs = useRef<(HTMLInputElement | null)[]>([]);
-  const clean = value.replace(/-/g, '').toUpperCase();
-  const segs  = Array.from({ length: GROUPS }, (_, i) => clean.slice(i * SEG, i * SEG + SEG));
+// Format key as XXXX-XXXX-XXXX-XXXX while typing (supports variable segment lengths)
+function formatKey(raw: string): string {
+  const clean = raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  return clean.match(/.{1,4}/g)?.join('-') ?? clean;
+}
 
-  const rebuild = (s: string[]) => onChange(s.join('-'));
+function LicenseInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [show, setShow] = useState(false);
 
-  const handleChange = (idx: number, raw: string) => {
-    const val = raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, SEG);
-    const next = [...segs]; next[idx] = val; rebuild(next);
-    if (val.length === SEG && idx < GROUPS - 1) refs.current[idx + 1]?.focus();
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(formatKey(e.target.value));
   };
 
-  const handleKeyDown = (idx: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace'  && segs[idx] === '' && idx > 0)          refs.current[idx - 1]?.focus();
-    if (e.key === 'ArrowLeft'  && idx > 0)                               refs.current[idx - 1]?.focus();
-    if (e.key === 'ArrowRight' && idx < GROUPS - 1)                      refs.current[idx + 1]?.focus();
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') handleActivateRef.current?.();
   };
 
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const raw    = e.clipboardData.getData('text').replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, SEG * GROUPS);
-    const newSegs = Array.from({ length: GROUPS }, (_, i) => raw.slice(i * SEG, i * SEG + SEG));
-    rebuild(newSegs);
-    const last = newSegs.findLastIndex((s: string) => s.length > 0);
-    refs.current[Math.min(last + 1, GROUPS - 1)]?.focus();
-  };
+  const masked = value ? value.replace(/[^-]/g, '·') : '';
 
   return (
-    <div className="flex items-center gap-3 w-full">
-      {segs.map((seg, idx) => (
-        <div key={idx} className="flex items-center gap-3 flex-1">
-          <input
-            ref={el => { refs.current[idx] = el; }}
-            type="text" value={seg} maxLength={SEG}
-            onChange={e => handleChange(idx, e.target.value)}
-            onKeyDown={e => handleKeyDown(idx, e)}
-            onPaste={handlePaste}
-            placeholder="·····"
-            className={cn(
-              'flex-1 h-16 text-center font-mono font-bold text-xl rounded-2xl border-2 transition-all duration-150 focus:outline-none tracking-[8px] placeholder:tracking-[4px] placeholder:text-white/15',
-              seg.length > 0
-                ? 'bg-purple-500/12 border-purple-500/50 text-white shadow-[0_0_20px_rgba(124,58,237,0.2)]'
-                : 'bg-white/3 border-white/10 text-white/40',
-              'focus:border-purple-500/70 focus:bg-purple-500/15 focus:shadow-[0_0_25px_rgba(124,58,237,0.3)]'
-            )}
-          />
-          {idx < GROUPS - 1 && <span className="text-white/20 font-bold text-2xl flex-shrink-0 select-none">–</span>}
-        </div>
-      ))}
+    <div className="relative flex items-center">
+      <input
+        type="text"
+        value={show ? value : masked}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onFocus={e => { if (!show) { e.target.value = value; onChange(value); setShow(true); } }}
+        onBlur={() => setShow(false)}
+        placeholder="XXXX-XXXX-XXXX-XXXX"
+        className="w-full h-12 px-4 pr-12 rounded-xl bg-[#12121f] border border-white/10 text-white/70 font-mono text-sm tracking-widest focus:outline-none focus:border-purple-500/40 focus:bg-[#16162a] transition-all placeholder:text-white/20"
+        spellCheck={false}
+        autoComplete="off"
+      />
+      <button
+        type="button"
+        onMouseDown={e => { e.preventDefault(); setShow(s => !s); }}
+        className="absolute right-3 text-white/25 hover:text-white/55 transition-colors"
+        tabIndex={-1}
+      >
+        {show ? (
+          <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        )}
+      </button>
     </div>
   );
 }
-
-// ref so Enter key inside input can trigger activate
-const handleActivateRef = { current: null as (() => void) | null };
 
 function DownloadSection() {
   return (
@@ -235,8 +226,9 @@ export default function LicensesPage() {
   const [errorMsg, setErrorMsg]     = useState('');
   const [debugInfo, setDebugInfo]   = useState<any>(null);
 
+  // Key with dashes for display, without for length check
   const cleanKey = keyValue.replace(/-/g, '').toUpperCase();
-  const isReady  = cleanKey.length >= 10;
+  const isReady  = cleanKey.length >= 8;
 
   const copyKey = (key: string) => { navigator.clipboard.writeText(key); toast.success('Copied!'); };
 
@@ -259,12 +251,15 @@ export default function LicensesPage() {
 
     setLoading(true);
     try {
+      // Send the key WITH dashes (original format) — KeyAuth expects it formatted
+      const formattedKey = keyValue.trim();
+
       const { data, error } = await supabase.functions.invoke('validate-key', {
-        body: { key: cleanKey, appName: 'both' },
+        body: { key: formattedKey, appName: 'both' },
       });
 
       if (error) {
-        const msg = `Edge function error: ${error.message}. Make sure you have deployed the validate-key function.`;
+        const msg = `Edge function error: ${error.message}`;
         setErrorMsg(msg);
         toast.error('Server error — check error message below');
         setLoading(false);
@@ -277,14 +272,12 @@ export default function LicensesPage() {
         return;
       }
 
-      // Show debug info to help diagnose issues
       setDebugInfo(data);
 
       const lagData = data?.lag;
       const intData = data?.internal;
 
       if (!data?.anySuccess) {
-        // Build a helpful error message
         const lagMsg = lagData?.message ?? '';
         const intMsg = intData?.message ?? '';
         const bothFailed = !lagData?.success && !intData?.success;
@@ -305,7 +298,7 @@ export default function LicensesPage() {
           : new Date(Date.now() + 30 * 86400000).toISOString();
         addLicense({
           id: Math.random().toString(36).substring(2, 10),
-          productId: 'keyauth-lag', productName: 'Lag Bypass', key: cleanKey,
+          productId: 'keyauth-lag', productName: 'Lag Bypass', key: formattedKey,
           hwid: lagData.info?.hwid ?? '',
           lastLogin: lagData.info?.lastlogin ? new Date(parseInt(lagData.info.lastlogin) * 1000).toISOString() : new Date().toISOString(),
           expiresAt: expiry, status: 'active', ip: lagData.info?.ip ?? '',
@@ -320,7 +313,7 @@ export default function LicensesPage() {
           : new Date(Date.now() + 30 * 86400000).toISOString();
         addLicense({
           id: Math.random().toString(36).substring(2, 10) + '_i',
-          productId: 'keyauth-internal', productName: 'Internal', key: cleanKey + '_INTERNAL',
+          productId: 'keyauth-internal', productName: 'Internal', key: formattedKey + '_INTERNAL',
           hwid: intData.info?.hwid ?? '',
           lastLogin: intData.info?.lastlogin ? new Date(parseInt(intData.info.lastlogin) * 1000).toISOString() : new Date().toISOString(),
           expiresAt: expiry, status: 'active', ip: intData.info?.ip ?? '',
@@ -363,31 +356,24 @@ export default function LicensesPage() {
           </div>
         </div>
 
-        <div className="mb-2">
-          <label className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-3 block">License Key</label>
-          <SegmentedInput value={keyValue} onChange={setKeyValue} />
+        <div className="mb-6">
+          <label className="text-xs font-semibold text-white/50 mb-2 block">License Key</label>
+          <LicenseInput value={keyValue} onChange={setKeyValue} />
         </div>
-        <p className="text-[11px] text-white/20 mb-6 text-center">Paste your full key — auto-fills all segments</p>
 
         <button
           onClick={handleActivate}
           disabled={loading || !isReady}
-          className="w-full py-5 rounded-2xl font-black text-base text-white flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-40 relative overflow-hidden"
+          className="w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] disabled:opacity-40 relative overflow-hidden"
           style={{
             background: 'linear-gradient(135deg, #7c3aed, #6d28d9, #5b21b6)',
             boxShadow: isReady && !loading
-              ? '0 0 50px rgba(124,58,237,0.55), 0 0 100px rgba(124,58,237,0.15), 0 4px 20px rgba(0,0,0,0.5)'
+              ? '0 0 40px rgba(124,58,237,0.45), 0 4px 20px rgba(0,0,0,0.4)'
               : '0 4px 20px rgba(0,0,0,0.3)',
           }}
         >
-          {isReady && !loading && (
-            <div className="absolute inset-0 overflow-hidden rounded-2xl">
-              <div className="absolute inset-0 -translate-x-full"
-                style={{ background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent)', animation: 'shimmer 2s infinite' }} />
-            </div>
-          )}
-          {loading ? <><Loader2 className="w-5 h-5 animate-spin" /> Validating with KeyAuth...</>
-                   : <><Key className="w-5 h-5" /> ⚡ Activate License Key</>}
+          {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Validating...</>
+                   : <><Key className="w-4 h-4" /> Activate License Key</>}
         </button>
 
         {/* Error details */}
@@ -406,14 +392,6 @@ export default function LicensesPage() {
                 </pre>
               </details>
             )}
-            <div className="mt-3 p-3 rounded-lg bg-white/3 border border-white/5">
-              <p className="text-[10px] text-white/40 font-semibold mb-1">Common fixes:</p>
-              <ul className="text-[10px] text-white/30 space-y-0.5 list-disc list-inside">
-                <li>Deploy edge functions: <code className="text-purple-400">supabase functions deploy validate-key</code></li>
-                <li>Add secrets: <code className="text-purple-400">KA_OWNERID</code>, <code className="text-purple-400">KA_LAG_APPID</code>, <code className="text-purple-400">KA_INT_APPID</code></li>
-                <li>Make sure the key is not expired and matches your KeyAuth app name exactly</li>
-              </ul>
-            </div>
           </div>
         )}
       </div>
