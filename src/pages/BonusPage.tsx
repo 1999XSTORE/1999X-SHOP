@@ -1,4 +1,5 @@
 import { useAppStore } from '@/lib/store';
+import { useTranslation } from 'react-i18next';
 import { Gift, Clock, Coins, Zap, Star, CheckCircle, Copy, Loader2, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
@@ -36,6 +37,7 @@ function Countdown({ expiresAt }: { expiresAt: string }) {
 
 // ── Reward choice modal ────────────────────────────────────
 function RewardModal({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const { addBalance, addLicense, user, redeemPoints } = useAppStore();
   const [loading, setLoading]     = useState(false);
   const [success, setSuccess]     = useState<null|'balance'|'key'>(null);
@@ -104,7 +106,7 @@ function RewardModal({ onClose }: { onClose: () => void }) {
               <div style={{width:60,height:60,borderRadius:18,background:'linear-gradient(135deg,rgba(251,191,36,.2),rgba(245,158,11,.1))',border:'1px solid rgba(251,191,36,.25)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',boxShadow:'0 0 30px rgba(245,158,11,.2)'}}>
                 <Gift size={28} color="var(--amber)"/>
               </div>
-              <div style={{fontSize:20,fontWeight:800,color:'#fff',marginBottom:6}}>Choose Your Reward</div>
+              <div style={{fontSize:20,fontWeight:800,color:'#fff',marginBottom:6}}>{t('bonus.chooseReward')}</div>
               <p style={{fontSize:13,color:'var(--muted)'}}>100 points redeemed · Pick your reward</p>
             </div>
 
@@ -145,13 +147,13 @@ function RewardModal({ onClose }: { onClose: () => void }) {
             <div style={{width:64,height:64,borderRadius:20,background:'rgba(16,232,152,.1)',border:'1px solid rgba(16,232,152,.2)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 18px',boxShadow:'0 0 40px rgba(16,232,152,.2)'}}>
               <CheckCircle size={32} color="var(--green)"/>
             </div>
-            <div style={{fontSize:22,fontWeight:800,color:'#fff',marginBottom:6}}>$3 Added!</div>
-            <div style={{fontSize:14,color:'var(--muted)',marginBottom:24}}>Balance updated in your wallet</div>
+            <div style={{fontSize:22,fontWeight:800,color:'#fff',marginBottom:6}}>{t('bonus.balanceAdded')}</div>
+            <div style={{fontSize:14,color:'var(--muted)',marginBottom:24}}>{t('bonus.balanceUpdated')}</div>
             <div style={{padding:'16px',borderRadius:14,background:'rgba(16,232,152,.06)',border:'1px solid rgba(16,232,152,.15)',marginBottom:20}}>
-              <div style={{fontSize:11,color:'var(--muted)',marginBottom:4}}>NEW BALANCE</div>
+              <div style={{fontSize:11,color:'var(--muted)',marginBottom:4}}>{t('bonus.newBalance')}</div>
               <div style={{fontSize:32,fontWeight:900,color:'var(--green)'}}>+$3.00</div>
             </div>
-            <button onClick={onClose} className="btn btn-g btn-full btn-lg">Done</button>
+            <button onClick={onClose} className="btn btn-g btn-full btn-lg">{t('common.done')}</button>
           </div>
         )}
 
@@ -161,8 +163,8 @@ function RewardModal({ onClose }: { onClose: () => void }) {
             <div style={{width:64,height:64,borderRadius:20,background:'rgba(139,92,246,.1)',border:'1px solid rgba(139,92,246,.2)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 18px',boxShadow:'0 0 40px rgba(139,92,246,.2)'}}>
               <CheckCircle size={32} color="var(--purple)"/>
             </div>
-            <div style={{fontSize:22,fontWeight:800,color:'#fff',marginBottom:6}}>Key Generated!</div>
-            <div style={{fontSize:13,color:'var(--muted)',marginBottom:20}}>Your 3-day license is active</div>
+            <div style={{fontSize:22,fontWeight:800,color:'#fff',marginBottom:6}}>{t('bonus.keyGenTitle')}</div>
+            <div style={{fontSize:13,color:'var(--muted)',marginBottom:20}}>{t('bonus.keyActive')}</div>
 
             {/* Key card */}
             <div style={{background:'rgba(255,255,255,.03)',border:'1px solid rgba(139,92,246,.2)',borderRadius:14,padding:'16px',marginBottom:14,boxShadow:'0 0 24px rgba(139,92,246,.1)'}}>
@@ -183,7 +185,7 @@ function RewardModal({ onClose }: { onClose: () => void }) {
                 <div style={{fontSize:12,fontWeight:700}}><Countdown expiresAt={keyExpiry}/></div>
               </div>
             </div>
-            <button onClick={onClose} className="btn btn-p btn-full btn-lg">Done</button>
+            <button onClick={onClose} className="btn btn-p btn-full btn-lg">{t('common.done')}</button>
           </div>
         )}
       </div>
@@ -193,6 +195,7 @@ function RewardModal({ onClose }: { onClose: () => void }) {
 
 // ── Main BonusPage ─────────────────────────────────────────
 export default function BonusPage() {
+  const { t } = useTranslation();
   const { bonusPoints, lastBonusClaim, claimBonus } = useAppStore();
   const [cooldown, setCooldown] = useState('');
   const [canClaim, setCanClaim] = useState(false);
@@ -238,15 +241,15 @@ export default function BonusPage() {
             <div style={{width:72,height:72,borderRadius:18,background:'linear-gradient(135deg,rgba(251,191,36,.2),rgba(245,158,11,.1))',border:'1px solid rgba(251,191,36,.25)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',boxShadow:'0 0 30px rgba(245,158,11,.18)',transform:burst?'scale(1.18)':'scale(1)',transition:'transform .3s cubic-bezier(.34,1.56,.64,1)'}}>
               <Gift size={32} color="var(--amber)"/>
             </div>
-            <div className="label" style={{color:'rgba(251,191,36,.5)',marginBottom:8}}>Daily Reward</div>
-            <h2 style={{fontSize:26,fontWeight:800,color:'#fff',letterSpacing:'-.02em',margin:'0 0 6px'}}>Bonus Points</h2>
+            <div className="label" style={{color:'rgba(251,191,36,.5)',marginBottom:8}}>{t('bonus.title')}</div>
+            <h2 style={{fontSize:26,fontWeight:800,color:'#fff',letterSpacing:'-.02em',margin:'0 0 6px'}}>{t('bonus.title')}</h2>
             <p style={{fontSize:13,color:'var(--muted)',margin:'0 0 22px'}}>Claim daily · 100 pts = <strong style={{color:'var(--amber)'}}>$3 or 3-Day Key</strong></p>
 
             {/* Points display */}
             <div style={{display:'inline-flex',alignItems:'center',gap:12,padding:'14px 24px',borderRadius:16,background:'rgba(251,191,36,.07)',border:'1px solid rgba(251,191,36,.18)',marginBottom:20}}>
               <Coins size={22} color="var(--amber)"/>
               <div style={{textAlign:'left'}}>
-                <div className="label" style={{color:'rgba(251,191,36,.5)',marginBottom:2}}>Your Points</div>
+                <div className="label" style={{color:'rgba(251,191,36,.5)',marginBottom:2}}>{t('bonus.yourPoints')}</div>
                 <div style={{fontSize:36,fontWeight:900,color:'var(--amber)',letterSpacing:'-.03em',lineHeight:1}}>{bonusPoints}</div>
               </div>
             </div>
@@ -280,7 +283,7 @@ export default function BonusPage() {
         {/* Redeem section */}
         <div className="g fu" style={{padding:20,animationDelay:'70ms'}}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
-            <div style={{fontSize:15,fontWeight:700,color:'#fff'}}>Redeem Rewards</div>
+            <div style={{fontSize:15,fontWeight:700,color:'#fff'}}>{t('bonus.redeem')}</div>
             <span style={{fontSize:11,color:'var(--dim)'}}>{earned} redeemed</span>
           </div>
 

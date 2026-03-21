@@ -1,4 +1,5 @@
 import { useAppStore } from '@/lib/store';
+import { useTranslation } from 'react-i18next';
 import { Key, Copy, RefreshCw, Globe, Clock, Shield, Download, CheckCircle, Loader2, AlertCircle, Play, ChevronRight, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -139,7 +140,7 @@ function LicenseInput({ value, onChange }: { value: string; onChange: (v: string
       <Key size={15} style={{ position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',color:'var(--muted)',pointerEvents:'none' }} />
       <input
         value={value} onChange={e => onChange(e.target.value)}
-        placeholder="Paste your license key here"
+        placeholder={t('license.placeholder')}
         onKeyDown={e => { if (e.key === 'Enter') handleActivateRef.current?.(); }}
         className="inp inp-lg"
         style={{ paddingLeft:42,fontFamily:'monospace',letterSpacing:'1px' }}
@@ -208,7 +209,7 @@ function LicenseCard({ lic, onCopy, onReset, accentColor }: {
           </div>
           <div>
             <div style={{ fontSize:14,fontWeight:700,color:'#fff' }}>{lic.productName}</div>
-            <div style={{ fontSize:11,color:'var(--muted)' }}>KeyAuth License · Bound to account</div>
+            <div style={{ fontSize:11,color:'var(--muted)' }}>{t('license.boundToAccount')}</div>
           </div>
         </div>
         <div style={{ display:'flex',alignItems:'center',gap:8 }}>
@@ -265,6 +266,7 @@ function LicenseCard({ lic, onCopy, onReset, accentColor }: {
 }
 
 export default function LicensesPage() {
+  const { t } = useTranslation();
   const { licenses, resetHwid, addLicense, user } = useAppStore();
   const [keyValue, setKeyValue]     = useState('');
   const [loading, setLoading]       = useState(false);
@@ -372,8 +374,8 @@ export default function LicensesPage() {
             <Key size={20} color="var(--purple)" />
           </div>
           <div>
-            <div style={{ fontSize:16,fontWeight:800,color:'#fff',letterSpacing:'-.01em' }}>Activate License Key</div>
-            <div style={{ fontSize:12,color:'var(--muted)',marginTop:2 }}>Enter your KeyAuth key to activate your panel</div>
+            <div style={{ fontSize:16,fontWeight:800,color:'#fff',letterSpacing:'-.01em' }}>{t('license.title')}</div>
+            <div style={{ fontSize:12,color:'var(--muted)',marginTop:2 }}>{t('license.subtitle')}</div>
           </div>
         </div>
 
@@ -383,14 +385,14 @@ export default function LicensesPage() {
         </div>
 
         <button onClick={handleActivate} disabled={loading || !isReady} className="btn btn-p btn-lg btn-full shim-btn">
-          {loading ? <><Loader2 size={17} className="animate-spin" /> Validating...</> : <><Key size={17} /> Activate License Key</>}
+          {loading ? <><Loader2 size={17} className="animate-spin" /> Validating...</> : <><Key size={17} />{t('license.activate')}</>}
         </button>
 
         {errorMsg && (
           <div style={{ marginTop:14,padding:'14px 16px',borderRadius:12,background:'rgba(248,113,113,.07)',border:'1px solid rgba(248,113,113,.2)' }}>
             <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:5 }}>
               <AlertTriangle size={14} color="var(--red)" />
-              <span style={{ fontSize:12,fontWeight:700,color:'var(--red)' }}>Activation Failed</span>
+              <span style={{ fontSize:12,fontWeight:700,color:'var(--red)' }}>{t('license.activationFailed')}</span>
             </div>
             <p style={{ fontSize:12,color:'rgba(248,113,113,.7)',lineHeight:1.5,wordBreak:'break-word' }}>{errorMsg}</p>
           </div>
@@ -402,7 +404,7 @@ export default function LicensesPage() {
         <div className="fu" style={{ animationDelay:'40ms' }}>
           <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:12 }}>
             <div className="dot dot-purple" style={{ background:'var(--blue)',boxShadow:'0 0 7px var(--blue)' }} />
-            <div style={{ fontSize:12,fontWeight:700,color:'var(--blue)',textTransform:'uppercase',letterSpacing:'.1em' }}>1999X Internal Panel</div>
+            <div style={{ fontSize:12,fontWeight:700,color:'var(--blue)',textTransform:'uppercase',letterSpacing:'.1em' }}>{t('license.internalPanel')}</div>
           </div>
           <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
             {intLicenses.map(l => <LicenseCard key={l.id} lic={l} onCopy={copyKey} onReset={setHwidTarget} accentColor="blue" />)}
@@ -415,7 +417,7 @@ export default function LicensesPage() {
         <div className="fu" style={{ animationDelay:'80ms' }}>
           <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:12 }}>
             <div className="dot dot-purple" />
-            <div style={{ fontSize:12,fontWeight:700,color:'var(--purple)',textTransform:'uppercase',letterSpacing:'.1em' }}>1999X Fake Lag Panel</div>
+            <div style={{ fontSize:12,fontWeight:700,color:'var(--purple)',textTransform:'uppercase',letterSpacing:'.1em' }}>{t('license.fakeLagPanel')}</div>
           </div>
           <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
             {lagLicenses.map(l => <LicenseCard key={l.id} lic={l} onCopy={copyKey} onReset={setHwidTarget} accentColor="purple" />)}
@@ -430,8 +432,8 @@ export default function LicensesPage() {
           <div style={{ width:64,height:64,borderRadius:20,background:'rgba(139,92,246,.08)',border:'1px solid rgba(139,92,246,.15)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px' }}>
             <Key size={28} color="rgba(139,92,246,.35)" />
           </div>
-          <p style={{ fontSize:15,fontWeight:600,color:'var(--muted)',marginBottom:6 }}>No active licenses</p>
-          <p style={{ fontSize:13,color:'var(--dim)' }}>Paste your license key above to get started</p>
+          <p style={{ fontSize:15,fontWeight:600,color:'var(--muted)',marginBottom:6 }}>{t('license.noLicense')}</p>
+          <p style={{ fontSize:13,color:'var(--dim)' }}>{t('license.noLicenseDesc')}</p>
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/lib/store';
-import { Bell, Wallet, Menu, X, LogOut, Globe, Zap } from 'lucide-react';
+import { Bell, Wallet, Menu, X, LogOut, Globe } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -82,8 +82,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             onClick={() => handleNav('/')}
             className="flex items-center gap-1.5 mr-3 flex-shrink-0"
           >
-            <img src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1" alt="1999X" style={{ width:32, height:32, objectFit:'contain', filter:'drop-shadow(0 0 8px rgba(139,92,246,.4))' }} />
-            <span className="hidden sm:block" style={{ fontSize:15, fontWeight:800, color:"white", letterSpacing:'-.01em' }}>1999X</span>
+            <img src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1" alt="1999X" style={{ height:36, width:'auto', maxWidth:120, objectFit:'contain', filter:'drop-shadow(0 0 8px rgba(139,92,246,.4))' }} />
           </button>
 
           {/* Desktop nav links — centered */}

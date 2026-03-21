@@ -137,7 +137,7 @@ export default function Index() {
           <img
             src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1"
             alt="1999X"
-            style={{ width:52, height:52, objectFit:'contain', filter:'drop-shadow(0 0 16px rgba(139,92,246,.5))', animation:'gp 1.5s ease-in-out infinite' }}
+            style={{ height:56, width:'auto', objectFit:'contain', filter:'drop-shadow(0 0 20px rgba(139,92,246,.6))', animation:'gp 1.5s ease-in-out infinite' }}
           />
           <div style={{ display:'flex', gap:5 }}>
             {[0,1,2].map(i => (
