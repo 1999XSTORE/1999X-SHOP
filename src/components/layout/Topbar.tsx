@@ -9,6 +9,7 @@ const navItems = [
   { key: 'licenses',    path: '/licenses',     label: 'License' },
   { key: 'chat',        path: '/chat',         label: 'Chat' },
   { key: 'wallet',      path: '/wallet',       label: 'Shop' },
+  { key: 'store',       path: '/store',        label: 'Store' },
   { key: 'bonus',       path: '/bonus',        label: 'Bonus' },
   { key: 'panelStatus', path: '/panel-status', label: 'Status' },
 ];
@@ -81,11 +82,8 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             onClick={() => handleNav('/')}
             className="flex items-center gap-1.5 mr-3 flex-shrink-0"
           >
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}>
-              <Zap className="w-4 h-4 text-white" />
-            </div>
-            <span className="hidden sm:block" style={{ fontSize: 15, fontWeight: 700, color: "white", fontFamily: "Space Grotesk, sans-serif" }}>1999X</span>
+            <img src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1" alt="1999X" style={{ width:32, height:32, objectFit:'contain', filter:'drop-shadow(0 0 8px rgba(139,92,246,.4))' }} />
+            <span className="hidden sm:block" style={{ fontSize:15, fontWeight:800, color:"white", letterSpacing:'-.01em' }}>1999X</span>
           </button>
 
           {/* Desktop nav links — centered */}
