@@ -26,11 +26,25 @@ export interface License {
   hwid: string;
   lastLogin: string;
   expiresAt: string;
-  status: 'active' | 'expired';
+  status: 'active' | 'expired' | 'banned';
   ip: string;
   device: string;
   hwidResetsUsed: number;
   hwidResetMonth: number;
+  lastHwidReset?: string;
+  productType?: 'weekly' | 'monthly' | 'combo' | 'reward' | 'trial' | 'lifetime';
+  boundEmail?: string;
+}
+
+export interface PurchaseRecord {
+  id: string;
+  productId: string;
+  productName: string;
+  productType: string;
+  amount: number;
+  key: string;
+  expiresAt: string;
+  purchasedAt: string;
 }
 
 export interface Product {
@@ -43,6 +57,8 @@ export interface Product {
   badge: string;
   badgeType: 'green' | 'gold' | 'indigo';
   image: string;
+  productType?: 'weekly' | 'monthly' | 'combo' | 'lifetime' | 'trial';
+  durationDays?: number;
 }
 
 export interface ChatMessage {
@@ -69,8 +85,11 @@ interface AppState {
   balance: number;
   bonusPoints: number;
   lastBonusClaim: string | null;
+  claimStreak: number;
+  lastClaimDay: string | null;
   transactions: Transaction[];
   licenses: License[];
+  purchaseHistory: PurchaseRecord[];
   chatMessages: ChatMessage[];
   supportMessages: ChatMessage[];
   announcements: Announcement[];
@@ -84,12 +103,19 @@ interface AppState {
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
   purchaseProduct: (product: Product) => License | null;
   claimBonus: () => boolean;
+  claimRewardBalance: () => boolean;
+  claimRewardKey: () => License | null;
   addChatMessage: (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
   addSupportMessage: (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
   deleteChatMessage: (id: string) => void;
   highlightChatMessage: (id: string) => void;
   resetHwid: (licenseId: string) => boolean;
   addLicense: (license: License) => void;
+  banKey: (licenseId: string) => void;
+  unbanKey: (licenseId: string) => void;
+  addAnnouncement: (ann: Omit<Announcement, 'id' | 'createdAt'>) => void;
+  deleteAnnouncement: (id: string) => void;
+  addPurchaseRecord: (record: PurchaseRecord) => void;
 }
 
 const generateKey = () => {
@@ -112,6 +138,9 @@ interface UserData {
   licenses: License[];
   bonusPoints: number;
   lastBonusClaim: string | null;
+  claimStreak: number;
+  lastClaimDay: string | null;
+  purchaseHistory: PurchaseRecord[];
 }
 
 function loadUserData(userId: string): UserData {
@@ -119,7 +148,7 @@ function loadUserData(userId: string): UserData {
     const raw = localStorage.getItem(`1999x-user-${userId}`);
     if (raw) return JSON.parse(raw);
   } catch {}
-  return { balance: 0, licenses: [], bonusPoints: 0, lastBonusClaim: null };
+  return { balance: 0, licenses: [], bonusPoints: 0, lastBonusClaim: null, claimStreak: 0, lastClaimDay: null, purchaseHistory: [] };
 }
 
 function saveUserData(userId: string, data: Partial<UserData>) {
@@ -135,36 +164,42 @@ function saveUserData(userId: string, data: Partial<UserData>) {
 export const PRODUCTS: Product[] = [
   {
     id: 'p1',
-    name: 'Lag Bypass 1 Day',
-    price: 1.99,
-    duration: '1 day',
-    description: 'Perfect for trying out. Full lag bypass for 1 day.',
-    features: ['Lag Bypass', 'Auto Updates', '24/7 Support'],
-    badge: 'TRIAL',
+    name: 'Weekly Key',
+    price: 4.99,
+    duration: '7 days',
+    description: 'Perfect for trying out. Full access for 7 days.',
+    features: ['Lag Bypass', 'Auto Updates', '24/7 Support', 'HWID Binding'],
+    badge: 'WEEKLY',
     badgeType: 'green',
     image: '',
+    productType: 'weekly',
+    durationDays: 7,
   },
   {
     id: 'p2',
-    name: 'Lag Bypass 30 Days',
-    price: 9.99,
+    name: 'Monthly Key',
+    price: 14.99,
     duration: '30 days',
     description: 'Full access for 30 days. Most popular choice.',
-    features: ['Lag Bypass', 'HWID Spoofer', 'Auto Updates', 'Priority Support'],
+    features: ['Lag Bypass', 'HWID Spoofer', 'Auto Updates', 'Priority Support', 'HWID Reset'],
     badge: 'POPULAR',
     badgeType: 'gold',
     image: '',
+    productType: 'monthly',
+    durationDays: 30,
   },
   {
     id: 'p3',
-    name: 'Lag Bypass Lifetime',
-    price: 49.99,
-    duration: 'Lifetime',
-    description: 'One-time purchase. Never pay again.',
-    features: ['Lag Bypass', 'HWID Spoofer', 'Lifetime Updates', 'VIP Support', 'All Future Features'],
+    name: 'Combo Key',
+    price: 24.99,
+    duration: '30 days',
+    description: 'Access to ALL products. Best value bundle.',
+    features: ['ALL Products Access', 'Lag Bypass + Internal', 'HWID Spoofer', 'Lifetime Updates', 'VIP Support'],
     badge: 'BEST VALUE',
     badgeType: 'indigo',
     image: '',
+    productType: 'combo',
+    durationDays: 30,
   },
 ];
 
@@ -175,8 +210,11 @@ export const useAppStore = create<AppState>()(
       balance: 0,
       bonusPoints: 0,
       lastBonusClaim: null,
+      claimStreak: 0,
+      lastClaimDay: null,
       transactions: [],
       licenses: [],
+      purchaseHistory: [],
       chatMessages: [
         {
           id: 'c1',
@@ -213,7 +251,6 @@ export const useAppStore = create<AppState>()(
       isAuthenticated: false,
 
       login: (user) => {
-        // Always load this user's saved data — works after logout, refresh, or new device
         const saved = loadUserData(user.id);
         set({
           user,
@@ -222,11 +259,13 @@ export const useAppStore = create<AppState>()(
           licenses:         saved.licenses,
           bonusPoints:      saved.bonusPoints,
           lastBonusClaim:   saved.lastBonusClaim,
+          claimStreak:      saved.claimStreak ?? 0,
+          lastClaimDay:     saved.lastClaimDay ?? null,
+          purchaseHistory:  saved.purchaseHistory ?? [],
         });
       },
 
       logout: () => {
-        // Save current data before clearing the screen
         const state = get();
         if (state.user?.id) {
           saveUserData(state.user.id, {
@@ -234,17 +273,22 @@ export const useAppStore = create<AppState>()(
             licenses:       state.licenses,
             bonusPoints:    state.bonusPoints,
             lastBonusClaim: state.lastBonusClaim,
+            claimStreak:    state.claimStreak,
+            lastClaimDay:   state.lastClaimDay,
+            purchaseHistory: state.purchaseHistory,
           });
         }
-        // Only clear identity — NOT the saved data in localStorage
         set({
           user:            null,
           isAuthenticated: false,
           balance:         0,
           bonusPoints:     0,
           lastBonusClaim:  null,
+          claimStreak:     0,
+          lastClaimDay:    null,
           transactions:    [],
           licenses:        [],
+          purchaseHistory: [],
         });
       },
 
@@ -252,7 +296,6 @@ export const useAppStore = create<AppState>()(
         const state = get();
         const newBalance = state.balance + amount;
         set({ balance: newBalance });
-        // Save immediately — don't wait for logout
         if (state.user?.id) {
           saveUserData(state.user.id, { balance: newBalance });
         }
@@ -265,6 +308,7 @@ export const useAppStore = create<AppState>()(
       purchaseProduct: (product) => {
         const state = get();
         if (state.balance < product.price) return null;
+        const durationDays = product.durationDays ?? parseInt(product.duration) ?? 7;
         const license: License = {
           id:             generateId(),
           productId:      product.id,
@@ -272,21 +316,33 @@ export const useAppStore = create<AppState>()(
           key:            generateKey(),
           hwid:           '',
           lastLogin:      new Date().toISOString(),
-          expiresAt:      product.duration === 'Lifetime'
+          expiresAt:      product.productType === 'lifetime'
             ? '2099-12-31T23:59:59Z'
-            : new Date(Date.now() + parseInt(product.duration) * 86400000).toISOString(),
+            : new Date(Date.now() + durationDays * 86400000).toISOString(),
           status:         'active',
           ip:             '',
           device:         '',
           hwidResetsUsed: 0,
           hwidResetMonth: new Date().getMonth(),
+          productType:    product.productType,
+          boundEmail:     state.user?.email ?? '',
+        };
+        const purchaseRecord: PurchaseRecord = {
+          id:          license.id,
+          productId:   product.id,
+          productName: product.name,
+          productType: product.productType ?? 'weekly',
+          amount:      product.price,
+          key:         license.key,
+          expiresAt:   license.expiresAt,
+          purchasedAt: new Date().toISOString(),
         };
         const newBalance  = state.balance - product.price;
         const newLicenses = [license, ...state.licenses];
-        set({ balance: newBalance, licenses: newLicenses });
-        // Save immediately
+        const newHistory  = [purchaseRecord, ...(state.purchaseHistory ?? [])];
+        set({ balance: newBalance, licenses: newLicenses, purchaseHistory: newHistory });
         if (state.user?.id) {
-          saveUserData(state.user.id, { balance: newBalance, licenses: newLicenses });
+          saveUserData(state.user.id, { balance: newBalance, licenses: newLicenses, purchaseHistory: newHistory });
         }
         return license;
       },
@@ -295,13 +351,56 @@ export const useAppStore = create<AppState>()(
         const state = get();
         const now = Date.now();
         if (state.lastBonusClaim && now - new Date(state.lastBonusClaim).getTime() < 86400000) return false;
+        const todayStr = new Date().toDateString();
+        const yesterdayStr = new Date(Date.now() - 86400000).toDateString();
+        const streak = state.lastClaimDay === yesterdayStr ? (state.claimStreak ?? 0) + 1 : 1;
         const newPoints = state.bonusPoints + 10;
         const newClaim  = new Date().toISOString();
-        set({ bonusPoints: newPoints, lastBonusClaim: newClaim });
+        set({ bonusPoints: newPoints, lastBonusClaim: newClaim, claimStreak: streak, lastClaimDay: todayStr });
         if (state.user?.id) {
-          saveUserData(state.user.id, { bonusPoints: newPoints, lastBonusClaim: newClaim });
+          saveUserData(state.user.id, { bonusPoints: newPoints, lastBonusClaim: newClaim, claimStreak: streak, lastClaimDay: todayStr });
         }
         return true;
+      },
+
+      claimRewardBalance: () => {
+        const state = get();
+        if (state.bonusPoints < 100) return false;
+        const newPoints  = state.bonusPoints - 100;
+        const newBalance = state.balance + 3;
+        set({ bonusPoints: newPoints, balance: newBalance });
+        if (state.user?.id) {
+          saveUserData(state.user.id, { bonusPoints: newPoints, balance: newBalance });
+        }
+        return true;
+      },
+
+      claimRewardKey: () => {
+        const state = get();
+        if (state.bonusPoints < 100) return null;
+        const newPoints = state.bonusPoints - 100;
+        const license: License = {
+          id:             generateId(),
+          productId:      'reward',
+          productName:    '3-Day Reward Key',
+          key:            generateKey(),
+          hwid:           '',
+          lastLogin:      new Date().toISOString(),
+          expiresAt:      new Date(Date.now() + 3 * 86400000).toISOString(),
+          status:         'active',
+          ip:             '',
+          device:         '',
+          hwidResetsUsed: 0,
+          hwidResetMonth: new Date().getMonth(),
+          productType:    'reward',
+          boundEmail:     state.user?.email ?? '',
+        };
+        const newLicenses = [license, ...state.licenses];
+        set({ bonusPoints: newPoints, licenses: newLicenses });
+        if (state.user?.id) {
+          saveUserData(state.user.id, { bonusPoints: newPoints, licenses: newLicenses });
+        }
+        return license;
       },
 
       addChatMessage: (msg) => set((s) => ({
@@ -324,10 +423,42 @@ export const useAppStore = create<AppState>()(
         const state = get();
         const newLicenses = [license, ...state.licenses.filter(l => l.key !== license.key)];
         set({ licenses: newLicenses });
-        // Save immediately — key is now permanently saved
         if (state.user?.id) {
           saveUserData(state.user.id, { licenses: newLicenses });
         }
+      },
+
+      banKey: (licenseId) => {
+        const state = get();
+        const newLicenses = state.licenses.map(l =>
+          l.id === licenseId ? { ...l, status: 'banned' as const } : l
+        );
+        set({ licenses: newLicenses });
+        if (state.user?.id) saveUserData(state.user.id, { licenses: newLicenses });
+      },
+
+      unbanKey: (licenseId) => {
+        const state = get();
+        const newLicenses = state.licenses.map(l =>
+          l.id === licenseId ? { ...l, status: 'active' as const } : l
+        );
+        set({ licenses: newLicenses });
+        if (state.user?.id) saveUserData(state.user.id, { licenses: newLicenses });
+      },
+
+      addAnnouncement: (ann) => set((s) => ({
+        announcements: [{ ...ann, id: generateId(), createdAt: new Date().toISOString() }, ...s.announcements],
+      })),
+
+      deleteAnnouncement: (id) => set((s) => ({
+        announcements: s.announcements.filter(a => a.id !== id),
+      })),
+
+      addPurchaseRecord: (record) => {
+        const state = get();
+        const newHistory = [record, ...(state.purchaseHistory ?? [])];
+        set({ purchaseHistory: newHistory });
+        if (state.user?.id) saveUserData(state.user.id, { purchaseHistory: newHistory });
       },
 
       resetHwid: (licenseId) => {
@@ -339,7 +470,7 @@ export const useAppStore = create<AppState>()(
         if (resetsUsed >= 2) return false;
         const newLicenses = state.licenses.map((l) =>
           l.id === licenseId
-            ? { ...l, hwid: 'HW-' + generateId().toUpperCase(), hwidResetsUsed: resetsUsed + 1, hwidResetMonth: currentMonth }
+            ? { ...l, hwid: '', hwidResetsUsed: resetsUsed + 1, hwidResetMonth: currentMonth, lastHwidReset: new Date().toISOString() }
             : l
         );
         set({ licenses: newLicenses });
@@ -351,8 +482,6 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: '1999x-store',
-      // Only persist non-user-specific data via Zustand persist
-      // User data (balance, licenses) is handled by loadUserData/saveUserData
       partialize: (state) => ({
         chatMessages:    state.chatMessages,
         supportMessages: state.supportMessages,

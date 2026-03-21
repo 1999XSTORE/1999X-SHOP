@@ -226,3 +226,81 @@ body > #root { position: relative; z-index: 1; }
   -webkit-backdrop-filter: blur(24px) saturate(1.5);
   border-bottom: 1px solid var(--border);
 }
+
+/* ─── Glass surface (used by ProductCard) ────────────────── */
+.glass-surface {
+  background: rgba(255,255,255,0.032);
+  border: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(18px) saturate(1.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+}
+
+/* ─── Shimmer line (used by ProductCard) ─────────────────── */
+.shimmer-line {
+  background: linear-gradient(90deg, transparent, rgba(139,92,246,0.4), transparent);
+  animation: shim 3s infinite;
+}
+
+/* ─── Float keyframes (used by ProductCard) ──────────────── */
+@keyframes float-1 {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-5px); }
+}
+@keyframes float-2 {
+  0%, 100% { transform: translateY(0px) rotate(0.3deg); }
+  50%       { transform: translateY(-7px) rotate(-0.3deg); }
+}
+@keyframes float-3 {
+  0%, 100% { transform: translateY(0px); }
+  33%       { transform: translateY(-4px); }
+  66%       { transform: translateY(-8px); }
+}
+
+/* ─── Pulse dot (used by ProductCard badge) ──────────────── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* ─── Bottom nav padding ─────────────────────────────────── */
+@media (max-width: 768px) {
+  main { padding-bottom: 1rem; }
+}
+
+/* ─── Tailwind HSL tokens (required by shadcn components) ── */
+@layer base {
+  :root {
+    --background:            220 20% 5%;
+    --foreground:            220 15% 90%;
+    --card:                  220 20% 7%;
+    --card-foreground:       220 15% 90%;
+    --popover:               220 20% 7%;
+    --popover-foreground:    220 15% 90%;
+    --primary:               43 73% 54%;
+    --primary-foreground:    220 20% 5%;
+    --secondary:             220 15% 12%;
+    --secondary-foreground:  220 15% 70%;
+    --muted:                 220 15% 12%;
+    --muted-foreground:      220 10% 45%;
+    --accent:                220 15% 15%;
+    --accent-foreground:     220 15% 90%;
+    --destructive:           0 70% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border:                220 15% 12%;
+    --input:                 220 15% 12%;
+    --ring:                  270 70% 60%;
+    --radius:                0.75rem;
+    --gold:                  43 73% 54%;
+    --gold-light:            43 90% 68%;
+    --emerald:               152 75% 55%;
+    --indigo:                239 60% 75%;
+    --sidebar-background:    220 20% 5%;
+    --sidebar-foreground:    220 15% 70%;
+    --sidebar-primary:       270 70% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent:        220 15% 12%;
+    --sidebar-accent-foreground: 220 15% 70%;
+    --sidebar-border:        220 15% 10%;
+    --sidebar-ring:          270 70% 60%;
+  }
+}
