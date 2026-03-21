@@ -5,13 +5,12 @@ import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { key: 'dashboard',   path: '/',             label: 'Home' },
-  { key: 'licenses',    path: '/licenses',     label: 'License' },
-  { key: 'chat',        path: '/chat',         label: 'Chat' },
-  { key: 'wallet',      path: '/wallet',       label: 'Shop' },
-  { key: 'store',       path: '/store',        label: 'Store' },
-  { key: 'bonus',       path: '/bonus',        label: 'Bonus' },
-  { key: 'panelStatus', path: '/panel-status', label: 'Status' },
+  { key: 'dashboard',   path: '/',             tKey: 'nav.home' },
+  { key: 'licenses',    path: '/licenses',     tKey: 'nav.license' },
+  { key: 'chat',        path: '/chat',         tKey: 'nav.chat' },
+  { key: 'wallet',      path: '/wallet',       tKey: 'nav.shop' },
+  { key: 'bonus',       path: '/bonus',        tKey: 'nav.bonus' },
+  { key: 'panelStatus', path: '/panel-status', tKey: 'nav.status' },
 ];
 
 const LANGUAGES = [
@@ -40,6 +39,7 @@ interface TopbarProps {
 
 export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProps) {
   const { i18n } = useTranslation();
+  const { t } = useTranslation();
   const { balance, user } = useAppStore();
   const [mobileOpen, setMobileOpen]   = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -99,7 +99,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                     : 'text-white/50 hover:text-white/80 hover:bg-white/5'
                 )}
               >
-                {item.label}
+                {t(item.tKey)}
               </button>
             ))}
           </div>
@@ -241,7 +241,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                       : 'text-white/50 hover:bg-white/5 hover:text-white/80'
                   )}
                 >
-                  {item.label}
+                  {t(item.tKey)}
                 </button>
               ))}
             </div>

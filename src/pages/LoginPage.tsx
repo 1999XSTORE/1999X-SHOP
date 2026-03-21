@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Globe, Loader2, Zap, Shield, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
@@ -19,6 +20,7 @@ export default function LoginPage() {
   const { i18n } = useTranslation();
   const [langOpen, setLangOpen] = useState(false);
   const [loading, setLoading]   = useState(false);
+  const { t } = useTranslation();
   const cur = LANGS.find(l => l.code === i18n.language) || LANGS[0];
 
   const go = async () => {
@@ -45,8 +47,8 @@ export default function LoginPage() {
             <div style={{width:56,height:56,borderRadius:15,background:'linear-gradient(135deg,#8b5cf6,#6d28d9)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 32px rgba(109,40,217,.45)',marginBottom:18}}>
               <Zap size={28} color="#fff"/>
             </div>
-            <h1 style={{fontSize:26,fontWeight:800,color:'#fff',letterSpacing:'-.02em',margin:0,marginBottom:8}}>Welcome to 1999X</h1>
-            <p style={{fontSize:14,color:'var(--muted)',margin:0,textAlign:'center',lineHeight:1.5}}>Sign in to access your premium panel</p>
+            <h1 style={{fontSize:26,fontWeight:800,color:'#fff',letterSpacing:'-.02em',margin:0,marginBottom:8}}>{t('auth.signIn')}</h1>
+            <p style={{fontSize:14,color:'var(--muted)',margin:0,textAlign:'center',lineHeight:1.5}}>{t('auth.subtitle')}</p>
           </div>
 
           {/* Trust badges */}
@@ -97,7 +99,7 @@ export default function LoginPage() {
             Continue with Google
           </button>
 
-          <p style={{textAlign:'center',marginTop:18,fontSize:12,color:'var(--dim)'}}>By signing in you agree to our Terms of Service</p>
+          <p style={{textAlign:'center',marginTop:18,fontSize:12,color:'var(--dim)'}}>{t('auth.terms')}</p>
         </div>
 
         {/* Discord link */}

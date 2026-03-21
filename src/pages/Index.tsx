@@ -26,7 +26,20 @@ const pageComponents: Record<string, React.FC> = {
   '/announcements': AnnouncementsPage,
 };
 
-// Fetch role with timeout — never hangs on page load
+const VALID_PATHS = Object.keys(pageComponents);
+
+// ── Persist current page across refreshes ──────────────────
+const PATH_KEY = '1999x-current-path';
+function getSavedPath(): string {
+  try {
+    const p = sessionStorage.getItem(PATH_KEY);
+    return p && VALID_PATHS.includes(p) ? p : '/';
+  } catch { return '/'; }
+}
+function savePath(p: string) {
+  try { sessionStorage.setItem(PATH_KEY, p); } catch {}
+}
+
 async function fetchRole(email: string): Promise<'admin' | 'support' | 'user'> {
   const { data } = await safeQuery(
     () => supabase.from('user_roles').select('role').eq('email', email).maybeSingle(),
@@ -38,10 +51,21 @@ async function fetchRole(email: string): Promise<'admin' | 'support' | 'user'> {
 
 export default function Index() {
   const { isAuthenticated, user, login, logout } = useAppStore();
-  const [currentPath, setCurrentPath]   = useState('/');
-  const [authReady, setAuthReady]       = useState(false); // tracks if session check is done
-  const intentionalLogout               = useRef(false);
-  const loggingIn                       = useRef(false);
+
+  // ── Restore last page from sessionStorage ─────────────────
+  const [currentPath, setCurrentPath] = useState(getSavedPath);
+
+  // ── Auth state ─────────────────────────────────────────────
+  // Start as true if already authenticated (Zustand persist loaded it)
+  // This prevents the flash of login screen on refresh
+  const [authReady, setAuthReady] = useState(isAuthenticated);
+  const intentionalLogout = useRef(false);
+  const loggingIn         = useRef(false);
+
+  const navigate = (path: string) => {
+    setCurrentPath(path);
+    savePath(path);
+  };
 
   useEffect(() => {
     const loginWithRole = async (session: any) => {
@@ -60,13 +84,16 @@ export default function Index() {
       setAuthReady(true);
     };
 
-    // Check existing session — always resolves within ~3s
+    // Check Supabase session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (intentionalLogout.current) { setAuthReady(true); return; }
-      if (session?.user && !isAuthenticated) {
+      if (session?.user) {
+        // Always refresh role from DB on page load
         loginWithRole(session);
       } else {
-        setAuthReady(true); // no session — show login immediately
+        // No session — if Zustand thinks we're logged in, clear it
+        if (isAuthenticated) logout();
+        setAuthReady(true);
       }
     });
 
@@ -83,8 +110,8 @@ export default function Index() {
       await loginWithRole(session);
     });
 
-    // Safety net — if auth check takes more than 4s, stop the spinner regardless
-    const safetyTimer = setTimeout(() => setAuthReady(true), 4000);
+    // Safety net — show login after 5s max wait
+    const safetyTimer = setTimeout(() => setAuthReady(true), 5000);
 
     return () => {
       subscription.unsubscribe();
@@ -94,21 +121,29 @@ export default function Index() {
 
   const handleLogout = async () => {
     intentionalLogout.current = true;
-    logout(); // clear immediately — don't wait
+    savePath('/'); // reset saved path on logout
+    logout();
     if (!user?.id?.startsWith('staff_')) {
       try { await supabase.auth.signOut(); } catch {}
     }
   };
 
-  // Show nothing while checking auth — max 4 seconds then shows login
+  // ── Loading screen — only shown if NOT already authenticated ──
+  // If Zustand has isAuthenticated=true, skip straight to app
   if (!authReady) {
     return (
-      <div className="min-h-screen bg-[#0a0a14] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-purple-600 flex items-center justify-center animate-pulse">
-            <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      <div style={{ minHeight:'100svh', background:'var(--bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:14 }}>
+          <img
+            src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1"
+            alt="1999X"
+            style={{ width:52, height:52, objectFit:'contain', filter:'drop-shadow(0 0 16px rgba(139,92,246,.5))', animation:'gp 1.5s ease-in-out infinite' }}
+          />
+          <div style={{ display:'flex', gap:5 }}>
+            {[0,1,2].map(i => (
+              <div key={i} style={{ width:5, height:5, borderRadius:'50%', background:'rgba(139,92,246,.6)', animation:`blink 1.2s ease-in-out ${i*0.2}s infinite` }} />
+            ))}
           </div>
-          <p className="text-xs text-white/30">Loading...</p>
         </div>
       </div>
     );
@@ -119,7 +154,7 @@ export default function Index() {
   const PageComponent = pageComponents[currentPath] || DashboardPage;
 
   return (
-    <AppLayout currentPath={currentPath} onNavigate={setCurrentPath} onLogout={handleLogout}>
+    <AppLayout currentPath={currentPath} onNavigate={navigate} onLogout={handleLogout}>
       <PageComponent />
     </AppLayout>
   );

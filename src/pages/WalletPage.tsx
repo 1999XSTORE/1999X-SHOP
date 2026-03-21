@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppStore, PRODUCTS } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
-import { ArrowRight, ArrowLeft, RefreshCw, Users, Check, X, Copy, CheckCircle, ExternalLink, Loader2, Zap, Shield, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, ArrowLeft, RefreshCw, Users, Check, X, Copy, CheckCircle, Loader2, Zap, Shield, Eye, EyeOff } from 'lucide-react';
 import { safeQuery } from '@/lib/safeFetch';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -62,8 +62,8 @@ const PAYMENT_METHODS = [
     id: 'paypal', label: 'PayPal', color: '#003087',
     icon: <svg width="20" height="20" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="20" fill="#003087"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="11" fontWeight="800">PP</text></svg>,
     qr: '',
-    fields: [{ label: 'PayPal.me', value: 'https://paypal.me/jjmaestre21', note: '' }],
-    instruction: 'Click the button to open PayPal and complete payment',
+    fields: [{ label: 'PayPal.me', value: 'https://www.paypal.com/paypalme/jjmaestre21', note: '' }],
+    instruction: 'Click Pay with PayPal below — balance added automatically after payment',
     hasQr: false,
   },
 ] as const;
@@ -259,24 +259,31 @@ function PayCard({ method, amount, user }: { method: typeof PAYMENT_METHODS[numb
 
   if (!method.hasQr) {
     return (
-      <div className="g" style={{ padding:22,textAlign:'center',background:'rgba(0,48,135,.08)',borderColor:'rgba(0,48,135,.2)' }}>
-        <div style={{ fontSize:40,marginBottom:14 }}>🅿️</div>
-        <div style={{ fontSize:16,fontWeight:700,color:'#fff',marginBottom:6 }}>Pay via PayPal</div>
-        <p style={{ fontSize:12,color:'var(--muted)',marginBottom:18,lineHeight:1.5 }}>{method.instruction}</p>
-        <div className="g" style={{ padding:'12px 16px',marginBottom:18,display:'flex',alignItems:'center',justifyContent:'space-between' }}>
-          <span style={{ fontSize:12,color:'var(--muted)' }}>Amount to send</span>
-          <span style={{ fontSize:22,fontWeight:800,color:'#fff' }}>${amount.toFixed(2)}</span>
+      <div className="g" style={{ padding:22, background:'rgba(0,48,135,.06)', borderColor:'rgba(0,96,223,.2)' }}>
+        {/* Header */}
+        <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:18 }}>
+          <div style={{ width:44,height:44,borderRadius:12,background:'linear-gradient(135deg,#003087,#009cde)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:'0 0 20px rgba(0,156,222,.3)' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M7.144 19.532l1.049-5.751c.11-.606.691-1.002 1.304-.948 2.155.194 6.877.1 8.818-4.002 2.554-5.397-.59-7.769-6.295-7.831H5.382a1.31 1.31 0 0 0-1.294 1.109L2.01 18.049a.738.738 0 0 0 .728.852h4.109l.297-1.369z"/><path d="M17.512 7.309c-.673 4.378-3.403 6.025-7.934 6.025H8.354l-1.061 5.82h3.285l.53-2.906h1.722c4.02 0 6.386-1.95 7.006-5.818.48-2.991-.39-5.016-2.324-5.121z" opacity=".6"/></svg>
+          </div>
+          <div>
+            <div style={{ fontSize:15,fontWeight:700,color:'#fff' }}>Pay with PayPal</div>
+            <div style={{ fontSize:11,color:'var(--muted)',marginTop:2 }}>Secure · Balance added automatically after payment</div>
+          </div>
         </div>
+
+        {/* Amount */}
+        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',background:'rgba(255,255,255,.04)',border:'1px solid var(--border)',borderRadius:10,padding:'12px 16px',marginBottom:16 }}>
+          <span style={{ fontSize:12,color:'var(--muted)' }}>Amount</span>
+          <span style={{ fontSize:24,fontWeight:800,color:'#fff',letterSpacing:'-.02em' }}>${amount.toFixed(2)}</span>
+        </div>
+
+        {/* PayPal SDK button — auto detects payment via API */}
         <PayPalAutoButton amount={amount} user={user} />
-        <div style={{height:1,background:'var(--border)',margin:'16px 0'}}/>
-        <p style={{fontSize:11,color:'var(--dim)',textAlign:'center'}}>
-          PayPal auto-pays and adds balance instantly. Or use manual PayPal.me below:
-        </p>
-        <a href={method.fields[0].value} target="_blank" rel="noopener noreferrer"
-          style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'10px',borderRadius:10,background:'rgba(255,255,255,.04)',border:'1px solid var(--border)',color:'var(--muted)',textDecoration:'none',fontSize:13,transition:'all .15s'}}
-          onMouseEnter={e=>(e.currentTarget.style.background='rgba(255,255,255,.08)')} onMouseLeave={e=>(e.currentTarget.style.background='rgba(255,255,255,.04)')}>
-          <ExternalLink size={14}/> Open PayPal.me manually
-        </a>
+
+        <div style={{ display:'flex',alignItems:'center',gap:6,marginTop:12,justifyContent:'center' }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span style={{ fontSize:11,color:'var(--dim)' }}>Payments verified by PayPal API · Balance credited in seconds</span>
+        </div>
       </div>
     );
   }
@@ -609,11 +616,16 @@ export default function WalletPage() {
 
     for (const p of toGen) {
       try {
+        // Hard 10-second timeout — never hangs forever
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000);
         const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-key`, {
           method: 'POST',
           headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${SUPABASE_ANON}`, 'apikey':SUPABASE_ANON },
           body: JSON.stringify({ panel_type: p, days, user_email: user?.email }),
+          signal: controller.signal,
         });
+        clearTimeout(timer);
         const result = await res.json();
         if (result.success && result.key) {
           const expiry   = new Date(Date.now() + days * 86400000).toISOString();
@@ -628,14 +640,17 @@ export default function WalletPage() {
           });
           generatedKeys.push({ key: result.key, panelId, panelName: panelNm, expiresAt: expiry });
         }
-      } catch {}
+      } catch (e) {
+        console.error('Key generation error:', e);
+      }
     }
 
     toast.dismiss('keygen');
     if (generatedKeys.length > 0) {
       setPurchaseSuccess({ product, keys: generatedKeys });
     } else {
-      toast.success(`✅ ${product.name} purchased! Check Licenses page for your key.`);
+      // Key generation failed/not configured — purchase still went through
+      toast.success(`✅ ${product.name} purchased! Activate your key on the License page.`);
     }
   };
 
