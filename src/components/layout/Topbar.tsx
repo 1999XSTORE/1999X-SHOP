@@ -6,10 +6,9 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { key: 'dashboard',   path: '/',             label: 'Home' },
-  { key: 'products',    path: '/products',     label: 'Products' },
   { key: 'licenses',    path: '/licenses',     label: 'License' },
   { key: 'chat',        path: '/chat',         label: 'Chat' },
-  { key: 'wallet',      path: '/wallet',       label: 'Wallet' },
+  { key: 'wallet',      path: '/wallet',       label: 'Shop' },
   { key: 'bonus',       path: '/bonus',        label: 'Bonus' },
   { key: 'panelStatus', path: '/panel-status', label: 'Status' },
 ];

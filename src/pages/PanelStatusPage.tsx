@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { safeFetch } from '@/lib/safeFetch';
 import { useAppStore } from '@/lib/store';
 import { Activity, CheckCircle, AlertTriangle, Clock, Megaphone, Sparkles, Wrench, RefreshCw, Users, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -36,14 +37,13 @@ export default function PanelStatusPage() {
 
   const [lag,      setLag]      = useState(OFFLINE);
   const [internal, setInternal] = useState(OFFLINE);
-  const [loading,  setLoading]  = useState(true);
+  const [loading,  setLoading]  = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
   const loadStats = async () => {
     setLoading(true);
     try {
-      // Use direct fetch so it works regardless of auth state
-      const res = await fetch(
+      const res = await safeFetch(
         'https://wkjqrjafogufqeasfeev.supabase.co/functions/v1/keyauth-stats',
         {
           method: 'POST',
@@ -53,29 +53,15 @@ export default function PanelStatusPage() {
             'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok',
           },
           body: JSON.stringify({}),
-        }
+        },
+        10000
       );
-
-      if (!res.ok) {
-        setLoading(false);
-        setLastRefresh(new Date());
-        return;
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data?.lag)      setLag(normalizeApp(data.lag));
+        if (data?.internal) setInternal(normalizeApp(data.internal));
       }
-
-      const data = await res.json();
-
-      if (!data?.lag && !data?.internal) {
-        setLoading(false);
-        setLastRefresh(new Date());
-        return;
-      }
-
-      setLag(normalizeApp(data.lag));
-      setInternal(normalizeApp(data.internal));
-
-    } catch (e) {
-    }
-
+    } catch {}
     setLoading(false);
     setLastRefresh(new Date());
   };

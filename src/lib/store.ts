@@ -12,11 +12,10 @@ export interface User {
 export interface Transaction {
   id: string;
   amount: number;
-  method: 'bkash' | 'binance' | 'paypal';
+  method: string;
   transactionId: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
-  screenshot?: string;
 }
 
 export interface License {
@@ -103,6 +102,33 @@ const generateKey = () => {
 
 const generateId = () => Math.random().toString(36).substring(2, 10);
 
+// ── Per-user data storage ─────────────────────────────────────
+// Stores balance + licenses under a key specific to each user ID.
+// This means data NEVER gets wiped on logout — it's always there
+// waiting when the user logs back in.
+
+interface UserData {
+  balance: number;
+  licenses: License[];
+  bonusPoints: number;
+  lastBonusClaim: string | null;
+}
+
+function loadUserData(userId: string): UserData {
+  try {
+    const raw = localStorage.getItem(`1999x-user-${userId}`);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { balance: 0, licenses: [], bonusPoints: 0, lastBonusClaim: null };
+}
+
+function saveUserData(userId: string, data: Partial<UserData>) {
+  try {
+    const existing = loadUserData(userId);
+    localStorage.setItem(`1999x-user-${userId}`, JSON.stringify({ ...existing, ...data }));
+  } catch {}
+}
+
 // ─────────────────────────────────────────────
 //  ✏️  EDIT YOUR PRODUCTS HERE
 // ─────────────────────────────────────────────
@@ -186,85 +212,154 @@ export const useAppStore = create<AppState>()(
       lastStatusUpdate: new Date().toISOString(),
       isAuthenticated: false,
 
-      login: (user) => set({ user, isAuthenticated: true }),
-      logout: () => set({
-        user: null,
-        isAuthenticated: false,
-        // Reset user-specific data on logout
-        balance: 0,
-        bonusPoints: 0,
-        lastBonusClaim: null,
-        transactions: [],
-        licenses: [],
-      }),
-      addBalance: (amount) => set((s) => ({ balance: s.balance + amount })),
+      login: (user) => {
+        // Always load this user's saved data — works after logout, refresh, or new device
+        const saved = loadUserData(user.id);
+        set({
+          user,
+          isAuthenticated:  true,
+          balance:          saved.balance,
+          licenses:         saved.licenses,
+          bonusPoints:      saved.bonusPoints,
+          lastBonusClaim:   saved.lastBonusClaim,
+        });
+      },
+
+      logout: () => {
+        // Save current data before clearing the screen
+        const state = get();
+        if (state.user?.id) {
+          saveUserData(state.user.id, {
+            balance:        state.balance,
+            licenses:       state.licenses,
+            bonusPoints:    state.bonusPoints,
+            lastBonusClaim: state.lastBonusClaim,
+          });
+        }
+        // Only clear identity — NOT the saved data in localStorage
+        set({
+          user:            null,
+          isAuthenticated: false,
+          balance:         0,
+          bonusPoints:     0,
+          lastBonusClaim:  null,
+          transactions:    [],
+          licenses:        [],
+        });
+      },
+
+      addBalance: (amount) => {
+        const state = get();
+        const newBalance = state.balance + amount;
+        set({ balance: newBalance });
+        // Save immediately — don't wait for logout
+        if (state.user?.id) {
+          saveUserData(state.user.id, { balance: newBalance });
+        }
+      },
+
       addTransaction: (tx) => set((s) => ({
-        transactions: [{ ...tx, id: generateId(), createdAt: new Date().toISOString() }, ...s.transactions]
+        transactions: [{ ...tx, id: generateId(), createdAt: new Date().toISOString() }, ...s.transactions],
       })),
+
       purchaseProduct: (product) => {
         const state = get();
         if (state.balance < product.price) return null;
         const license: License = {
-          id: generateId(),
-          productId: product.id,
-          productName: product.name,
-          key: generateKey(),
-          hwid: '',
-          lastLogin: new Date().toISOString(),
-          expiresAt: product.duration === 'Lifetime'
+          id:             generateId(),
+          productId:      product.id,
+          productName:    product.name,
+          key:            generateKey(),
+          hwid:           '',
+          lastLogin:      new Date().toISOString(),
+          expiresAt:      product.duration === 'Lifetime'
             ? '2099-12-31T23:59:59Z'
             : new Date(Date.now() + parseInt(product.duration) * 86400000).toISOString(),
-          status: 'active',
-          ip: '',
-          device: '',
+          status:         'active',
+          ip:             '',
+          device:         '',
           hwidResetsUsed: 0,
           hwidResetMonth: new Date().getMonth(),
         };
-        set((s) => ({
-          balance: s.balance - product.price,
-          licenses: [license, ...s.licenses],
-        }));
+        const newBalance  = state.balance - product.price;
+        const newLicenses = [license, ...state.licenses];
+        set({ balance: newBalance, licenses: newLicenses });
+        // Save immediately
+        if (state.user?.id) {
+          saveUserData(state.user.id, { balance: newBalance, licenses: newLicenses });
+        }
         return license;
       },
+
       claimBonus: () => {
         const state = get();
         const now = Date.now();
         if (state.lastBonusClaim && now - new Date(state.lastBonusClaim).getTime() < 86400000) return false;
-        set({ bonusPoints: state.bonusPoints + 10, lastBonusClaim: new Date().toISOString() });
+        const newPoints = state.bonusPoints + 10;
+        const newClaim  = new Date().toISOString();
+        set({ bonusPoints: newPoints, lastBonusClaim: newClaim });
+        if (state.user?.id) {
+          saveUserData(state.user.id, { bonusPoints: newPoints, lastBonusClaim: newClaim });
+        }
         return true;
       },
+
       addChatMessage: (msg) => set((s) => ({
-        chatMessages: [...s.chatMessages, { ...msg, id: generateId(), timestamp: new Date().toISOString() }]
+        chatMessages: [...s.chatMessages, { ...msg, id: generateId(), timestamp: new Date().toISOString() }],
       })),
+
       addSupportMessage: (msg) => set((s) => ({
-        supportMessages: [...s.supportMessages, { ...msg, id: generateId(), timestamp: new Date().toISOString() }]
+        supportMessages: [...s.supportMessages, { ...msg, id: generateId(), timestamp: new Date().toISOString() }],
       })),
+
       deleteChatMessage: (id) => set((s) => ({
-        chatMessages: s.chatMessages.filter((m) => m.id !== id)
+        chatMessages: s.chatMessages.filter((m) => m.id !== id),
       })),
+
       highlightChatMessage: (id) => set((s) => ({
-        chatMessages: s.chatMessages.map((m) => m.id === id ? { ...m, highlighted: !m.highlighted } : m)
+        chatMessages: s.chatMessages.map((m) => m.id === id ? { ...m, highlighted: !m.highlighted } : m),
       })),
-      addLicense: (license) => set((s) => ({
-        licenses: [license, ...s.licenses.filter(l => l.key !== license.key)],
-      })),
+
+      addLicense: (license) => {
+        const state = get();
+        const newLicenses = [license, ...state.licenses.filter(l => l.key !== license.key)];
+        set({ licenses: newLicenses });
+        // Save immediately — key is now permanently saved
+        if (state.user?.id) {
+          saveUserData(state.user.id, { licenses: newLicenses });
+        }
+      },
+
       resetHwid: (licenseId) => {
         const state = get();
         const license = state.licenses.find((l) => l.id === licenseId);
         if (!license) return false;
         const currentMonth = new Date().getMonth();
-        const resetsUsed = license.hwidResetMonth === currentMonth ? license.hwidResetsUsed : 0;
+        const resetsUsed   = license.hwidResetMonth === currentMonth ? license.hwidResetsUsed : 0;
         if (resetsUsed >= 2) return false;
-        set((s) => ({
-          licenses: s.licenses.map((l) =>
-            l.id === licenseId
-              ? { ...l, hwid: 'HW-' + generateId().toUpperCase(), hwidResetsUsed: resetsUsed + 1, hwidResetMonth: currentMonth }
-              : l
-          )
-        }));
+        const newLicenses = state.licenses.map((l) =>
+          l.id === licenseId
+            ? { ...l, hwid: 'HW-' + generateId().toUpperCase(), hwidResetsUsed: resetsUsed + 1, hwidResetMonth: currentMonth }
+            : l
+        );
+        set({ licenses: newLicenses });
+        if (state.user?.id) {
+          saveUserData(state.user.id, { licenses: newLicenses });
+        }
         return true;
       },
     }),
-    { name: '1999x-store' }
+    {
+      name: '1999x-store',
+      // Only persist non-user-specific data via Zustand persist
+      // User data (balance, licenses) is handled by loadUserData/saveUserData
+      partialize: (state) => ({
+        chatMessages:    state.chatMessages,
+        supportMessages: state.supportMessages,
+        announcements:   state.announcements,
+        systemStatus:    state.systemStatus,
+        lastStatusUpdate: state.lastStatusUpdate,
+      }),
+    }
   )
 );
