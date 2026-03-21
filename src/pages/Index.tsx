@@ -132,16 +132,56 @@ export default function Index() {
   // If Zustand has isAuthenticated=true, skip straight to app
   if (!authReady) {
     return (
-      <div style={{ minHeight:'100svh', background:'var(--bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:14 }}>
-          <img
-            src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1"
-            alt="1999X"
-            style={{ height:56, width:'auto', objectFit:'contain', filter:'drop-shadow(0 0 20px rgba(139,92,246,.6))', animation:'gp 1.5s ease-in-out infinite' }}
-          />
-          <div style={{ display:'flex', gap:5 }}>
-            {[0,1,2].map(i => (
-              <div key={i} style={{ width:5, height:5, borderRadius:'50%', background:'rgba(139,92,246,.6)', animation:`blink 1.2s ease-in-out ${i*0.2}s infinite` }} />
+      <div style={{ minHeight:'100svh', background:'#07080f', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
+        <style>{`
+          @keyframes splash-pulse { 0%,100%{transform:scale(1);filter:drop-shadow(0 0 20px rgba(139,92,246,.6));} 50%{transform:scale(1.08);filter:drop-shadow(0 0 40px rgba(139,92,246,.9)) drop-shadow(0 0 80px rgba(109,40,217,.4));} }
+          @keyframes splash-ring { 0%{transform:scale(0.6);opacity:.8;} 100%{transform:scale(2.2);opacity:0;} }
+          @keyframes splash-bar { 0%{width:0%;} 100%{width:100%;} }
+          @keyframes splash-float { 0%,100%{transform:translateY(0px);} 50%{transform:translateY(-8px);} }
+          @keyframes splash-orb { 0%,100%{opacity:.4;transform:scale(1);} 50%{opacity:.7;transform:scale(1.1);} }
+          @keyframes splash-text { 0%{opacity:0;letter-spacing:8px;} 100%{opacity:1;letter-spacing:2px;} }
+          @keyframes splash-fade-up { from{opacity:0;transform:translateY(16px);} to{opacity:1;transform:translateY(0);} }
+        `}</style>
+
+        {/* Background ambient orbs */}
+        <div style={{ position:'absolute', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle, rgba(109,40,217,.18) 0%, transparent 70%)', top:'50%', left:'50%', transform:'translate(-50%,-50%)', animation:'splash-orb 4s ease-in-out infinite', pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', width:300, height:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(16,232,152,.08) 0%, transparent 70%)', top:'20%', right:'15%', animation:'splash-orb 5s ease-in-out 1s infinite', pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', width:250, height:250, borderRadius:'50%', background:'radial-gradient(circle, rgba(56,189,248,.08) 0%, transparent 70%)', bottom:'20%', left:'10%', animation:'splash-orb 6s ease-in-out 0.5s infinite', pointerEvents:'none' }}/>
+
+        {/* Expanding rings */}
+        {[0,1,2].map(i => (
+          <div key={i} style={{ position:'absolute', width:120, height:120, borderRadius:'50%', border:'1px solid rgba(139,92,246,.3)', animation:`splash-ring 2.4s ease-out ${i*0.6}s infinite`, pointerEvents:'none' }}/>
+        ))}
+
+        {/* Main content */}
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:0, position:'relative', zIndex:2 }}>
+
+          {/* Logo with float animation */}
+          <div style={{ animation:'splash-float 3s ease-in-out infinite', marginBottom:28 }}>
+            <img
+              src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1"
+              alt="1999X"
+              style={{ height:72, width:'auto', objectFit:'contain', animation:'splash-pulse 2s ease-in-out infinite' }}
+            />
+          </div>
+
+          {/* Brand name */}
+          <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'2px', textTransform:'uppercase', animation:'splash-text .8s cubic-bezier(.22,1,.36,1) .3s both', marginBottom:6, fontFamily:'inherit' }}>
+            1999X
+          </div>
+          <div style={{ fontSize:11, fontWeight:500, color:'rgba(255,255,255,.3)', letterSpacing:'4px', textTransform:'uppercase', animation:'splash-fade-up .8s ease .5s both', marginBottom:32 }}>
+            Premium Panel
+          </div>
+
+          {/* Loading bar */}
+          <div style={{ width:180, height:2, borderRadius:2, background:'rgba(255,255,255,.06)', overflow:'hidden', animation:'splash-fade-up .5s ease .4s both' }}>
+            <div style={{ height:'100%', borderRadius:2, background:'linear-gradient(90deg, #8b5cf6, #10e898)', animation:'splash-bar 2s cubic-bezier(.4,0,.2,1) .6s both', boxShadow:'0 0 8px rgba(139,92,246,.6)' }}/>
+          </div>
+
+          {/* Loading dots */}
+          <div style={{ display:'flex', gap:6, marginTop:20, animation:'splash-fade-up .5s ease .7s both' }}>
+            {[0,1,2,3,4].map(i => (
+              <div key={i} style={{ width:4, height:4, borderRadius:'50%', background:i%2===0?'rgba(139,92,246,.7)':'rgba(16,232,152,.5)', animation:`blink 1.4s ease-in-out ${i*0.15}s infinite` }}/>
             ))}
           </div>
         </div>

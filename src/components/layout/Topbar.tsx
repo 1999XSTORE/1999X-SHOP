@@ -1,34 +1,34 @@
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/lib/store';
-import { Bell, Wallet, Menu, X, LogOut, Globe } from 'lucide-react';
+import { Menu, X, LogOut, Globe, Wallet, Crown, Shield } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { key: 'dashboard',   path: '/',             tKey: 'nav.home' },
+  { key: 'dashboard',   path: '/',             tKey: 'nav.home'    },
   { key: 'licenses',    path: '/licenses',     tKey: 'nav.license' },
-  { key: 'chat',        path: '/chat',         tKey: 'nav.chat' },
-  { key: 'wallet',      path: '/wallet',       tKey: 'nav.shop' },
-  { key: 'bonus',       path: '/bonus',        tKey: 'nav.bonus' },
-  { key: 'panelStatus', path: '/panel-status', tKey: 'nav.status' },
+  { key: 'chat',        path: '/chat',         tKey: 'nav.chat'    },
+  { key: 'wallet',      path: '/wallet',       tKey: 'nav.shop'    },
+  { key: 'bonus',       path: '/bonus',        tKey: 'nav.bonus'   },
+  { key: 'panelStatus', path: '/panel-status', tKey: 'nav.status'  },
 ];
 
 const LANGUAGES = [
-  { code: 'en', label: 'English',     flag: '🇬🇧' },
-  { code: 'ar', label: 'العربية',    flag: '🇸🇦' },
-  { code: 'bn', label: 'বাংলা',      flag: '🇧🇩' },
-  { code: 'th', label: 'ไทย',        flag: '🇹🇭' },
-  { code: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
-  { code: 'es', label: 'Español',    flag: '🇪🇸' },
-  { code: 'pt', label: 'Português',  flag: '🇧🇷' },
-  { code: 'hi', label: 'हिन्दी',     flag: '🇮🇳' },
-  { code: 'fr', label: 'Français',   flag: '🇫🇷' },
-  { code: 'de', label: 'Deutsch',    flag: '🇩🇪' },
-  { code: 'ja', label: '日本語',     flag: '🇯🇵' },
-  { code: 'ko', label: '한국어',     flag: '🇰🇷' },
-  { code: 'zh', label: '中文',       flag: '🇨🇳' },
-  { code: 'ru', label: 'Русский',    flag: '🇷🇺' },
-  { code: 'tr', label: 'Türkçe',     flag: '🇹🇷' },
+  { code:'en', label:'English',    flag:'🇬🇧' },
+  { code:'ar', label:'العربية',   flag:'🇸🇦' },
+  { code:'bn', label:'বাংলা',     flag:'🇧🇩' },
+  { code:'th', label:'ไทย',       flag:'🇹🇭' },
+  { code:'vi', label:'Tiếng Việt',flag:'🇻🇳' },
+  { code:'es', label:'Español',   flag:'🇪🇸' },
+  { code:'pt', label:'Português', flag:'🇧🇷' },
+  { code:'hi', label:'हिन्दी',    flag:'🇮🇳' },
+  { code:'fr', label:'Français',  flag:'🇫🇷' },
+  { code:'de', label:'Deutsch',   flag:'🇩🇪' },
+  { code:'ja', label:'日本語',    flag:'🇯🇵' },
+  { code:'ko', label:'한국어',    flag:'🇰🇷' },
+  { code:'zh', label:'中文',      flag:'🇨🇳' },
+  { code:'ru', label:'Русский',   flag:'🇷🇺' },
+  { code:'tr', label:'Türkçe',    flag:'🇹🇷' },
 ];
 
 interface TopbarProps {
@@ -38,110 +38,158 @@ interface TopbarProps {
 }
 
 export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProps) {
-  const { i18n } = useTranslation();
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const { balance, user } = useAppStore();
-  const [mobileOpen, setMobileOpen]   = useState(false);
+  const [mobileOpen,  setMobileOpen]  = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [langOpen, setLangOpen]       = useState(false);
+  const [langOpen,    setLangOpen]    = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const langRef    = useRef<HTMLDivElement>(null);
 
-  const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
-
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const h = (e: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
       if (langRef.current    && !langRef.current.contains(e.target as Node))    setLangOpen(false);
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  const handleNav = (path: string) => {
-    onNavigate(path);
-    setMobileOpen(false);
-  };
+  const handleNav = (path: string) => { onNavigate(path); setMobileOpen(false); };
 
   return (
     <>
-      {/* Floating navbar wrapper — fixed, centered */}
-      <div className="fixed top-4 left-0 right-0 z-50 flex justify-center px-4">
-        <nav
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-white/10 shadow-2xl shadow-black/40"
-          style={{
-            background: 'rgba(6,6,15,0.85)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            maxWidth: '1400px',
-            width: '100%',
-          }}
-        >
+      <style>{`
+        .nav-pill {
+          position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+          z-index: 50; width: calc(100% - 32px); max-width: 1100px;
+        }
+        .nav-inner {
+          display: flex; align-items: center; gap: 6px;
+          padding: 8px 10px; border-radius: 22px;
+          background: rgba(8, 8, 18, 0.82);
+          backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+          border: 1px solid rgba(255,255,255,0.08);
+          box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03) inset;
+        }
+        .nav-link {
+          padding: 7px 14px; border-radius: 14px; font-size: 13px;
+          font-weight: 500; cursor: pointer; border: none; background: transparent;
+          color: rgba(255,255,255,0.5); transition: all 0.18s ease;
+          font-family: inherit; white-space: nowrap;
+          position: relative;
+        }
+        .nav-link:hover {
+          color: rgba(255,255,255,0.9);
+          background: rgba(255,255,255,0.07);
+        }
+        .nav-link.active {
+          color: #fff;
+          background: rgba(139,92,246,0.18);
+          border: 1px solid rgba(139,92,246,0.3);
+          box-shadow: 0 0 16px rgba(109,40,217,0.25);
+          font-weight: 600;
+        }
+        .nav-btn {
+          padding: 7px 10px; border-radius: 13px; border: none; cursor: pointer;
+          background: transparent; color: rgba(255,255,255,0.45); display: flex;
+          align-items: center; justify-content: center; transition: all 0.18s;
+          font-family: inherit;
+        }
+        .nav-btn:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.8); }
+        .balance-pill {
+          display: flex; align-items: center; gap: 6px; padding: 6px 14px;
+          border-radius: 14px; border: 1px solid rgba(139,92,246,0.25);
+          background: rgba(139,92,246,0.1); color: #c4b5fd; font-size: 12px;
+          font-weight: 700; cursor: pointer; transition: all 0.18s; font-family: inherit;
+          white-space: nowrap;
+        }
+        .balance-pill:hover { background: rgba(139,92,246,0.18); border-color: rgba(139,92,246,0.4); }
+        .logo-img {
+          height: 34px; width: auto; object-fit: contain;
+          filter: drop-shadow(0 0 10px rgba(139,92,246,0.5));
+        }
+        .dropdown {
+          position: absolute; right: 0; top: calc(100% + 10px);
+          background: rgba(10,10,22,0.97); backdrop-filter: blur(24px);
+          border: 1px solid rgba(255,255,255,0.1); border-radius: 18px;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.7); padding: 6px; z-index: 60;
+          min-width: 200px; overflow: hidden;
+        }
+        .dropdown-item {
+          display: flex; align-items: center; gap: 9px; padding: 9px 12px;
+          border-radius: 12px; font-size: 13px; cursor: pointer; border: none;
+          background: transparent; color: rgba(255,255,255,0.65); width: 100%;
+          transition: all 0.15s; font-family: inherit; text-align: left;
+        }
+        .dropdown-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
+        .avatar-ring { border-radius: 50%; border: 2px solid rgba(139,92,246,0.3); }
+      `}</style>
+
+      <div className="nav-pill">
+        <div className="nav-inner">
+
           {/* Logo */}
-          <button
-            onClick={() => handleNav('/')}
-            className="flex items-center gap-1.5 mr-3 flex-shrink-0"
-          >
-            <img src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1" alt="1999X" style={{ height:36, width:'auto', maxWidth:120, objectFit:'contain', filter:'drop-shadow(0 0 8px rgba(139,92,246,.4))' }} />
+          <button onClick={() => handleNav('/')} style={{ display:'flex', alignItems:'center', marginRight:4, flexShrink:0, background:'none', border:'none', cursor:'pointer', padding:'4px 6px', borderRadius:12 }}>
+            <img
+              src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1"
+              alt="1999X"
+              className="logo-img"
+              style={{ height:34, width:'auto', objectFit:'contain' }}
+              onError={e => {
+                const t = e.target as HTMLImageElement;
+                t.style.display = 'none';
+                const span = document.createElement('span');
+                span.textContent = '1999X';
+                span.style.cssText = 'font-size:16px;font-weight:900;color:#fff;letter-spacing:-.02em';
+                t.parentNode?.appendChild(span);
+              }}
+            />
           </button>
 
-          {/* Desktop nav links — centered */}
+          {/* Divider */}
+          <div style={{ width:1, height:22, background:'rgba(255,255,255,0.08)', flexShrink:0, margin:'0 2px' }} />
+
+          {/* Nav links — desktop */}
           <div className="hidden lg:flex items-center gap-0.5 flex-1 justify-center">
             {navItems.map(item => (
               <button
                 key={item.key}
                 onClick={() => handleNav(item.path)}
-                className={cn(
-                  'px-3 py-1.5 rounded-xl text-[13px] font-medium transition-all duration-200',
-                  currentPath === item.path
-                    ? 'text-white bg-white/10'
-                    : 'text-white/50 hover:text-white/80 hover:bg-white/5'
-                )}
+                className={cn('nav-link', currentPath === item.path && 'active')}
               >
                 {t(item.tKey)}
               </button>
             ))}
           </div>
 
-          {/* Right side controls */}
-          <div className="flex items-center gap-1.5 ml-auto flex-shrink-0">
+          {/* Right controls */}
+          <div style={{ display:'flex', alignItems:'center', gap:5, marginLeft:'auto', flexShrink:0 }}>
 
             {/* Balance */}
-            <button
-              onClick={() => handleNav('/wallet')}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-purple-500/20 bg-purple-500/10 text-xs font-semibold text-purple-300 hover:bg-purple-500/15 transition-colors"
-            >
-              <Wallet className="w-3 h-3" />
+            <button onClick={() => handleNav('/wallet')} className="balance-pill hidden sm:flex">
+              <Wallet size={13} />
               ${balance.toFixed(2)}
             </button>
 
-            {/* Language picker */}
-            <div className="relative" ref={langRef}>
-              <button
-                onClick={() => setLangOpen(!langOpen)}
-                className="p-2 rounded-xl hover:bg-white/5 transition-colors text-white/40 hover:text-white/70"
-                title="Language"
-              >
-                <Globe className="w-4 h-4" />
+            {/* Language */}
+            <div style={{ position:'relative' }} ref={langRef}>
+              <button onClick={() => setLangOpen(!langOpen)} className="nav-btn" title="Language">
+                <Globe size={15} />
               </button>
               {langOpen && (
-                <div className="absolute right-0 top-full mt-2 w-44 rounded-2xl border border-white/10 shadow-2xl shadow-black/60 py-1 z-50 overflow-hidden"
-                  style={{ background: 'rgba(10,10,20,0.95)', backdropFilter: 'blur(20px)' }}>
-                  <div className="px-3 py-2 border-b border-white/5">
-                    <p className="text-[10px] text-white/30 uppercase tracking-wider font-semibold">Language</p>
+                <div className="dropdown" style={{ minWidth:170 }}>
+                  <div style={{ padding:'6px 12px 8px', borderBottom:'1px solid rgba(255,255,255,.06)', marginBottom:4 }}>
+                    <span style={{ fontSize:10,fontWeight:700,color:'rgba(255,255,255,.3)',textTransform:'uppercase',letterSpacing:'.1em' }}>Language</span>
                   </div>
-                  <div className="max-h-48 overflow-y-auto">
+                  <div style={{ maxHeight:200, overflowY:'auto' }}>
                     {LANGUAGES.map(lang => (
-                      <button
-                        key={lang.code}
-                        onClick={() => { i18n.changeLanguage(lang.code); setLangOpen(false); }}
-                        className={cn(
-                          'w-full flex items-center gap-2 px-3 py-2 text-xs transition-colors hover:bg-white/5',
-                          lang.code === i18n.language ? 'text-purple-400 font-semibold' : 'text-white/60'
-                        )}
-                      >
-                        <span>{lang.flag}</span>
+                      <button key={lang.code} onClick={() => { i18n.changeLanguage(lang.code); setLangOpen(false); }}
+                        className="dropdown-item"
+                        style={{ color: lang.code === i18n.language ? '#c4b5fd' : undefined, fontWeight: lang.code === i18n.language ? 600 : undefined }}>
+                        <span style={{ fontSize:16 }}>{lang.flag}</span>
                         <span>{lang.label}</span>
+                        {lang.code === i18n.language && <span style={{ marginLeft:'auto', fontSize:10, color:'var(--purple)' }}>✓</span>}
                       </button>
                     ))}
                   </div>
@@ -150,107 +198,87 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             </div>
 
             {/* Profile */}
-            <div className="relative" ref={profileRef}>
-              <button
-                onClick={() => setProfileOpen(!profileOpen)}
-                className="flex items-center gap-1.5 p-1 rounded-xl hover:bg-white/5 transition-colors"
-              >
-                <div className="relative">
-                  {user?.avatar ? (
-                    <img src={user.avatar} alt={user.name} className="w-7 h-7 rounded-full object-cover ring-1 ring-purple-500/30" />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-400">
-                      {user?.name?.charAt(0) || 'U'}
+            <div style={{ position:'relative' }} ref={profileRef}>
+              <button onClick={() => setProfileOpen(!profileOpen)}
+                style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 10px 5px 5px', borderRadius:16, border:'1px solid rgba(255,255,255,.08)', background: profileOpen ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.04)', cursor:'pointer', transition:'all .15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background='rgba(255,255,255,.08)')}
+                onMouseLeave={e => (e.currentTarget.style.background=profileOpen?'rgba(255,255,255,.08)':'rgba(255,255,255,.04)')}>
+                <div style={{ position:'relative' }}>
+                  {user?.avatar
+                    ? <img src={user.avatar} alt={user.name} className="avatar-ring" style={{ width:28,height:28,objectFit:'cover' }}/>
+                    : <div style={{ width:28,height:28,borderRadius:'50%',background:'linear-gradient(135deg,#8b5cf6,#6d28d9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,color:'#fff' }}>{user?.name?.charAt(0)||'U'}</div>
+                  }
+                  {user?.role === 'admin' && (
+                    <div style={{ position:'absolute',top:-3,right:-3,width:14,height:14,borderRadius:'50%',background:'#ef4444',border:'2px solid var(--bg)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                      <Crown size={7} color="#fff"/>
                     </div>
                   )}
-                  {user?.role === 'admin' && (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border border-[#0a0a14] text-[6px] text-white flex items-center justify-center font-black">A</span>
-                  )}
                   {user?.role === 'support' && (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-blue-500 border border-[#0a0a14] text-[6px] text-white flex items-center justify-center font-black">S</span>
+                    <div style={{ position:'absolute',top:-3,right:-3,width:14,height:14,borderRadius:'50%',background:'#3b82f6',border:'2px solid var(--bg)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                      <Shield size={7} color="#fff"/>
+                    </div>
                   )}
                 </div>
+                <span style={{ fontSize:12,fontWeight:600,color:'rgba(255,255,255,.8)',maxWidth:80,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+                  {user?.name?.split(' ')[0] || 'User'}
+                </span>
               </button>
+
               {profileOpen && (
-                <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl border border-white/10 shadow-2xl shadow-black/60 py-1 z-50"
-                  style={{ background: 'rgba(10,10,20,0.95)', backdropFilter: 'blur(20px)' }}>
+                <div className="dropdown">
                   {user && (
-                    <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2">
-                      {user.avatar ? (
-                        <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-xs font-bold text-purple-400">
-                          {user.name.charAt(0)}
+                    <div style={{ padding:'10px 12px 12px',borderBottom:'1px solid rgba(255,255,255,.06)',marginBottom:4 }}>
+                      <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                        {user.avatar
+                          ? <img src={user.avatar} alt={user.name} style={{ width:36,height:36,borderRadius:'50%',objectFit:'cover' }}/>
+                          : <div style={{ width:36,height:36,borderRadius:'50%',background:'linear-gradient(135deg,#8b5cf6,#6d28d9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800,color:'#fff' }}>{user.name.charAt(0)}</div>
+                        }
+                        <div style={{ flex:1,minWidth:0 }}>
+                          <div style={{ fontSize:13,fontWeight:700,color:'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{user.name}</div>
+                          <div style={{ fontSize:11,fontWeight:600,color:user.role==='admin'?'#f87171':user.role==='support'?'#60a5fa':'rgba(255,255,255,.35)',marginTop:1 }}>
+                            {user.role==='admin'?'👑 Administrator':user.role==='support'?'🛡 Support Staff':user.email}
+                          </div>
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-white truncate">{user.name}</p>
-                        <p className="text-[10px] truncate font-semibold" style={{color: user.role === 'admin' ? '#f87171' : user.role === 'support' ? '#60a5fa' : 'rgba(255,255,255,0.3)'}}>
-                          {user.role === 'admin' ? '👑 Administrator' : user.role === 'support' ? '🛡 Support Staff' : user.email}
-                        </p>
                       </div>
                     </div>
                   )}
-                  <button
-                    onClick={() => { onLogout(); setProfileOpen(false); }}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    Sign Out
+                  <button onClick={() => { onLogout(); setProfileOpen(false); }} className="dropdown-item" style={{ color:'#f87171' }}>
+                    <LogOut size={14} /> Sign Out
                   </button>
                 </div>
               )}
             </div>
 
             {/* Mobile hamburger */}
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="p-2 rounded-xl hover:bg-white/5 transition-colors lg:hidden"
-            >
-              {mobileOpen
-                ? <X className="w-4 h-4 text-white/60" />
-                : <Menu className="w-4 h-4 text-white/60" />}
+            <button onClick={() => setMobileOpen(!mobileOpen)} className="nav-btn lg:hidden">
+              {mobileOpen ? <X size={16}/> : <Menu size={16}/>}
             </button>
           </div>
-        </nav>
+        </div>
       </div>
 
-      {/* Mobile dropdown — slides down from navbar */}
+      {/* Mobile dropdown */}
       {mobileOpen && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/50" onClick={() => setMobileOpen(false)} />
-          <div className="fixed top-20 left-4 right-4 z-40 rounded-2xl border border-white/10 p-3 shadow-2xl shadow-black/60"
-            style={{ background: 'rgba(10,10,20,0.96)', backdropFilter: 'blur(20px)' }}>
-
-            {/* Balance on mobile */}
-            <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/5">
-              <span className="text-xs text-white/40">Balance</span>
-              <span className="text-sm font-bold text-purple-400">${balance.toFixed(2)}</span>
+          <div style={{ position:'fixed',inset:0,zIndex:40,background:'rgba(0,0,0,.5)' }} onClick={() => setMobileOpen(false)}/>
+          <div style={{ position:'fixed',top:72,left:12,right:12,zIndex:40,borderRadius:20,border:'1px solid rgba(255,255,255,.1)',padding:12,background:'rgba(8,8,18,.97)',backdropFilter:'blur(24px)',boxShadow:'0 20px 60px rgba(0,0,0,.7)' }}>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12,paddingBottom:12,borderBottom:'1px solid rgba(255,255,255,.06)' }}>
+              <span style={{ fontSize:12,color:'rgba(255,255,255,.4)' }}>Balance</span>
+              <span style={{ fontSize:14,fontWeight:700,color:'#c4b5fd' }}>${balance.toFixed(2)}</span>
             </div>
-
-            <div className="grid grid-cols-2 gap-1.5">
+            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:6 }}>
               {navItems.map(item => (
-                <button
-                  key={item.key}
-                  onClick={() => handleNav(item.path)}
-                  className={cn(
-                    'px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all',
-                    currentPath === item.path
-                      ? 'bg-purple-500/15 text-purple-400 border border-purple-500/20'
-                      : 'text-white/50 hover:bg-white/5 hover:text-white/80'
-                  )}
-                >
+                <button key={item.key} onClick={() => handleNav(item.path)}
+                  style={{ padding:'10px 14px',borderRadius:14,fontSize:13,fontWeight:500,cursor:'pointer',border:`1px solid ${currentPath===item.path?'rgba(139,92,246,.3)':'rgba(255,255,255,.06)'}`,background:currentPath===item.path?'rgba(139,92,246,.15)':'rgba(255,255,255,.03)',color:currentPath===item.path?'#c4b5fd':'rgba(255,255,255,.6)',textAlign:'left',fontFamily:'inherit',transition:'all .15s' }}>
                   {t(item.tKey)}
                 </button>
               ))}
             </div>
-
-            <button
-              onClick={() => { onLogout(); setMobileOpen(false); }}
-              className="w-full mt-3 pt-3 border-t border-white/5 flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
+            <button onClick={() => { onLogout(); setMobileOpen(false); }}
+              style={{ width:'100%',marginTop:10,paddingTop:10,borderTop:'1px solid rgba(255,255,255,.06)',display:'flex',alignItems:'center',gap:8,padding:'10px 14px',fontSize:13,color:'#f87171',background:'none',border:'none',cursor:'pointer',borderRadius:14,fontFamily:'inherit',transition:'all .15s' }}
+              onMouseEnter={e=>(e.currentTarget.style.background='rgba(239,68,68,.08)')}
+              onMouseLeave={e=>(e.currentTarget.style.background='none')}>
+              <LogOut size={14}/> Sign Out
             </button>
           </div>
         </>

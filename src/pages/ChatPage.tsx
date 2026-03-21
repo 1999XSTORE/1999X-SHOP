@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppStore } from '@/lib/store';
-import { Send, Trash2, Edit2, Reply, X, Crown, Shield, Copy, Smile, Hash, Lock } from 'lucide-react';
+import { Send, Trash2, Edit2, Reply, X, Crown, Shield, Copy, Smile, Hash, Lock, Lock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
@@ -411,7 +411,7 @@ export default function ChatPage() {
         .chat-input::placeholder { color:rgba(255,255,255,.25); }
       `}</style>
 
-      <div style={{ display:'flex', height:'calc(100vh - 90px)', gap:12, overflow:'hidden' }}>
+      <div style={{ display:'flex', flex:1, minHeight:0, gap:12, overflow:'hidden' }}>
 
         {/* ── Main chat area ── */}
         <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0, background:'rgba(255,255,255,.02)', border:'1px solid rgba(255,255,255,.06)', borderRadius:20, overflow:'hidden' }}>
@@ -505,30 +505,57 @@ export default function ChatPage() {
           )}
 
           {/* Input */}
-          <div style={{ padding:'12px 14px', borderTop:'1px solid rgba(255,255,255,.06)', flexShrink:0, background:'rgba(255,255,255,.01)' }}>
-            <div style={{ display:'flex', gap:12, alignItems:'flex-end', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:14, padding:'10px 14px', transition:'border-color .15s' }}
-              onFocus={() => {}} >
+          <div style={{ padding:'10px 14px 12px', borderTop:'1px solid rgba(255,255,255,.06)', flexShrink:0, background:'rgba(255,255,255,.01)' }}>
+
+            {/* Private mention hint */}
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8, flexWrap:'wrap' }}>
+              <span style={{ fontSize:10, color:'rgba(255,255,255,.2)', fontWeight:500 }}>Tip:</span>
+              {[
+                { tag:'@support', label:'Private to Support', c:'rgba(96,165,250,.9)', bg:'rgba(59,130,246,.1)', bc:'rgba(59,130,246,.2)' },
+                { tag:'@admin',   label:'Private to Admin',   c:'rgba(248,113,113,.9)', bg:'rgba(239,68,68,.1)',  bc:'rgba(239,68,68,.2)'  },
+              ].map(({ tag, label, c, bg, bc }) => (
+                <button key={tag} onClick={() => { setInput(p => p ? p + ' ' + tag + ' ' : tag + ' '); inputRef.current?.focus(); }}
+                  style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'3px 9px', borderRadius:20, background:bg, border:`1px solid ${bc}`, cursor:'pointer', fontFamily:'inherit', transition:'all .15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity='0.8')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity='1')}>
+                  <Lock size={9} color={c}/>
+                  <span style={{ fontSize:10, fontWeight:700, color:c }}>{tag}</span>
+                  <span style={{ fontSize:9, color:'rgba(255,255,255,.3)' }}>{label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Input row */}
+            <div style={{ display:'flex', gap:12, alignItems:'flex-end', background: input.includes('@admin')||input.includes('@support') ? 'rgba(139,92,246,.06)' : 'rgba(255,255,255,.04)', border: input.includes('@admin')||input.includes('@support') ? '1px solid rgba(139,92,246,.25)' : '1px solid rgba(255,255,255,.08)', borderRadius:14, padding:'10px 14px', transition:'all .2s', boxShadow: input.includes('@admin')||input.includes('@support') ? '0 0 20px rgba(139,92,246,.1)' : 'none' }}>
               <Avatar src={user?.avatar} name={user?.name || '?'} role={user?.role} size={30}/>
-              <textarea
-                ref={inputRef}
-                className="chat-input"
-                value={input}
-                rows={1}
-                onChange={e => {
-                  setInput(e.target.value);
-                  broadcastTyping();
-                  // Auto-resize
-                  e.target.style.height = 'auto';
-                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-                }}
-                placeholder={user ? 'Message #community (Shift+Enter for newline)' : 'Login to chat...'}
-                disabled={!user}
-              />
+              <div style={{ flex:1, minWidth:0 }}>
+                {/* Private indicator when typing @mention */}
+                {(input.includes('@admin') || input.includes('@support')) && (
+                  <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:5 }}>
+                    <Lock size={10} color="var(--purple)"/>
+                    <span style={{ fontSize:10, fontWeight:700, color:'var(--purple)' }}>Private message — only visible to Support Team</span>
+                  </div>
+                )}
+                <textarea
+                  ref={inputRef}
+                  className="chat-input"
+                  value={input}
+                  rows={1}
+                  onChange={e => {
+                    setInput(e.target.value);
+                    broadcastTyping();
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+                  }}
+                  placeholder={user ? 'Message #community · use @support or @admin for private' : 'Login to chat...'}
+                  disabled={!user}
+                />
+              </div>
               <button onClick={handleSend} disabled={!input.trim() || !user}
-                style={{ padding:'8px 10px', borderRadius:10, border:'none', cursor:input.trim()&&user?'pointer':'not-allowed', background:input.trim()&&user?'linear-gradient(135deg,#8b5cf6,#6d28d9)':'rgba(255,255,255,.05)', color:'#fff', display:'flex', alignItems:'center', flexShrink:0, transition:'all .15s', opacity:input.trim()&&user?1:0.4, boxShadow:input.trim()&&user?'0 0 20px rgba(109,40,217,.4)':'none' }}>
+                style={{ padding:'8px 10px', borderRadius:10, border:'none', cursor:input.trim()&&user?'pointer':'not-allowed', background:input.trim()&&user ? (input.includes('@admin')||input.includes('@support') ? 'linear-gradient(135deg,#7c3aed,#6d28d9)' : 'linear-gradient(135deg,#8b5cf6,#6d28d9)') : 'rgba(255,255,255,.05)', color:'#fff', display:'flex', alignItems:'center', flexShrink:0, transition:'all .15s', opacity:input.trim()&&user?1:0.4, boxShadow:input.trim()&&user?'0 0 20px rgba(109,40,217,.4)':'none' }}>
                 <Send size={15}/>
               </button>
             </div>

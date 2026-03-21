@@ -1,4 +1,5 @@
 import { useAppStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { Key, Copy, RefreshCw, Globe, Clock, Shield, Download, CheckCircle, Loader2, AlertCircle, Play, ChevronRight, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
@@ -366,16 +367,25 @@ export default function LicensesPage() {
     setLoading(true);
     try {
       // ── Step 1: Check if key is already bound to a different Gmail ──
-      const { data: existingBinding } = await fetch(`${SUPABASE_URL}/rest/v1/key_bindings?key=eq.${encodeURIComponent(trimmedKey)}&select=user_email`, {
-        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` }
-      }).then(r => r.json()).then(data => ({ data: Array.isArray(data) ? data[0] : null })).catch(() => ({ data: null }));
-
-      if (existingBinding && existingBinding.user_email !== user.email) {
-        setErrorMsg(`❌ This key is already bound to a different Google account (${existingBinding.user_email.replace(/(.{3}).*(@.*)/, '$1***$2')}). Each key can only be used by one Gmail account.`);
-        toast.error('Key is bound to another account');
-        setLoading(false);
-        return;
-      }
+      // Use edge function to bypass RLS (anon key can't read other users' bindings)
+      let existingBinding: { user_email: string } | null = null;
+      try {
+        const bindRes = await fetch(`${SUPABASE_URL}/functions/v1/check-key-binding`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON}`, 'apikey': SUPABASE_ANON },
+          body: JSON.stringify({ key: trimmedKey, user_email: user.email }),
+        });
+        const bindData = await bindRes.json();
+        if (bindData.blocked) {
+          setErrorMsg(`❌ This key is already bound to another Google account. Each key can only be used by one Gmail account.`);
+          toast.error('Key is bound to another account');
+          setLoading(false);
+          return;
+        }
+        if (bindData.existing_email) {
+          existingBinding = { user_email: bindData.existing_email };
+        }
+      } catch { /* if edge function not deployed, skip check */ }
 
       // ── Step 2: Validate with KeyAuth ──
       const [lagResult, intResult] = await Promise.all([
@@ -425,21 +435,14 @@ export default function LicensesPage() {
 
       // ── Step 3: Bind key to Gmail in Supabase ──
       if (!existingBinding) {
-        await fetch(`${SUPABASE_URL}/rest/v1/key_bindings`, {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_ANON,
-            'Authorization': `Bearer ${SUPABASE_ANON}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal',
-          },
-          body: JSON.stringify({
-            key:        trimmedKey,
-            user_id:    user.id,
-            user_email: user.email,
-            panel_type: panelType,
-          }),
-        }).catch(() => {});
+        // Use supabase client with user session — RLS allows user to insert their own binding
+        const { error: bindErr } = await supabase.from('key_bindings').insert({
+          key:        trimmedKey,
+          user_id:    user.id,
+          user_email: user.email,
+          panel_type: panelType,
+        });
+        if (bindErr) console.warn('Key binding save failed:', bindErr.message);
       }
 
       const count = (lagOk ? 1 : 0) + (intOk ? 1 : 0);
