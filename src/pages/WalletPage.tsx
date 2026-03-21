@@ -24,7 +24,7 @@ const PAYMENT_METHODS = [
     icon:<svg width="20" height="20" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#1a1a1a"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="#F0B90B" fontSize="9" fontWeight="800">BEP</text></svg> },
   { id:'litecoin',  label:'Litecoin',    color:'#A5A9B4', instruction:'Send LTC to the address above', hasQr:true, qr:'YOUR_LTC_QR_URL', fields:[{ label:'LTC Address', value:'YOUR_LTC_ADDRESS', note:'Litecoin network' }],
     icon:<svg width="20" height="20" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#345D9D"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="13" fontWeight="800">Ł</text></svg> },
-  { id:'paypal',    label:'PayPal',      color:'#003087', instruction:'Pay with PayPal — balance added automatically', hasQr:false, qr:'', fields:[{ label:'PayPal', value:'https://paypal.me/jjmaestre21', note:'' }],
+  { id:'paypal',    label:'PayPal',      color:'#003087', instruction:'Pay with PayPal — balance added automatically', hasQr:false, qr:'', fields:[{ label:'PayPal', value:'https://paypal.me/JohanMaestre', note:'' }],
     icon:<svg width="20" height="20" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#003087"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="10" fontWeight="800">PP</text></svg> },
 ] as const;
 
@@ -42,7 +42,7 @@ function PayPalButton({ amount, user }: { amount: number; user: any }) {
   const [clicked, setClicked] = useState(false);
 
   // Build PayPal.me link with amount
-  const paypalLink = `https://www.paypal.com/paypalme/jjmaestre21/${amount.toFixed(2)}USD`;
+  const paypalLink = `https://www.paypal.com/paypalme/JohanMaestre/${amount.toFixed(2)}USD`;
 
   const handleClick = () => {
     setClicked(true);

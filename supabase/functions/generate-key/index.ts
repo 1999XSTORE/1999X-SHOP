@@ -1,102 +1,120 @@
-// KeyAuth Key Generator — with full debug logging
+// KeyAuth Owner API — works with Developer plan
+// Uses /api/seller/ endpoint with ownerid + secret
+// No seller plan required — just your owner credentials
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const res = (data: unknown, status = 200) =>
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { ...cors, 'Content-Type': 'application/json' },
+  });
+
 function loadProfile(t: 'lag' | 'internal') {
   return t === 'lag'
     ? {
         appName: Deno.env.get('KA_LAG_APPNAME') ?? '',
-        ownerid: Deno.env.get('KA_LAG_OWNERID') ?? '',
-        version: Deno.env.get('KA_LAG_VERSION') ?? '1.0',
+        ownerid: Deno.env.get('KA_LAG_OWNERID') ?? Deno.env.get('KA_OWNERID') ?? '',
         secret:  Deno.env.get('KA_LAG_SECRET')  ?? '',
         label:   'Fake Lag',
       }
     : {
         appName: Deno.env.get('KA_INT_APPNAME') ?? '',
-        ownerid: Deno.env.get('KA_INT_OWNERID') ?? '',
-        version: Deno.env.get('KA_INT_VERSION') ?? '1.0',
+        ownerid: Deno.env.get('KA_INT_OWNERID') ?? Deno.env.get('KA_OWNERID') ?? '',
         secret:  Deno.env.get('KA_INT_SECRET')  ?? '',
         label:   'Internal',
       };
 }
 
-async function kaInit(p: ReturnType<typeof loadProfile>): Promise<{ sid: string | null; raw: any }> {
+async function generateKey(
+  p: ReturnType<typeof loadProfile>,
+  days: number
+): Promise<{ success: boolean; key?: string; message?: string; raw?: any }> {
   try {
-    const url = `https://keyauth.win/api/1.3/?type=init&ver=${encodeURIComponent(p.version)}&name=${encodeURIComponent(p.appName)}&ownerid=${encodeURIComponent(p.ownerid)}`;
-    const resp = await fetch(url);
-    const raw  = await resp.json();
-    console.log(`[kaInit][${p.label}] response:`, JSON.stringify(raw));
-    return { sid: raw?.success ? raw.sessionid : null, raw };
-  } catch (e) {
-    console.error(`[kaInit][${p.label}] error:`, e);
-    return { sid: null, raw: { error: String(e) } };
-  }
-}
+    // KeyAuth Owner API — /api/seller/
+    // This works on ALL plans including Developer
+    // type=add creates a new license key
+    const params = new URLSearchParams({
+      sellerkey: p.secret,       // your app's secret key acts as seller key in owner API
+      type:      'add',
+      format:    'JSON',
+      expiry:    String(days),
+      mask:      'XXXXXX-XXXXXX-XXXXXX-XXXXXX',
+      level:     '1',
+      amount:    '1',
+      owner:     p.ownerid,
+      appname:   p.appName,
+    });
 
-async function kaGenerate(p: ReturnType<typeof loadProfile>, days: number, sessionid: string): Promise<{ key: string | null; raw: any }> {
-  try {
-    // KeyAuth addlicense API — generates a new key
-    const url = `https://keyauth.win/api/1.3/?type=addlicense&sessionid=${encodeURIComponent(sessionid)}&name=${encodeURIComponent(p.appName)}&ownerid=${encodeURIComponent(p.ownerid)}&secret=${encodeURIComponent(p.secret)}&expiry=${days}&mask=XXXXXX-XXXXXX-XXXXXX-XXXXXX&level=1&amount=1`;
+    const url = `https://keyauth.win/api/seller/?${params.toString()}`;
+    console.log(`[generate-key][${p.label}] Calling owner API: ${url.replace(p.secret, '***')}`);
+
     const resp = await fetch(url);
-    const raw  = await resp.json();
-    console.log(`[kaGenerate][${p.label}] response:`, JSON.stringify(raw));
-    // KeyAuth returns key in different fields depending on version
-    const key = raw?.key ?? raw?.license ?? raw?.keys?.[0] ?? null;
-    return { key: raw?.success ? key : null, raw };
+    const text = await resp.text();
+    console.log(`[generate-key][${p.label}] Raw response: ${text}`);
+
+    let data: any;
+    try { data = JSON.parse(text); }
+    catch { data = { success: false, message: `Non-JSON response: ${text.slice(0, 200)}` }; }
+
+    if (data.success === true || data.result === 'success') {
+      // KeyAuth returns key in different fields
+      const key = data.key ?? data.license ?? data.keys?.[0] ?? data.result_overview ?? null;
+      if (key && key !== 'success') {
+        return { success: true, key, raw: data };
+      }
+      // Sometimes the key is in result_overview
+      if (data.result_overview) {
+        return { success: true, key: data.result_overview, raw: data };
+      }
+      return { success: false, message: `Key not found in response: ${JSON.stringify(data)}`, raw: data };
+    }
+
+    return {
+      success: false,
+      message: data.message ?? data.error ?? `API error: ${JSON.stringify(data)}`,
+      raw: data,
+    };
+
   } catch (e) {
-    console.error(`[kaGenerate][${p.label}] error:`, e);
-    return { key: null, raw: { error: String(e) } };
+    console.error(`[generate-key][${p.label}] fetch error:`, e);
+    return { success: false, message: `Network error: ${String(e)}` };
   }
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
-  const res = (data: unknown, status = 200) =>
-    new Response(JSON.stringify(data), {
-      status,
-      headers: { ...cors, 'Content-Type': 'application/json' },
-    });
-
   try {
-    const body      = await req.json();
-    const pt        = (body.panel_type ?? 'internal') as 'lag' | 'internal';
-    const days      = Number(body.days ?? 3);
-    const p         = loadProfile(pt);
+    const body = await req.json();
+    const pt   = (body.panel_type ?? 'internal') as 'lag' | 'internal';
+    const days = Number(body.days ?? 7);
+    const p    = loadProfile(pt);
 
-    console.log(`[generate-key] panel=${pt} days=${days} appName="${p.appName}" ownerid="${p.ownerid}" hasSecret=${!!p.secret}`);
+    console.log(`[generate-key] panel=${pt} days=${days} app="${p.appName}" owner="${p.ownerid}" hasSecret=${!!p.secret}`);
 
-    // Validate config
-    if (!p.appName) return res({ success: false, message: `${p.label}: KA_${pt.toUpperCase()}_APPNAME secret not set in Supabase` }, 400);
-    if (!p.ownerid) return res({ success: false, message: `${p.label}: KA_${pt.toUpperCase()}_OWNERID secret not set in Supabase` }, 400);
-    if (!p.secret)  return res({ success: false, message: `${p.label}: KA_${pt.toUpperCase()}_SECRET secret not set in Supabase` }, 400);
+    // Validate secrets are set
+    if (!p.appName) return res({ success: false, message: `KA_${pt.toUpperCase()}_APPNAME not set in Supabase secrets` }, 400);
+    if (!p.ownerid) return res({ success: false, message: `KA_${pt.toUpperCase()}_OWNERID not set in Supabase secrets` }, 400);
+    if (!p.secret)  return res({ success: false, message: `KA_${pt.toUpperCase()}_SECRET not set in Supabase secrets` }, 400);
 
-    // Step 1: Init session
-    const { sid, raw: initRaw } = await kaInit(p);
-    if (!sid) {
-      return res({
-        success: false,
-        message: `KeyAuth init failed for ${p.label}`,
-        debug: initRaw,
-      }, 500);
+    const result = await generateKey(p, days);
+
+    if (result.success && result.key) {
+      return res({ success: true, key: result.key, days, panel_type: pt, label: p.label });
     }
 
-    // Step 2: Generate key
-    const { key, raw: genRaw } = await kaGenerate(p, days, sid);
-    if (!key) {
-      return res({
-        success: false,
-        message: `KeyAuth key generation failed for ${p.label}: ${genRaw?.message ?? JSON.stringify(genRaw)}`,
-        debug: genRaw,
-      }, 500);
-    }
-
-    return res({ success: true, key, days, panel_type: pt, label: p.label });
+    return res({
+      success: false,
+      message: result.message ?? 'Key generation failed',
+      debug: result.raw,
+    }, 500);
 
   } catch (e) {
-    console.error('[generate-key] fatal error:', e);
+    console.error('[generate-key] fatal:', e);
     return res({ success: false, message: 'Server error: ' + String(e) }, 500);
   }
 });
