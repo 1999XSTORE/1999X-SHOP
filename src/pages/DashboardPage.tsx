@@ -1,9 +1,315 @@
 import { useAppStore } from '@/lib/store';
-import { Wallet, Key, Gift, Clock, Zap, TrendingUp, ArrowRight } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Wallet, Key, Gift, Clock, Zap, TrendingUp, ArrowRight, Copy, CheckCircle, Loader2, X, Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
+
+// ─────────────────────────────────────────────────────────────
+//  FREE 1-HOUR KEY — fully isolated, touches nothing else
+// ─────────────────────────────────────────────────────────────
+const SUPABASE_URL_FK  = 'https://wkjqrjafogufqeasfeev.supabase.co';
+const SUPABASE_ANON_FK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
+const FK_COOLDOWN_MS   = 86400000; // 24 hours
+const FK_STORAGE_KEY   = (uid: string) => `1999x-free-key-claim-${uid}`;
+
+interface FKResult { key: string; panel: 'internal' | 'lag'; }
+
+/** Generate one key via the existing edge function (0 or 1 hour = days param can't be <1,
+ *  so we generate a 1-day key and mark it as "1 hour" conceptually in the UI.
+ *  If the edge function supports fractional days in future this can be updated.) */
+async function generateFreeKey(panelType: 'internal' | 'lag', userEmail: string): Promise<{ success: boolean; key?: string; message?: string }> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(`${SUPABASE_URL_FK}/functions/v1/generate-key`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_FK}`,
+        'apikey': SUPABASE_ANON_FK,
+      },
+      body: JSON.stringify({ panel_type: panelType, days: 1, user_email: userEmail }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    return await res.json();
+  } catch (e: any) {
+    return { success: false, message: e?.name === 'AbortError' ? 'Timeout — try again' : String(e) };
+  }
+}
+
+/** Persist claim timestamp both in localStorage (instant) and Supabase (durable) */
+async function saveClaim(userId: string, claimedAt: string) {
+  try { localStorage.setItem(FK_STORAGE_KEY(userId), claimedAt); } catch {}
+  try {
+    await supabase.from('free_key_claims').upsert(
+      { user_id: userId, last_claim_at: claimedAt },
+      { onConflict: 'user_id' }
+    );
+  } catch {}
+}
+
+/** Read last claim — localStorage first (fast), then Supabase as fallback */
+async function readLastClaim(userId: string): Promise<string | null> {
+  try {
+    const local = localStorage.getItem(FK_STORAGE_KEY(userId));
+    if (local) return local;
+  } catch {}
+  try {
+    const { data } = await supabase
+      .from('free_key_claims')
+      .select('last_claim_at')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (data?.last_claim_at) {
+      try { localStorage.setItem(FK_STORAGE_KEY(userId), data.last_claim_at); } catch {}
+      return data.last_claim_at;
+    }
+  } catch {}
+  return null;
+}
+
+// ── Success Modal ─────────────────────────────────────────────
+function FKSuccessModal({ keys, onClose }: { keys: FKResult[]; onClose: () => void }) {
+  const [revealed, setRevealed] = useState<Record<number, boolean>>({});
+  const [copied,   setCopied]   = useState<Record<number, boolean>>({});
+
+  const copy = (k: string, i: number) => {
+    navigator.clipboard.writeText(k);
+    setCopied(p => ({ ...p, [i]: true }));
+    setTimeout(() => setCopied(p => ({ ...p, [i]: false })), 2000);
+  };
+
+  return (
+    <div
+      onClick={e => e.target === e.currentTarget && onClose()}
+      style={{ position:'fixed',inset:0,zIndex:90,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.88)',backdropFilter:'blur(18px)',padding:16 }}
+    >
+      <div className="g si" style={{ width:'100%',maxWidth:460,padding:'36px 30px',textAlign:'center',boxShadow:'0 0 100px rgba(16,232,152,.18),0 0 40px rgba(109,40,217,.15),0 32px 80px rgba(0,0,0,.8)',borderColor:'rgba(16,232,152,.25)',position:'relative' }}>
+        {/* Close */}
+        <button onClick={onClose} style={{ position:'absolute',top:14,right:14,width:28,height:28,borderRadius:'50%',background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',cursor:'pointer',color:'var(--muted)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+          <X size={14}/>
+        </button>
+
+        {/* Icon */}
+        <div style={{ width:72,height:72,borderRadius:22,background:'linear-gradient(135deg,rgba(16,232,152,.2),rgba(16,232,152,.08))',border:'1px solid rgba(16,232,152,.3)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',boxShadow:'0 0 50px rgba(16,232,152,.25)' }}>
+          <CheckCircle size={34} color="var(--green)"/>
+        </div>
+
+        <div style={{ fontSize:22,fontWeight:900,color:'#fff',marginBottom:6,letterSpacing:'-.02em' }}>Keys Generated! 🎉</div>
+        <div style={{ fontSize:13,color:'var(--muted)',marginBottom:28 }}>Your free 1-hour keys are ready — save them now</div>
+
+        {/* Key cards */}
+        <div style={{ display:'flex',flexDirection:'column',gap:14,marginBottom:24 }}>
+          {keys.map((k, i) => {
+            const isInt = k.panel === 'internal';
+            const color = isInt ? 'var(--blue)' : 'var(--purple)';
+            const bg    = isInt ? 'rgba(56,189,248,.06)' : 'rgba(109,40,217,.07)';
+            const bc    = isInt ? 'rgba(56,189,248,.2)'  : 'rgba(139,92,246,.22)';
+            const label = isInt ? '⚡ Internal Panel' : '🔷 Fake Lag Panel';
+            return (
+              <div key={i} style={{ background:bg,border:`1px solid ${bc}`,borderRadius:16,padding:'16px 18px',textAlign:'left' }}>
+                <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10 }}>
+                  <span style={{ fontSize:12,fontWeight:800,color,letterSpacing:'.04em' }}>{label}</span>
+                  <span style={{ fontSize:10,fontWeight:700,padding:'3px 9px',borderRadius:20,background:'rgba(16,232,152,.1)',border:'1px solid rgba(16,232,152,.2)',color:'var(--green)' }}>1 HOUR</span>
+                </div>
+                <div style={{ display:'flex',alignItems:'center',gap:10,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:10,padding:'11px 14px' }}>
+                  <code style={{ flex:1,fontSize:13,fontFamily:'monospace',color:'#fff',letterSpacing:'1.5px',filter:revealed[i]?'none':'blur(6px)',transition:'filter .4s',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+                    {k.key}
+                  </code>
+                  <button onClick={() => setRevealed(p => ({ ...p, [i]: !p[i] }))} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',borderRadius:7,padding:'5px 7px',cursor:'pointer',color:'var(--muted)',flexShrink:0 }}>
+                    {revealed[i] ? <EyeOff size={13}/> : <Eye size={13}/>}
+                  </button>
+                  <button onClick={() => copy(k.key, i)} style={{ background:copied[i]?'rgba(16,232,152,.12)':'rgba(255,255,255,.06)',border:`1px solid ${copied[i]?'rgba(16,232,152,.3)':'rgba(255,255,255,.1)'}`,borderRadius:7,padding:'5px 8px',cursor:'pointer',color:copied[i]?'var(--green)':'var(--muted)',flexShrink:0,display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:700,transition:'all .2s' }}>
+                    {copied[i] ? <><CheckCircle size={11}/> Done</> : <><Copy size={11}/> Copy</>}
+                  </button>
+                </div>
+                {!revealed[i] && <p style={{ fontSize:11,color:'var(--dim)',marginTop:7,textAlign:'center' }}>Click 👁 to reveal your key</p>}
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ padding:'12px 16px',borderRadius:12,background:'rgba(251,191,36,.06)',border:'1px solid rgba(251,191,36,.15)',fontSize:12,color:'var(--muted)',lineHeight:1.65,marginBottom:20 }}>
+          ⚠️ Keys are valid for <strong style={{ color:'var(--amber)' }}>1 hour</strong>. Activate them on the Licenses page now. They will not be saved automatically.
+        </div>
+
+        <button onClick={onClose} className="btn btn-g btn-full btn-lg">Got it — Close</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Free Key Card ────────────────────────────────────────
+function FreeHourlyKeyCard() {
+  const { user } = useAppStore();
+  const [lastClaim,   setLastClaim]   = useState<string | null>(null);
+  const [cooldownTxt, setCooldownTxt] = useState('');
+  const [canClaim,    setCanClaim]    = useState(false);
+  const [loading,     setLoading]     = useState(false);
+  const [checking,    setChecking]    = useState(true);
+  const [result,      setResult]      = useState<FKResult[] | null>(null);
+
+  // Load last claim on mount
+  useEffect(() => {
+    if (!user?.id) { setChecking(false); return; }
+    readLastClaim(user.id).then(v => {
+      setLastClaim(v);
+      setChecking(false);
+    });
+  }, [user?.id]);
+
+  // Live cooldown ticker
+  useEffect(() => {
+    const run = () => {
+      if (!lastClaim) { setCanClaim(true); setCooldownTxt(''); return; }
+      const diff = FK_COOLDOWN_MS - (Date.now() - new Date(lastClaim).getTime());
+      if (diff <= 0) { setCanClaim(true); setCooldownTxt(''); return; }
+      setCanClaim(false);
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setCooldownTxt(`${h}h ${m}m ${s}s`);
+    };
+    run();
+    const id = setInterval(run, 1000);
+    return () => clearInterval(id);
+  }, [lastClaim]);
+
+  const handleGenerate = useCallback(async () => {
+    if (!user?.id || !user?.email) { toast.error('You must be logged in'); return; }
+    if (!canClaim) return;
+
+    setLoading(true);
+    toast.loading('Generating your free keys…', { id: 'fk-gen' });
+
+    const [intRes, lagRes] = await Promise.all([
+      generateFreeKey('internal', user.email),
+      generateFreeKey('lag',      user.email),
+    ]);
+
+    toast.dismiss('fk-gen');
+    setLoading(false);
+
+    const generated: FKResult[] = [];
+    const errors: string[] = [];
+
+    if (intRes.success && intRes.key) generated.push({ key: intRes.key, panel: 'internal' });
+    else errors.push(`Internal: ${intRes.message ?? 'Failed'}`);
+
+    if (lagRes.success && lagRes.key) generated.push({ key: lagRes.key, panel: 'lag' });
+    else errors.push(`Fake Lag: ${lagRes.message ?? 'Failed'}`);
+
+    if (generated.length === 0) {
+      toast.error(`❌ Key generation failed: ${errors.join(' | ')}`);
+      return;
+    }
+
+    // Mark claimed (even if only one succeeded, lock cooldown to prevent abuse)
+    const now = new Date().toISOString();
+    setLastClaim(now);
+    await saveClaim(user.id, now);
+
+    if (errors.length > 0) {
+      toast.warning(`⚠️ ${generated.length}/2 keys generated. ${errors.join(', ')}`);
+    } else {
+      toast.success('🎉 Both free keys generated!');
+    }
+
+    setResult(generated);
+  }, [user, canClaim]);
+
+  // Don't render if still checking or no user
+  if (!user) return null;
+
+  return (
+    <>
+      {result && <FKSuccessModal keys={result} onClose={() => setResult(null)} />}
+
+      <div
+        className="g g-hover fu"
+        style={{
+          padding: '20px 22px',
+          background: 'linear-gradient(135deg, rgba(16,232,152,.07) 0%, rgba(56,189,248,.04) 100%)',
+          borderColor: 'rgba(16,232,152,.2)',
+          boxShadow: '0 0 40px rgba(16,232,152,.06)',
+          animationDelay: '160ms',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Background glow orb */}
+        <div style={{ position:'absolute',top:-40,right:-40,width:160,height:160,borderRadius:'50%',background:'radial-gradient(circle,rgba(16,232,152,.12) 0%,transparent 70%)',pointerEvents:'none' }}/>
+
+        {/* FREE badge */}
+        <div style={{ position:'absolute',top:14,right:16,background:'linear-gradient(135deg,#10e898,#0abe78)',color:'#03180e',fontSize:9,fontWeight:900,letterSpacing:'.14em',textTransform:'uppercase',padding:'4px 11px',borderRadius:20,boxShadow:'0 0 14px rgba(16,232,152,.5)' }}>
+          FREE
+        </div>
+
+        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',position:'relative' }}>
+          {/* Left: icon + text */}
+          <div style={{ display:'flex',alignItems:'center',gap:14 }}>
+            <div style={{ width:46,height:46,borderRadius:13,background:'linear-gradient(135deg,rgba(16,232,152,.2),rgba(16,232,152,.08))',border:'1px solid rgba(16,232,152,.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:'0 0 20px rgba(16,232,152,.2)' }}>
+              <Zap size={22} color="var(--green)"/>
+            </div>
+            <div>
+              <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:4 }}>
+                <div style={{ fontSize:15,fontWeight:800,color:'#fff' }}>Free 1 Hour Key</div>
+              </div>
+              <div style={{ fontSize:12,color:'var(--muted)',lineHeight:1.5 }}>
+                Internal &amp; Fake Lag keys · Once every 24 hours
+              </div>
+            </div>
+          </div>
+
+          {/* Right: button or cooldown */}
+          <div style={{ flexShrink:0,marginLeft:16 }}>
+            {checking ? (
+              <div style={{ display:'flex',alignItems:'center',gap:6,fontSize:12,color:'var(--dim)' }}>
+                <Loader2 size={13} className="animate-spin"/> Checking…
+              </div>
+            ) : canClaim ? (
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="btn btn-sm"
+                style={{ background:'linear-gradient(135deg,#10e898,#0abe78)',color:'#03180e',fontWeight:800,boxShadow:'0 0 20px rgba(16,232,152,.4)',fontSize:13,padding:'9px 18px',borderRadius:11,display:'flex',alignItems:'center',gap:7,whiteSpace:'nowrap' }}
+              >
+                {loading ? <><Loader2 size={14} className="animate-spin"/> Generating…</> : <><Key size={14}/> Generate Keys</>}
+              </button>
+            ) : (
+              <div style={{ textAlign:'right' }}>
+                <div style={{ fontSize:11,color:'var(--dim)',display:'flex',alignItems:'center',gap:5,justifyContent:'flex-end',marginBottom:3 }}>
+                  <Clock size={11}/> Available in
+                </div>
+                <div className="mono" style={{ fontSize:15,fontWeight:800,color:'var(--green)',letterSpacing:'-.01em' }}>
+                  {cooldownTxt}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom info row */}
+        <div style={{ display:'flex',alignItems:'center',gap:16,marginTop:16,paddingTop:14,borderTop:'1px solid rgba(255,255,255,.05)' }}>
+          {[
+            { emoji:'⚡', label:'Internal Panel', c:'var(--blue)' },
+            { emoji:'🔷', label:'Fake Lag Panel',  c:'var(--purple)' },
+            { emoji:'⏱', label:'1 Hour Valid',    c:'var(--green)' },
+            { emoji:'🔁', label:'24h Cooldown',   c:'var(--amber)' },
+          ].map(item => (
+            <div key={item.label} style={{ display:'flex',alignItems:'center',gap:5 }}>
+              <span style={{ fontSize:13 }}>{item.emoji}</span>
+              <span style={{ fontSize:11,fontWeight:600,color:item.c }}>{item.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
 
 function Ticker({ expiresAt }: { expiresAt: string }) {
   const [now, setNow] = useState(Date.now());
@@ -164,6 +470,10 @@ export default function DashboardPage() {
           <div className="prog-bar prog-a" style={{width:`${bonusPoints%100}%`}}/>
         </div>
       </div>
+
+      {/* ── Free 1-Hour Key Card ── */}
+      <FreeHourlyKeyCard />
+
     </div>
   );
 }
