@@ -11,8 +11,8 @@ export default function AppLayout({ children, currentPath, onNavigate, onLogout 
   return (
     <div style={{ minHeight: '100svh', background: 'var(--bg)' }}>
       <Topbar currentPath={currentPath} onNavigate={onNavigate} onLogout={onLogout} />
-      <main style={{ paddingTop: 82, paddingBottom: 48, paddingLeft: 16, paddingRight: 16 }}>
-        <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+      <main style={{ paddingTop: 86, paddingBottom: 60, paddingLeft: 24, paddingRight: 24 }}>
+        <div style={{ maxWidth: 1600, margin: '0 auto' }}>
           {children}
         </div>
       </main>

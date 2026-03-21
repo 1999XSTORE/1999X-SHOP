@@ -32,69 +32,59 @@ type MethodId = typeof PAYMENT_METHODS[number]['id'];
 const AMOUNTS = [5, 10, 15, 25, 50, 100];
 const PAYPAL_CLIENT_ID = 'AQDx_km7TpeGRXIAdKfy7njTbxq674K5hr-chTHjeADSCkoYghzhbXB0LAW6QABFoJ9_4uxFUBXRZbp_';
 
-// ── PayPal SDK Button ────────────────────────────────────────
+// ── PayPal Direct Pay Button ─────────────────────────────────
+// Uses PayPal.me direct link — 100% reliable, no SDK needed
+// After paying, user submits transaction ID manually OR
+// the paypal-webhook auto-credits via API
 function PayPalButton({ amount, user }: { amount: number; user: any }) {
-  const [sdkState, setSdkState] = useState<'loading'|'ready'|'error'>('loading');
-  const [paying, setPaying]     = useState(false);
-  const containerRef            = useRef<HTMLDivElement>(null);
-  const storeUser               = useAppStore(s => s.user);
-  const u                       = user ?? storeUser;
+  const storeUser = useAppStore(s => s.user);
+  const u         = user ?? storeUser;
+  const [clicked, setClicked] = useState(false);
 
-  useEffect(() => {
-    if ((window as any).paypal) { setSdkState('ready'); return; }
-    if (document.querySelector('#paypal-sdk')) {
-      const wait = setInterval(() => { if ((window as any).paypal) { clearInterval(wait); setSdkState('ready'); } }, 300);
-      return () => clearInterval(wait);
-    }
-    const s = document.createElement('script');
-    s.id = 'paypal-sdk';
-    s.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD&intent=capture`;
-    s.async = true;
-    s.onload  = () => setSdkState('ready');
-    s.onerror = () => setSdkState('error');
-    document.head.appendChild(s);
-  }, []);
+  // Build PayPal.me link with amount
+  const paypalLink = `https://www.paypal.com/paypalme/jjmaestre21/${amount.toFixed(2)}USD`;
 
-  useEffect(() => {
-    if (sdkState !== 'ready' || !containerRef.current || !(window as any).paypal) return;
-    containerRef.current.innerHTML = '';
-    try {
-      (window as any).paypal.Buttons({
-        createOrder: (_: any, actions: any) => actions.order.create({
-          intent: 'CAPTURE',
-          purchase_units: [{ amount: { value: amount.toFixed(2), currency_code: 'USD' }, custom_id: u?.email ?? '', description: '1999X Balance' }],
-        }),
-        onApprove: async (_: any, actions: any) => {
-          setPaying(true);
-          try { await actions.order.capture(); toast.success('✅ Payment done! Balance updating soon...', { duration: 6000 }); }
-          catch { toast.error('Capture failed. Contact support.'); }
-          setPaying(false);
-        },
-        onCancel: () => toast.error('Payment cancelled.'),
-        onError:  () => toast.error('PayPal error. Try again.'),
-        style: { layout:'vertical', color:'blue', shape:'rect', label:'pay', height:48 },
-      }).render(containerRef.current);
-    } catch { setSdkState('error'); }
-  }, [sdkState, amount]);
+  const handleClick = () => {
+    setClicked(true);
+    window.open(paypalLink, '_blank', 'noopener,noreferrer');
+    // Reset after 8s so button is clickable again
+    setTimeout(() => setClicked(false), 8000);
+  };
 
-  if (sdkState === 'loading') return (
-    <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:18,borderRadius:12,background:'rgba(0,48,135,.06)',border:'1px solid rgba(0,96,223,.15)' }}>
-      <Loader2 size={18} color="#4a9eff" className="animate-spin" />
-      <span style={{ fontSize:13,color:'var(--muted)' }}>Loading PayPal...</span>
-    </div>
-  );
-  if (sdkState === 'error') return (
-    <div style={{ padding:14,borderRadius:12,background:'rgba(248,113,113,.06)',border:'1px solid rgba(248,113,113,.2)',textAlign:'center' }}>
-      <p style={{ fontSize:13,color:'var(--red)',marginBottom:8 }}>PayPal failed to load.</p>
-      <button onClick={() => { setSdkState('loading'); window.location.reload(); }} className="btn btn-ghost btn-sm">Retry</button>
-    </div>
-  );
   return (
-    <div style={{ position:'relative' }}>
-      <div ref={containerRef} style={{ minHeight:52 }} />
-      {paying && (
-        <div style={{ position:'absolute',inset:0,background:'rgba(0,0,0,.6)',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',gap:8,color:'#fff',fontSize:13 }}>
-          <Loader2 size={16} className="animate-spin" /> Processing...
+    <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+      {/* Main PayPal button */}
+      <button onClick={handleClick}
+        style={{ width:'100%',padding:'15px 20px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontWeight:800,fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',gap:10,transition:'all .2s',
+          background:'linear-gradient(135deg,#0070ba,#1546a0)',
+          color:'#fff',
+          boxShadow:'0 4px 20px rgba(0,112,186,.4)',
+        }}
+        onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.transform='translateY(-2px)';(e.currentTarget as HTMLButtonElement).style.boxShadow='0 8px 28px rgba(0,112,186,.5)';}}
+        onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.transform='none';(e.currentTarget as HTMLButtonElement).style.boxShadow='0 4px 20px rgba(0,112,186,.4)';}}>
+        {/* PayPal logo SVG */}
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+          <path d="M7.144 19.532l1.049-5.751c.11-.606.691-1.002 1.304-.948 2.155.194 6.877.1 8.818-4.002 2.554-5.397-.59-7.769-6.295-7.831H5.382a1.31 1.31 0 0 0-1.294 1.109L2.01 18.049a.738.738 0 0 0 .728.852h4.109l.297-1.369z"/>
+          <path d="M17.512 7.309c-.673 4.378-3.403 6.025-7.934 6.025H8.354l-1.061 5.82h3.285l.53-2.906h1.722c4.02 0 6.386-1.95 7.006-5.818.48-2.991-.39-5.016-2.324-5.121z" opacity=".7"/>
+        </svg>
+        Pay ${amount.toFixed(2)} with PayPal
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </button>
+
+      {/* After clicked — show instruction */}
+      {clicked && (
+        <div style={{ padding:'14px 16px',borderRadius:12,background:'rgba(251,191,36,.07)',border:'1px solid rgba(251,191,36,.2)',display:'flex',gap:12,alignItems:'flex-start' }}>
+          <div style={{ width:32,height:32,borderRadius:9,background:'rgba(251,191,36,.15)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:16 }}>📋</div>
+          <div>
+            <div style={{ fontSize:12,fontWeight:800,color:'var(--amber)',marginBottom:5 }}>PayPal opened — complete these steps:</div>
+            <div style={{ display:'flex',flexDirection:'column',gap:4 }}>
+              {['1. Log in to PayPal and complete the payment','2. Copy the Transaction ID from PayPal receipt','3. Come back here → click "I've Sent Payment"','4. Paste the Transaction ID → Submit'].map((step,i) => (
+                <div key={i} style={{ fontSize:11,color:'var(--muted)',display:'flex',gap:7,alignItems:'flex-start' }}>
+                  <span style={{ color:'var(--green)',fontWeight:700,flexShrink:0 }}>✓</span>{step}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -328,6 +318,48 @@ function PurchaseSuccessModal({ data, onClose }: { data: { product: any; keys: A
   );
 }
 
+
+// ── Confirm Purchase Modal ────────────────────────────────────
+function ConfirmModal({ product, onConfirm, onCancel }: {
+  product: { name: string; price: number; duration: string; emoji?: string };
+  onConfirm: () => void;
+  onCancel:  () => void;
+}) {
+  return (
+    <div style={{ position:'fixed',inset:0,zIndex:80,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.82)',backdropFilter:'blur(14px)',padding:16 }}>
+      <div className="g si" style={{ maxWidth:380,width:'100%',padding:'32px 28px',textAlign:'center',boxShadow:'0 0 80px rgba(139,92,246,.12),0 32px 80px rgba(0,0,0,.7)' }}>
+        <div style={{ fontSize:40,marginBottom:16 }}>{product.emoji || '🛒'}</div>
+        <div style={{ fontSize:20,fontWeight:800,color:'#fff',marginBottom:8 }}>Confirm Purchase</div>
+        <div style={{ fontSize:13,color:'var(--muted)',marginBottom:24 }}>Please review your order before proceeding</div>
+
+        <div style={{ background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)',borderRadius:14,padding:20,marginBottom:24,textAlign:'left' }}>
+          <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10 }}>
+            <span style={{ fontSize:13,color:'var(--muted)' }}>Product</span>
+            <span style={{ fontSize:14,fontWeight:700,color:'#fff' }}>{product.name}</span>
+          </div>
+          <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10 }}>
+            <span style={{ fontSize:13,color:'var(--muted)' }}>Duration</span>
+            <span style={{ fontSize:14,fontWeight:700,color:'#fff' }}>{product.duration}</span>
+          </div>
+          <div style={{ height:1,background:'var(--border)',margin:'12px 0' }} />
+          <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+            <span style={{ fontSize:14,fontWeight:700,color:'var(--muted)' }}>Total</span>
+            <span style={{ fontSize:28,fontWeight:900,color:'#fff',letterSpacing:'-.03em' }}>${product.price}</span>
+          </div>
+        </div>
+
+        <div style={{ display:'flex',gap:10 }}>
+          <button onClick={onCancel} className="btn btn-ghost" style={{ flex:1 }}>Cancel</button>
+          <button onClick={onConfirm} className="btn btn-p" style={{ flex:2,boxShadow:'0 0 24px rgba(109,40,217,.4)' }}>
+            ✅ Confirm Purchase
+          </button>
+        </div>
+        <p style={{ fontSize:11,color:'var(--dim)',marginTop:12 }}>Balance will be deducted immediately. Refunded if key generation fails.</p>
+      </div>
+    </div>
+  );
+}
+
 // ── NEW: Product Section with panel grouping ──────────────────
 const PANEL_GROUPS = [
   {
@@ -451,7 +483,7 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
           </div>
         </div>
 
-        <button onClick={() => onBuy({ ...plan, keyauthPanel: plan.keyauthPanel, duration: `${plan.days} days`, name: `${group.name} ${plan.label}`, description: group.desc, badgeType: group.featured ? 'gold' : group.id === 'internal' ? 'green' : 'indigo' })}
+        <button onClick={() => onBuy({ ...plan, keyauthPanel: plan.keyauthPanel, duration: `${plan.days} days`, name: `${group.name} — ${plan.label}`, description: group.desc, badgeType: group.featured ? 'gold' : group.id === 'internal' ? 'green' : 'indigo', emoji: group.emoji })}
           disabled={!can}
           style={{ width:'100%',padding:'13px',borderRadius:12,fontSize:14,fontWeight:800,cursor:can?'pointer':'not-allowed',border:'none',transition:'all .2s',fontFamily:'inherit',letterSpacing:'-.01em',
             background: can ? (group.featured ? 'linear-gradient(135deg,#c9a84c,#e8b84b)' : group.bg) : 'rgba(255,255,255,.04)',
@@ -469,7 +501,7 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
 // ── Main WalletPage ─────────────────────────────────────────
 export default function WalletPage() {
   const { t } = useTranslation();
-  const { balance, addBalance, purchaseProduct, addLicense, user } = useAppStore();
+  const { balance, addBalance, purchaseProduct, deductBalance, refundBalance, addLicense, user } = useAppStore();
   const [step, setStep]         = useState<1|2|3>(1);
   const [amount, setAmount]     = useState(10);
   const [custom, setCustom]     = useState('');
@@ -479,6 +511,7 @@ export default function WalletPage() {
   const [myTxns, setMyTxns]     = useState<any[]>([]);
   const [txnsLoad,setTxnsLoad]  = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState<{ product: any; keys: Array<{ key: string; panelId: string; panelName: string; expiresAt: string }> } | null>(null);
+  const [confirmPending, setConfirmPending]   = useState<any | null>(null);
 
   const isAdmin   = user?.role === 'admin';
   const isSupport = user?.role === 'support';
@@ -541,9 +574,11 @@ export default function WalletPage() {
   };
 
   const handleBuy = async (product: any) => {
-    if (balance<product.price) { toast.error('Insufficient balance.'); return; }
-    const lic = purchaseProduct({ ...product, id: product.id || `${product.keyauthPanel}-${product.days}d`, price: product.price, features: product.features || [], badge:'', badgeType: product.badgeType || 'green', image:'' });
-    if (!lic) { toast.error('Purchase failed'); return; }
+    if (balance < product.price) { toast.error('Insufficient balance. Add funds first.'); return; }
+
+    // Step 1: Deduct balance ONLY — no license created yet
+    const deducted = deductBalance(product.price);
+    if (!deducted) { toast.error('Insufficient balance'); return; }
     const panel = product.keyauthPanel ?? 'lag';
     const days  = product.days || parseInt(product.duration)||7;
     const toGen = panel==='both' ? ['internal','lag'] : [panel];
@@ -570,10 +605,17 @@ export default function WalletPage() {
       } catch(e) { errors.push(`${p}: ${String(e)}`); }
     }
     toast.dismiss('keygen');
-    if (generatedKeys.length>0) {
-      setPurchaseSuccess({ product, keys:generatedKeys });
+    if (generatedKeys.length > 0) {
+      setPurchaseSuccess({ product, keys: generatedKeys });
     } else {
-      toast.error(`⚠️ Purchased but key gen failed: ${errors.join(' | ')}`, { duration:10000 });
+      // REFUND — key generation failed, give money back
+      refundBalance(product.price);
+      const errDetail = errors.join(' | ');
+      console.error('Key generation failed:', errDetail);
+      toast.error(
+        `❌ Key generation failed. Your $${product.price} has been refunded. Error: ${errDetail}`,
+        { duration: 12000 }
+      );
     }
   };
 
@@ -592,6 +634,13 @@ export default function WalletPage() {
 
   return (
     <div style={{ display:'flex',flexDirection:'column',gap:22 }}>
+      {confirmPending && (
+        <ConfirmModal
+          product={{ name: confirmPending.name || confirmPending.id, price: confirmPending.price, duration: `${confirmPending.days} days`, emoji: confirmPending.emoji }}
+          onConfirm={() => { const p = confirmPending; setConfirmPending(null); handleBuy(p); }}
+          onCancel={() => setConfirmPending(null)}
+        />
+      )}
       {purchaseSuccess && <PurchaseSuccessModal data={purchaseSuccess} onClose={()=>setPurchaseSuccess(null)}/>}
 
       {/* ── Balance Card ── */}
@@ -616,7 +665,7 @@ export default function WalletPage() {
         </div>
         <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:16 }}>
           {PANEL_GROUPS.map(group => (
-            <PanelProductCard key={group.id} group={group} balance={balance} onBuy={handleBuy}/>
+            <PanelProductCard key={group.id} group={group} balance={balance} onBuy={(p) => setConfirmPending(p)}/>
           ))}
         </div>
       </div>

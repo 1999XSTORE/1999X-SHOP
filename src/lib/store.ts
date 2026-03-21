@@ -84,6 +84,8 @@ interface AppState {
   addBalance: (amount: number) => void;
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
   purchaseProduct: (product: Product) => License | null;
+  deductBalance: (amount: number) => boolean;  // returns false if insufficient
+  refundBalance: (amount: number) => void;      // always succeeds
   claimBonus: () => boolean;
   redeemPoints: (pts: number) => boolean;
   addChatMessage: (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
@@ -340,11 +342,26 @@ export const useAppStore = create<AppState>()(
         const newBalance  = state.balance - product.price;
         const newLicenses = [license, ...state.licenses];
         set({ balance: newBalance, licenses: newLicenses });
-        // Save immediately
         if (state.user?.id) {
           saveUserData(state.user.id, { balance: newBalance, licenses: newLicenses });
         }
         return license;
+      },
+
+      deductBalance: (amount) => {
+        const state = get();
+        if (state.balance < amount) return false;
+        const newBalance = state.balance - amount;
+        set({ balance: newBalance });
+        if (state.user?.id) saveUserData(state.user.id, { balance: newBalance });
+        return true;
+      },
+
+      refundBalance: (amount) => {
+        const state = get();
+        const newBalance = state.balance + amount;
+        set({ balance: newBalance });
+        if (state.user?.id) saveUserData(state.user.id, { balance: newBalance });
       },
 
       claimBonus: () => {
