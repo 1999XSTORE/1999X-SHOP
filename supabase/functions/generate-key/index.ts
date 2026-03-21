@@ -15,14 +15,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const pt   = (body.panel_type ?? 'internal') as 'lag' | 'internal';
-
-    // ── Duration logic ──────────────────────────────────────────
-    // Callers can pass either:
-    //   { hours: 1 }   → use KeyAuth expirytime in seconds (for sub-day keys)
-    //   { days: N }    → use KeyAuth expiry in whole days (existing behaviour)
-    // hours takes priority when present.
-    const hours = body.hours !== undefined ? Number(body.hours) : null;
-    const days  = hours !== null ? null : Number(body.days ?? 7);
+    const days = Number(body.days ?? 7);
 
     // Each panel has its own seller key and app name
     const sellerKey = pt === 'lag'
@@ -33,27 +26,16 @@ Deno.serve(async (req) => {
       ? (Deno.env.get('KA_LAG_APPNAME') ?? '')
       : (Deno.env.get('KA_INT_APPNAME') ?? '');
 
-    console.log(`[generate-key] panel=${pt} hours=${hours} days=${days} app="${appName}"`);
+    console.log(`[generate-key] panel=${pt} days=${days} app="${appName}"`);
 
     if (!sellerKey) return json({ success: false, message: `Seller key not set for ${pt}` }, 400);
     if (!appName)   return json({ success: false, message: `App name not set for ${pt}` }, 400);
-
-    // ── Build KeyAuth seller API URL ────────────────────────────
-    // For hour-based keys:  &expiry=0&expirytime=<seconds>
-    // For day-based keys:   &expiry=<whole_days>
-    let expiryParam: string;
-    if (hours !== null) {
-      const seconds = Math.round(hours * 3600);
-      expiryParam = `&expiry=0&expirytime=${seconds}`;
-    } else {
-      expiryParam = `&expiry=${days}`;
-    }
 
     const url = [
       'https://keyauth.win/api/seller/',
       `?sellerkey=${encodeURIComponent(sellerKey)}`,
       `&type=add`,
-      expiryParam,
+      `&expiry=${days}`,
       `&mask=1999X*******`,
       `&level=1`,
       `&amount=1`,
@@ -63,7 +45,7 @@ Deno.serve(async (req) => {
 
     const resp = await fetch(url);
     const raw  = (await resp.text()).trim();
-    console.log(`[${pt}][${hours !== null ? hours + 'h' : days + 'd'}] response: "${raw}"`);
+    console.log(`[${pt}][${days}d] response: "${raw}"`);
 
     const isError = (
       raw.length === 0 ||
@@ -75,14 +57,14 @@ Deno.serve(async (req) => {
     );
 
     if (!isError) {
-      return json({ success: true, key: raw, hours, days, panel_type: pt });
+      return json({ success: true, key: raw, days, panel_type: pt });
     }
 
     try {
       const parsed = JSON.parse(raw);
       if (parsed.success === true) {
         const key = parsed.key ?? parsed.license ?? parsed.keys?.[0] ?? null;
-        if (key) return json({ success: true, key, hours, days, panel_type: pt });
+        if (key) return json({ success: true, key, days, panel_type: pt });
       }
       return json({ success: false, message: parsed.message ?? raw }, 500);
     } catch {
