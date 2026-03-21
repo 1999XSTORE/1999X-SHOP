@@ -258,7 +258,7 @@ export default function LicensesPage() {
   const [errorMsg, setErrorMsg] = useState('');
 
   const trimmedKey = keyValue.trim();
-  const isReady    = trimmedKey.length >= 4;
+  const isReady    = trimmedKey.length >= 1;
 
   const copyKey = (k: string) => { navigator.clipboard.writeText(k); toast.success('Copied!'); };
 
