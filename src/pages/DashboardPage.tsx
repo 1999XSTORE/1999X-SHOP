@@ -14,7 +14,7 @@ const SUPABASE_ANON_FK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 const FK_COOLDOWN_MS   = 86400000; // 24 hours
 const FK_STORAGE_KEY   = (uid: string) => `1999x-free-key-claim-${uid}`;
 
-interface FKResult { key: string; panel: 'internal' | 'lag'; }
+interface FKResult { key: string; panel: 'internal' | 'lag'; expiresAt: string; }
 
 /** Generate one key via the existing edge function (0 or 1 hour = days param can't be <1,
  *  so we generate a 1-day key and mark it as "1 hour" conceptually in the UI.
@@ -30,7 +30,7 @@ async function generateFreeKey(panelType: 'internal' | 'lag', userEmail: string)
         'Authorization': `Bearer ${SUPABASE_ANON_FK}`,
         'apikey': SUPABASE_ANON_FK,
       },
-      body: JSON.stringify({ panel_type: panelType, days: 1, user_email: userEmail }),
+      body: JSON.stringify({ panel_type: panelType, hours: 1, user_email: userEmail }), // KeyAuth expirytime=3600s
       signal: controller.signal,
     });
     clearTimeout(timer);
@@ -71,6 +71,33 @@ async function readLastClaim(userId: string): Promise<string | null> {
   return null;
 }
 
+// ── Live 1-hour countdown inside modal ───────────────────────
+function FKCountdown({ expiresAt }: { expiresAt: string }) {
+  const [txt, setTxt] = useState('');
+  useEffect(() => {
+    const run = () => {
+      const diff = new Date(expiresAt).getTime() - Date.now();
+      if (diff <= 0) { setTxt('Expired'); return; }
+      const m = Math.floor(diff / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setTxt(`${m}m ${String(s).padStart(2,'0')}s`);
+    };
+    run();
+    const id = setInterval(run, 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+  const expired = txt === 'Expired';
+  return (
+    <span style={{ fontSize:11,fontWeight:800,padding:'3px 9px',borderRadius:20,
+      background: expired ? 'rgba(248,113,113,.1)' : 'rgba(16,232,152,.1)',
+      border: expired ? '1px solid rgba(248,113,113,.2)' : '1px solid rgba(16,232,152,.2)',
+      color: expired ? 'var(--red)' : 'var(--green)',
+      display:'inline-flex',alignItems:'center',gap:4 }}>
+      <Clock size={9}/> {expired ? 'Expired' : txt + ' left'}
+    </span>
+  );
+}
+
 // ── Success Modal ─────────────────────────────────────────────
 function FKSuccessModal({ keys, onClose }: { keys: FKResult[]; onClose: () => void }) {
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
@@ -87,7 +114,7 @@ function FKSuccessModal({ keys, onClose }: { keys: FKResult[]; onClose: () => vo
       onClick={e => e.target === e.currentTarget && onClose()}
       style={{ position:'fixed',inset:0,zIndex:90,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.88)',backdropFilter:'blur(18px)',padding:16 }}
     >
-      <div className="g si" style={{ width:'100%',maxWidth:460,padding:'36px 30px',textAlign:'center',boxShadow:'0 0 100px rgba(16,232,152,.18),0 0 40px rgba(109,40,217,.15),0 32px 80px rgba(0,0,0,.8)',borderColor:'rgba(16,232,152,.25)',position:'relative' }}>
+      <div className="g si" style={{ width:'100%',maxWidth:480,padding:'36px 30px',textAlign:'center',boxShadow:'0 0 100px rgba(16,232,152,.18),0 0 40px rgba(109,40,217,.15),0 32px 80px rgba(0,0,0,.8)',borderColor:'rgba(16,232,152,.25)',position:'relative',maxHeight:'90vh',overflowY:'auto' }}>
         {/* Close */}
         <button onClick={onClose} style={{ position:'absolute',top:14,right:14,width:28,height:28,borderRadius:'50%',background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',cursor:'pointer',color:'var(--muted)',display:'flex',alignItems:'center',justifyContent:'center' }}>
           <X size={14}/>
@@ -99,10 +126,10 @@ function FKSuccessModal({ keys, onClose }: { keys: FKResult[]; onClose: () => vo
         </div>
 
         <div style={{ fontSize:22,fontWeight:900,color:'#fff',marginBottom:6,letterSpacing:'-.02em' }}>Keys Generated! 🎉</div>
-        <div style={{ fontSize:13,color:'var(--muted)',marginBottom:28 }}>Your free 1-hour keys are ready — save them now</div>
+        <div style={{ fontSize:13,color:'var(--muted)',marginBottom:24 }}>Your free 1-hour keys are ready — activate them NOW on the Licenses page</div>
 
         {/* Key cards */}
-        <div style={{ display:'flex',flexDirection:'column',gap:14,marginBottom:24 }}>
+        <div style={{ display:'flex',flexDirection:'column',gap:14,marginBottom:20 }}>
           {keys.map((k, i) => {
             const isInt = k.panel === 'internal';
             const color = isInt ? 'var(--blue)' : 'var(--purple)';
@@ -111,32 +138,36 @@ function FKSuccessModal({ keys, onClose }: { keys: FKResult[]; onClose: () => vo
             const label = isInt ? '⚡ Internal Panel' : '🔷 Fake Lag Panel';
             return (
               <div key={i} style={{ background:bg,border:`1px solid ${bc}`,borderRadius:16,padding:'16px 18px',textAlign:'left' }}>
-                <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10 }}>
+                {/* Header row: label + live countdown */}
+                <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12 }}>
                   <span style={{ fontSize:12,fontWeight:800,color,letterSpacing:'.04em' }}>{label}</span>
-                  <span style={{ fontSize:10,fontWeight:700,padding:'3px 9px',borderRadius:20,background:'rgba(16,232,152,.1)',border:'1px solid rgba(16,232,152,.2)',color:'var(--green)' }}>1 HOUR</span>
+                  <FKCountdown expiresAt={k.expiresAt} />
                 </div>
-                <div style={{ display:'flex',alignItems:'center',gap:10,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:10,padding:'11px 14px' }}>
+                {/* Key row */}
+                <div style={{ display:'flex',alignItems:'center',gap:8,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:10,padding:'11px 14px',marginBottom:8 }}>
                   <code style={{ flex:1,fontSize:13,fontFamily:'monospace',color:'#fff',letterSpacing:'1.5px',filter:revealed[i]?'none':'blur(6px)',transition:'filter .4s',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
                     {k.key}
                   </code>
-                  <button onClick={() => setRevealed(p => ({ ...p, [i]: !p[i] }))} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',borderRadius:7,padding:'5px 7px',cursor:'pointer',color:'var(--muted)',flexShrink:0 }}>
+                  <button onClick={() => setRevealed(p => ({ ...p, [i]: !p[i] }))} title={revealed[i]?'Hide':'Reveal'} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',borderRadius:7,padding:'5px 7px',cursor:'pointer',color:'var(--muted)',flexShrink:0,display:'flex',alignItems:'center' }}>
                     {revealed[i] ? <EyeOff size={13}/> : <Eye size={13}/>}
                   </button>
-                  <button onClick={() => copy(k.key, i)} style={{ background:copied[i]?'rgba(16,232,152,.12)':'rgba(255,255,255,.06)',border:`1px solid ${copied[i]?'rgba(16,232,152,.3)':'rgba(255,255,255,.1)'}`,borderRadius:7,padding:'5px 8px',cursor:'pointer',color:copied[i]?'var(--green)':'var(--muted)',flexShrink:0,display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:700,transition:'all .2s' }}>
-                    {copied[i] ? <><CheckCircle size={11}/> Done</> : <><Copy size={11}/> Copy</>}
+                  <button onClick={() => copy(k.key, i)} title="Copy" style={{ background:copied[i]?'rgba(16,232,152,.12)':'rgba(255,255,255,.06)',border:`1px solid ${copied[i]?'rgba(16,232,152,.3)':'rgba(255,255,255,.1)'}`,borderRadius:7,padding:'5px 9px',cursor:'pointer',color:copied[i]?'var(--green)':'var(--muted)',flexShrink:0,display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:700,transition:'all .2s' }}>
+                    {copied[i] ? <><CheckCircle size={11}/> Copied!</> : <><Copy size={11}/> Copy</>}
                   </button>
                 </div>
-                {!revealed[i] && <p style={{ fontSize:11,color:'var(--dim)',marginTop:7,textAlign:'center' }}>Click 👁 to reveal your key</p>}
+                {!revealed[i] && <p style={{ fontSize:11,color:'var(--dim)',textAlign:'center',margin:0 }}>👁 Click eye icon to reveal</p>}
               </div>
             );
           })}
         </div>
 
-        <div style={{ padding:'12px 16px',borderRadius:12,background:'rgba(251,191,36,.06)',border:'1px solid rgba(251,191,36,.15)',fontSize:12,color:'var(--muted)',lineHeight:1.65,marginBottom:20 }}>
-          ⚠️ Keys are valid for <strong style={{ color:'var(--amber)' }}>1 hour</strong>. Activate them on the Licenses page now. They will not be saved automatically.
+        {/* Warning */}
+        <div style={{ padding:'12px 16px',borderRadius:12,background:'rgba(248,113,113,.05)',border:'1px solid rgba(248,113,113,.18)',fontSize:12,color:'var(--muted)',lineHeight:1.65,marginBottom:20,display:'flex',gap:10,alignItems:'flex-start',textAlign:'left' }}>
+          <span style={{ fontSize:18,flexShrink:0 }}>⚠️</span>
+          <span>Keys expire in <strong style={{ color:'var(--red)' }}>1 hour</strong>. Go to the <strong style={{ color:'#fff' }}>Licenses</strong> page and activate them immediately. You can reopen this popup anytime during the 24h cooldown.</span>
         </div>
 
-        <button onClick={onClose} className="btn btn-g btn-full btn-lg">Got it — Close</button>
+        <button onClick={onClose} className="btn btn-g btn-full btn-lg">Close — I've Saved My Keys</button>
       </div>
     </div>
   );
@@ -150,7 +181,8 @@ function FreeHourlyKeyCard() {
   const [canClaim,    setCanClaim]    = useState(false);
   const [loading,     setLoading]     = useState(false);
   const [checking,    setChecking]    = useState(true);
-  const [result,      setResult]      = useState<FKResult[] | null>(null);
+  const [savedKeys,   setSavedKeys]   = useState<FKResult[] | null>(null); // persists across modal open/close
+  const [modalOpen,   setModalOpen]   = useState(false);                   // controls visibility only
 
   // Load last claim on mount
   useEffect(() => {
@@ -196,10 +228,11 @@ function FreeHourlyKeyCard() {
     const generated: FKResult[] = [];
     const errors: string[] = [];
 
-    if (intRes.success && intRes.key) generated.push({ key: intRes.key, panel: 'internal' });
+    const fkExpiry = new Date(Date.now() + 3600000).toISOString(); // 1 hour from now
+    if (intRes.success && intRes.key) generated.push({ key: intRes.key, panel: 'internal', expiresAt: fkExpiry });
     else errors.push(`Internal: ${intRes.message ?? 'Failed'}`);
 
-    if (lagRes.success && lagRes.key) generated.push({ key: lagRes.key, panel: 'lag' });
+    if (lagRes.success && lagRes.key) generated.push({ key: lagRes.key, panel: 'lag', expiresAt: fkExpiry });
     else errors.push(`Fake Lag: ${lagRes.message ?? 'Failed'}`);
 
     if (generated.length === 0) {
@@ -218,7 +251,8 @@ function FreeHourlyKeyCard() {
       toast.success('🎉 Both free keys generated!');
     }
 
-    setResult(generated);
+    setSavedKeys(generated);
+    setModalOpen(true);
   }, [user, canClaim]);
 
   // Don't render if still checking or no user
@@ -226,7 +260,7 @@ function FreeHourlyKeyCard() {
 
   return (
     <>
-      {result && <FKSuccessModal keys={result} onClose={() => setResult(null)} />}
+      {savedKeys && modalOpen && <FKSuccessModal keys={savedKeys} onClose={() => setModalOpen(false)} />}
 
       <div
         className="g g-hover fu"
@@ -265,7 +299,7 @@ function FreeHourlyKeyCard() {
           </div>
 
           {/* Right: button or cooldown */}
-          <div style={{ flexShrink:0,marginLeft:16 }}>
+          <div style={{ flexShrink:0,marginLeft:16,display:'flex',flexDirection:'column',gap:8,alignItems:'flex-end' }}>
             {checking ? (
               <div style={{ display:'flex',alignItems:'center',gap:6,fontSize:12,color:'var(--dim)' }}>
                 <Loader2 size={13} className="animate-spin"/> Checking…
@@ -288,6 +322,16 @@ function FreeHourlyKeyCard() {
                   {cooldownTxt}
                 </div>
               </div>
+            )}
+            {/* View Keys button — always visible after generation, survives modal close */}
+            {savedKeys && !canClaim && (
+              <button
+                onClick={() => setModalOpen(true)}
+                className="btn btn-sm btn-ghost"
+                style={{ fontSize:11,padding:'6px 12px',borderRadius:9,display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap',border:'1px solid rgba(16,232,152,.25)',color:'var(--green)' }}
+              >
+                <Eye size={11}/> View My Keys
+              </button>
             )}
           </div>
         </div>
