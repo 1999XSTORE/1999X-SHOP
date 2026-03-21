@@ -1,13 +1,35 @@
-// ── Store Page — uses the exact provided design from s99 ──────
-// The CSS and HTML are injected as a shadow-isolated widget.
-// Logic (buy buttons) is handled by sell.app embeds.
+import { useEffect } from 'react';
 
 export default function StorePage() {
+  useEffect(() => {
+    // Inject DM Sans font
+    const font = document.createElement('link');
+    font.rel = 'stylesheet';
+    font.href = 'https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap';
+    document.head.appendChild(font);
+
+    // Inject sell.app styles
+    const sellCss = document.createElement('link');
+    sellCss.rel = 'stylesheet';
+    sellCss.href = 'https://cdn.sell.app/embed/style.css';
+    document.head.appendChild(sellCss);
+
+    // Inject sell.app script
+    const script = document.createElement('script');
+    script.src = 'https://cdn.sell.app/embed/script.js';
+    script.type = 'module';
+    script.async = true;
+    document.head.appendChild(script);
+
+    return () => {
+      document.head.removeChild(font);
+      document.head.removeChild(sellCss);
+      if (document.head.contains(script)) document.head.removeChild(script);
+    };
+  }, []);
+
   return (
-    <>
-      {/* Inject DM Sans + sell.app */}
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet" />
-      <link href="https://cdn.sell.app/embed/style.css" rel="stylesheet" />
+    <div>
 
       <style>{`
 /* ── DASHBOARD (shared with chat page) ── */
@@ -200,8 +222,6 @@ export default function StorePage() {
         </div>
       </div>
 
-      {/* Load sell.app script */}
-      <script src="https://cdn.sell.app/embed/script.js" type="module" async />
-    </>
+    </div>
   );
 }

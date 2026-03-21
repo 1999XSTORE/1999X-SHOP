@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppStore, PRODUCTS } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
-import { ArrowRight, ArrowLeft, RefreshCw, Users, Check, X, Copy, CheckCircle, ExternalLink, Loader2, Zap, Shield } from 'lucide-react';
+import { ArrowRight, ArrowLeft, RefreshCw, Users, Check, X, Copy, CheckCircle, ExternalLink, Loader2, Zap, Shield, Eye, EyeOff } from 'lucide-react';
 import { safeQuery } from '@/lib/safeFetch';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -525,11 +525,11 @@ export default function WalletPage() {
           if (tx.status === 'approved' && !isCredited(tx.id)) {
             addCredited(tx.id); // mark BEFORE addBalance to prevent double-credit on error
             addBalance(Number(tx.amount));
-            toast.success(\`🎉 Payment approved! $\${tx.amount} added to balance!\`);
+            toast.success(`🎉 Payment approved! $${tx.amount} added to balance!`);
           }
           if (tx.status === 'rejected' && !isCredited(tx.id + '_r')) {
             addCredited(tx.id + '_r');
-            toast.error(\`Payment of $\${tx.amount} was rejected.\`);
+            toast.error(`Payment of $${tx.amount} was rejected.`);
           }
         }
         // Refresh display (separate from crediting)
@@ -554,9 +554,9 @@ export default function WalletPage() {
 
     // Realtime — only updates display, does NOT credit balance
     // (the poll handles crediting with mutex protection)
-    const ch = supabase.channel(\`wallet-\${user.id}\`)
+    const ch = supabase.channel(`wallet-${user.id}`)
       .on('postgres_changes', {
-        event: 'UPDATE', schema: 'public', table: 'transactions', filter: \`user_id=eq.\${user.id}\`,
+        event: 'UPDATE', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}`,
       }, () => {
         // Trigger a check — mutex ensures no double-credit
         check();
@@ -609,9 +609,9 @@ export default function WalletPage() {
 
     for (const p of toGen) {
       try {
-        const res = await fetch(\`\${SUPABASE_URL}/functions/v1/generate-key\`, {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-key`, {
           method: 'POST',
-          headers: { 'Content-Type':'application/json', 'Authorization':\`Bearer \${SUPABASE_ANON}\`, 'apikey':SUPABASE_ANON },
+          headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${SUPABASE_ANON}`, 'apikey':SUPABASE_ANON },
           body: JSON.stringify({ panel_type: p, days, user_email: user?.email }),
         });
         const result = await res.json();
@@ -620,7 +620,7 @@ export default function WalletPage() {
           const panelId  = p === 'lag' ? 'keyauth-lag' : 'keyauth-internal';
           const panelNm  = p === 'lag' ? 'Fake Lag' : 'Internal';
           addLicense({
-            id: \`purchase_\${Math.random().toString(36).slice(2,10)}\`,
+            id: `purchase_${Math.random().toString(36).slice(2,10)}`,
             productId: panelId, productName: panelNm,
             key: p === 'lag' ? result.key : result.key + '_INTERNAL',
             hwid: '', lastLogin: new Date().toISOString(), expiresAt: expiry,
@@ -635,7 +635,7 @@ export default function WalletPage() {
     if (generatedKeys.length > 0) {
       setPurchaseSuccess({ product, keys: generatedKeys });
     } else {
-      toast.success(\`✅ \${product.name} purchased! Check Licenses page for your key.\`);
+      toast.success(`✅ ${product.name} purchased! Check Licenses page for your key.`);
     }
   };
 
