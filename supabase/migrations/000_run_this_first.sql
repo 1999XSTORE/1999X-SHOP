@@ -90,3 +90,7 @@ end $$;
 -- insert into public.user_roles (email, role)
 -- values ('youremail@gmail.com', 'admin')
 -- on conflict (email) do update set role = excluded.role;
+
+
+-- ── Enable realtime on transactions (required for instant balance updates) ──
+alter publication supabase_realtime add table public.transactions;

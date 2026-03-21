@@ -418,6 +418,34 @@ export default function WalletPage() {
     if (!user || isAdmin || isSupport) return;
     loadMyTxns();
 
+    // Track which transaction IDs we have already credited
+    // so we never double-credit the same payment
+    const credited = new Set<string>();
+
+    // Poll every 8 seconds — checks if any pending txn got approved
+    // This works even if realtime is not enabled on the table
+    const checkApprovals = async () => {
+      const { data } = await safeQuery(() =>
+        supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+      );
+      if (!data) return;
+
+      data.forEach((tx: any) => {
+        if (tx.status === 'approved' && !credited.has(tx.id)) {
+          credited.add(tx.id);
+          addBalance(Number(tx.amount));
+          toast.success(`🎉 Payment approved! $${tx.amount} added to your balance.`);
+        }
+        if (tx.status === 'rejected' && !credited.has(tx.id + '_rejected')) {
+          credited.add(tx.id + '_rejected');
+          toast.error(`Payment of $${tx.amount} was rejected.`);
+        }
+      });
+
+      setMyTxns(data);
+    };
+
+    // Also try realtime as bonus — works if enabled
     const channel = supabase
       .channel(`wallet-${user.id}`)
       .on('postgres_changes', {
@@ -425,17 +453,30 @@ export default function WalletPage() {
         filter: `user_id=eq.${user.id}`,
       }, payload => {
         const updated = payload.new as any;
-        if (updated.status === 'approved') {
+        if (updated.status === 'approved' && !credited.has(updated.id)) {
+          credited.add(updated.id);
           addBalance(Number(updated.amount));
           toast.success(`🎉 Payment approved! $${updated.amount} added to your balance.`);
-        } else if (updated.status === 'rejected') {
+        } else if (updated.status === 'rejected' && !credited.has(updated.id + '_rejected')) {
+          credited.add(updated.id + '_rejected');
           toast.error(`Payment of $${updated.amount} was rejected.`);
         }
         setMyTxns(prev => prev.map(t => t.id === updated.id ? updated : t));
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    // Poll every 8 seconds
+    const pollInterval = setInterval(checkApprovals, 8000);
+
+    // Also check when user comes back to the tab
+    const handleFocus = () => checkApprovals();
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', handleFocus);
+      supabase.removeChannel(channel);
+    };
   }, [user?.id]);
 
   // ── Submit with hard timeout ──────────────────────────────
