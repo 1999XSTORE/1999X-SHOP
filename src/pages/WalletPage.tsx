@@ -418,9 +418,14 @@ export default function WalletPage() {
     if (!user || isAdmin || isSupport) return;
     loadMyTxns();
 
-    // Track which transaction IDs we have already credited
-    // so we never double-credit the same payment
-    const credited = new Set<string>();
+    // Track credited IDs in sessionStorage to survive re-renders
+    // This prevents double-crediting when user navigates away and back
+    const getCredited = () => new Set<string>(JSON.parse(sessionStorage.getItem('credited-txns') || '[]'));
+    const addCredited = (id: string) => {
+      const s = getCredited(); s.add(id);
+      sessionStorage.setItem('credited-txns', JSON.stringify([...s]));
+    };
+    const credited = getCredited();
 
     // Poll every 8 seconds — checks if any pending txn got approved
     // This works even if realtime is not enabled on the table
@@ -431,13 +436,13 @@ export default function WalletPage() {
       if (!data) return;
 
       data.forEach((tx: any) => {
-        if (tx.status === 'approved' && !credited.has(tx.id)) {
-          credited.add(tx.id);
+        if (tx.status === 'approved' && !getCredited().has(tx.id)) {
+          addCredited(tx.id);
           addBalance(Number(tx.amount));
           toast.success(`🎉 Payment approved! $${tx.amount} added to your balance.`);
         }
-        if (tx.status === 'rejected' && !credited.has(tx.id + '_rejected')) {
-          credited.add(tx.id + '_rejected');
+        if (tx.status === 'rejected' && !getCredited().has(tx.id + '_rejected')) {
+          addCredited(tx.id + '_rejected');
           toast.error(`Payment of $${tx.amount} was rejected.`);
         }
       });
@@ -453,12 +458,12 @@ export default function WalletPage() {
         filter: `user_id=eq.${user.id}`,
       }, payload => {
         const updated = payload.new as any;
-        if (updated.status === 'approved' && !credited.has(updated.id)) {
-          credited.add(updated.id);
+        if (updated.status === 'approved' && !getCredited().has(updated.id)) {
+          addCredited(updated.id);
           addBalance(Number(updated.amount));
           toast.success(`🎉 Payment approved! $${updated.amount} added to your balance.`);
-        } else if (updated.status === 'rejected' && !credited.has(updated.id + '_rejected')) {
-          credited.add(updated.id + '_rejected');
+        } else if (updated.status === 'rejected' && !getCredited().has(updated.id + '_rejected')) {
+          addCredited(updated.id + '_rejected');
           toast.error(`Payment of $${updated.amount} was rejected.`);
         }
         setMyTxns(prev => prev.map(t => t.id === updated.id ? updated : t));

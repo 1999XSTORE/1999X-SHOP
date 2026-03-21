@@ -2,45 +2,40 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
-const resources = {
-  en: {
-    translation: {
-      nav: { dashboard: 'Dashboard', products: 'Products', licenses: 'Licenses', chat: 'Community', support: 'Support', panelStatus: 'Panel Status', logout: 'Logout' },
-      dashboard: { title: 'Dashboard', balance: 'Balance', addBalance: 'Add Balance', activeKeys: 'Active Keys', totalPurchases: 'Total Purchases', bonusPoints: 'Bonus Points', recentActivity: 'Recent Activity', quickActions: 'Quick Actions' },
-      products: { title: 'Products', buy: 'Purchase Now', insufficient: 'Insufficient Balance', perMonth: '/month', features: 'Features' },
-      wallet: { title: 'Add Balance', selectAmount: 'Select Amount', paymentMethod: 'Payment Method', transactionId: 'Transaction ID', screenshot: 'Upload Screenshot', submit: 'Submit Payment', history: 'Transaction History', pending: 'Pending', approved: 'Approved', rejected: 'Rejected', custom: 'Custom Amount' },
-      licenses: { title: 'My Licenses', key: 'License Key', hwid: 'HWID', lastLogin: 'Last Login', expiry: 'Expires', status: 'Status', active: 'Active', expired: 'Expired', resetHwid: 'Reset HWID', copied: 'Copied!', copy: 'Copy', device: 'Device', ip: 'IP Address', resetsLeft: 'resets left this month' },
-      chat: { title: 'Community Chat', placeholder: 'Type a message...', send: 'Send' },
-      support: { title: 'Support Chat', tagSupport: 'Tag @support for help' },
-      bonus: { title: 'Daily Bonus', claim: 'Claim Bonus', claimed: 'Already Claimed', nextClaim: 'Next claim in', points: 'Points', convert: 'Convert to Discount' },
-      announcements: { title: 'Announcements', noAnnouncements: 'No announcements yet' },
-      status: { title: 'Panel Status', online: 'All Systems Operational', maintenance: 'Under Maintenance', lastUpdate: 'Last Update' },
-      auth: { login: 'Login', loginGoogle: 'Continue with Google', welcome: 'Welcome back', subtitle: 'Sign in to access your dashboard' },
-      common: { loading: 'Loading...', error: 'Error', success: 'Success', cancel: 'Cancel', confirm: 'Confirm', save: 'Save', search: 'Search...' }
-    }
-  },
-  ar: { translation: { nav: { dashboard: 'لوحة القيادة', products: 'المنتجات', licenses: 'التراخيص', chat: 'المجتمع', support: 'الدعم', panelStatus: 'حالة اللوحة', logout: 'تسجيل الخروج' }, auth: { login: 'تسجيل الدخول', loginGoogle: 'المتابعة مع Google', welcome: 'مرحبًا بعودتك', subtitle: 'سجّل الدخول للوصول إلى لوحتك' } } },
-  bn: { translation: { nav: { dashboard: 'ড্যাশবোর্ড', products: 'পণ্য', licenses: 'লাইসেন্স', chat: 'কমিউনিটি', support: 'সাপোর্ট', panelStatus: 'প্যানেল স্ট্যাটাস', logout: 'লগআউট' }, auth: { login: 'লগইন', loginGoogle: 'Google দিয়ে চালিয়ে যান', welcome: 'স্বাগতম', subtitle: 'আপনার ড্যাশবোর্ড অ্যাক্সেস করুন' } } },
-  th: { translation: { nav: { dashboard: 'แดชบอร์ด', products: 'ผลิตภัณฑ์', licenses: 'ใบอนุญาต', chat: 'ชุมชน', support: 'สนับสนุน', panelStatus: 'สถานะแผง', logout: 'ออกจากระบบ' }, auth: { login: 'เข้าสู่ระบบ', loginGoogle: 'ดำเนินการต่อด้วย Google' } } },
-  vi: { translation: { nav: { dashboard: 'Bảng điều khiển', products: 'Sản phẩm', licenses: 'Giấy phép', chat: 'Cộng đồng', support: 'Hỗ trợ', panelStatus: 'Trạng thái bảng', logout: 'Đăng xuất' }, auth: { login: 'Đăng nhập', loginGoogle: 'Tiếp tục với Google' } } },
-  es: { translation: { nav: { dashboard: 'Panel', products: 'Productos', licenses: 'Licencias', chat: 'Comunidad', support: 'Soporte', panelStatus: 'Estado del panel', logout: 'Cerrar sesión' }, auth: { login: 'Iniciar sesión', loginGoogle: 'Continuar con Google' } } },
-  pt: { translation: { nav: { dashboard: 'Painel', products: 'Produtos', licenses: 'Licenças', chat: 'Comunidade', support: 'Suporte', panelStatus: 'Status do painel', logout: 'Sair' }, auth: { login: 'Entrar', loginGoogle: 'Continuar com Google' } } },
-  hi: { translation: { nav: { dashboard: 'डैशबोर्ड', products: 'उत्पाद', licenses: 'लाइसेंस', chat: 'समुदाय', support: 'सहायता', panelStatus: 'पैनल स्थिति', logout: 'लॉगआउट' }, auth: { login: 'लॉगिन', loginGoogle: 'Google से जारी रखें' } } },
-  si: { translation: { nav: { dashboard: 'උපකරණ පුවරුව', products: 'නිෂ්පාදන', licenses: 'බලපත්‍ර', chat: 'ප්‍රජාව', support: 'සහාය', panelStatus: 'පුවරු තත්ත්වය', logout: 'පිටවීම' }, auth: { login: 'පුරනය', loginGoogle: 'Google සමඟ ඉදිරියට' } } },
-  fr: { translation: { nav: { dashboard: 'Tableau de bord', products: 'Produits', licenses: 'Licences', chat: 'Communauté', support: 'Support', panelStatus: 'État du panneau', logout: 'Déconnexion' }, auth: { login: 'Connexion', loginGoogle: 'Continuer avec Google' } } },
-  de: { translation: { nav: { dashboard: 'Dashboard', products: 'Produkte', licenses: 'Lizenzen', chat: 'Gemeinschaft', support: 'Support', panelStatus: 'Panel-Status', logout: 'Abmelden' }, auth: { login: 'Anmelden', loginGoogle: 'Weiter mit Google' } } },
-  ja: { translation: { nav: { dashboard: 'ダッシュボード', products: '製品', licenses: 'ライセンス', chat: 'コミュニティ', support: 'サポート', panelStatus: 'パネルステータス', logout: 'ログアウト' }, auth: { login: 'ログイン', loginGoogle: 'Googleで続ける' } } },
-  ko: { translation: { nav: { dashboard: '대시보드', products: '제품', licenses: '라이선스', chat: '커뮤니티', support: '지원', panelStatus: '패널 상태', logout: '로그아웃' }, auth: { login: '로그인', loginGoogle: 'Google로 계속' } } },
-  zh: { translation: { nav: { dashboard: '仪表板', products: '产品', licenses: '许可证', chat: '社区', support: '支持', panelStatus: '面板状态', logout: '退出' }, auth: { login: '登录', loginGoogle: '使用Google继续' } } },
-  ru: { translation: { nav: { dashboard: 'Панель', products: 'Продукты', licenses: 'Лицензии', chat: 'Сообщество', support: 'Поддержка', panelStatus: 'Статус панели', logout: 'Выйти' }, auth: { login: 'Войти', loginGoogle: 'Войти через Google' } } },
-  tr: { translation: { nav: { dashboard: 'Panel', products: 'Ürünler', licenses: 'Lisanslar', chat: 'Topluluk', support: 'Destek', panelStatus: 'Panel Durumu', logout: 'Çıkış' }, auth: { login: 'Giriş', loginGoogle: 'Google ile devam et' } } },
+// Full translations for every page
+const en = {
+  nav: { dashboard: 'Home', shop: 'Shop', licenses: 'License', chat: 'Chat', support: 'Support', status: 'Status', bonus: 'Bonus', announcements: 'News', wallet: 'Shop', logout: 'Sign Out' },
+  dashboard: { welcome: 'Welcome back', balance: 'Balance', activeKeys: 'Active Keys', approved: 'Approved', bonusPoints: 'Bonus Pts', activeSubscriptions: 'Active Subscriptions', noLicense: 'No active licenses', noLicenseDesc: 'Go to Shop to activate your key', quickLinks: 'Quick Links', dailyBonus: 'Daily Bonus', dailyBonusDesc: '+10 pts daily · 100 pts = reward', claimNow: 'Claim Now', nextClaim: 'Next claim in' },
+  shop: { title: 'Shop', products: 'Products', addBalance: 'Add Balance', selectAmount: 'Select Amount', continue: 'Continue', paymentMethod: 'Payment Method', sentPayment: "I've Sent Payment", txnId: 'Transaction / Reference ID', txnIdPlaceholder: 'Paste your transaction ID here', txnIdDesc: 'Enter the ID you received after payment', submit: 'Submit Payment', submitting: 'Submitting...', back: 'Back', history: 'Transaction History', noTxns: 'No transactions yet', approved: 'Approved', rejected: 'Rejected', pending: 'Pending', buy: 'Buy', insufficientBalance: 'Insufficient Balance', approvedMsg: 'Payment approved! ${amount} added to your balance.', rejectedMsg: 'Payment of ${amount} was rejected.' },
+  license: { title: 'Activate License', subtitle: 'Enter your KeyAuth key to activate your panel', placeholder: 'Paste your license key', activate: 'Activate License Key', validating: 'Validating...', noLicense: 'No active licenses', noLicenseDesc: 'Paste your license key above to get started', internalPanel: '1999X Internal Panel', fakeLagPanel: '1999X Fake Lag Panel', hwid: 'HWID', ip: 'IP', lastLogin: 'Last Login', expiry: 'Expiry', resetHwid: 'Reset HWID', resetsLeft: 'left', copy: 'Copy', download: 'Download Panel', tutorial: 'Watch Tutorial', failed: 'Activation Failed' },
+  bonus: { title: 'Bonus Points', subtitle: 'Claim every day · 100 pts = reward', yourPoints: 'Your Points', progressLabel: 'Progress to next reward', claim: '⚡ Claim +10 Points', claimed: '✓ Claimed!', nextClaim: 'Next claim in', redeem: 'Redeem Rewards', redeemed: 'redeemed so far', needMore: 'more pts to redeem', redeemBtn: 'Redeem pts', key3Day: '3-Day Key', balance1: '$1 Balance', fullAccess: 'Full access key', walletCredit: 'Wallet credit' },
+  status: { title: 'Panel Status', allOps: 'Operational', maintenance: 'Maintenance', liveStats: 'Live Stats', totalUsers: 'Total Users', onlineNow: 'Online Now', services: 'Services', announcements: 'Announcements' },
+  announcements: { title: 'Announcements', noAnnouncements: 'No announcements yet', checkBack: 'Check back later for updates' },
+  chat: { title: 'Community Chat', placeholder: 'Send a message...', send: 'Send' },
+  support: { title: 'Support', placeholder: 'Describe your issue...' },
+  common: { loading: 'Loading...', error: 'Error', cancel: 'Cancel', confirm: 'Confirm', copy: 'Copy', copied: 'Copied!' },
 };
 
-i18n.use(LanguageDetector).use(initReactI18next).init({
-  resources,
-  fallbackLng: 'en',
-  interpolation: { escapeValue: false },
-  detection: { order: ['localStorage', 'navigator'], caches: ['localStorage'] },
+const translations: Record<string, typeof en> = {
+  en,
+  ar: { ...en, nav: { ...en.nav, dashboard: 'الرئيسية', shop: 'المتجر', licenses: 'الترخيص', chat: 'الدردشة', support: 'الدعم', status: 'الحالة', bonus: 'المكافآت', announcements: 'الأخبار', wallet: 'المتجر', logout: 'خروج' }, dashboard: { ...en.dashboard, welcome: 'مرحبًا بعودتك', balance: 'الرصيد', activeKeys: 'المفاتيح النشطة', approved: 'موافق عليه', bonusPoints: 'نقاط المكافأة', activeSubscriptions: 'الاشتراكات النشطة', noLicense: 'لا توجد تراخيص نشطة', noLicenseDesc: 'اذهب إلى المتجر لتفعيل مفتاحك', quickLinks: 'روابط سريعة', dailyBonus: 'المكافأة اليومية', dailyBonusDesc: '+10 نقاط يومياً · 100 نقطة = مكافأة', claimNow: 'احصل الآن', nextClaim: 'الحصول التالي في' }, shop: { ...en.shop, title: 'المتجر', products: 'المنتجات', addBalance: 'إضافة رصيد', selectAmount: 'اختر المبلغ', continue: 'متابعة', paymentMethod: 'طريقة الدفع', sentPayment: 'لقد أرسلت الدفع', txnId: 'رقم المعاملة', txnIdPlaceholder: 'الصق رقم المعاملة هنا', submit: 'إرسال الدفع', submitting: 'جارٍ الإرسال...', back: 'رجوع', history: 'سجل المعاملات', noTxns: 'لا توجد معاملات بعد', approved: 'تمت الموافقة', rejected: 'مرفوض', pending: 'قيد الانتظار', buy: 'شراء', insufficientBalance: 'رصيد غير كافٍ' }, license: { ...en.license, title: 'تفعيل الترخيص', subtitle: 'أدخل مفتاح KeyAuth الخاص بك', placeholder: 'الصق مفتاح الترخيص', activate: 'تفعيل المفتاح', validating: 'جارٍ التحقق...', noLicense: 'لا توجد تراخيص نشطة', noLicenseDesc: 'الصق مفتاح الترخيص للبدء', failed: 'فشل التفعيل' }, bonus: { ...en.bonus, title: 'نقاط المكافأة', subtitle: 'احصل يومياً · 100 نقطة = مكافأة', yourPoints: 'نقاطك', claim: '⚡ احصل على +10 نقاط', claimed: '✓ تم الحصول!', nextClaim: 'الحصول التالي في', redeem: 'استبدال المكافآت' }, status: { ...en.status, title: 'حالة اللوحة', allOps: 'يعمل', maintenance: 'صيانة', liveStats: 'إحصائيات مباشرة', totalUsers: 'إجمالي المستخدمين', onlineNow: 'متصل الآن', services: 'الخدمات', announcements: 'الإعلانات' }, announcements: { ...en.announcements, title: 'الإعلانات', noAnnouncements: 'لا توجد إعلانات بعد', checkBack: 'تحقق لاحقاً للتحديثات' }, common: { ...en.common, loading: 'تحميل...', error: 'خطأ', cancel: 'إلغاء', confirm: 'تأكيد', copy: 'نسخ', copied: 'تم النسخ!' } },
+  bn: { ...en, nav: { ...en.nav, dashboard: 'হোম', shop: 'শপ', licenses: 'লাইসেন্স', chat: 'চ্যাট', support: 'সাপোর্ট', status: 'স্ট্যাটাস', bonus: 'বোনাস', announcements: 'খবর', wallet: 'শপ', logout: 'সাইন আউট' }, dashboard: { ...en.dashboard, welcome: 'স্বাগতম', balance: 'ব্যালেন্স', activeKeys: 'সক্রিয় কী', claimNow: 'এখনই নিন', nextClaim: 'পরবর্তী দাবি' }, shop: { ...en.shop, title: 'শপ', addBalance: 'ব্যালেন্স যোগ করুন', selectAmount: 'পরিমাণ বেছে নিন', continue: 'চালিয়ে যান', submit: 'পেমেন্ট জমা দিন', back: 'পেছনে', history: 'লেনদেনের ইতিহাস' }, license: { ...en.license, title: 'লাইসেন্স সক্রিয় করুন', placeholder: 'লাইসেন্স কী পেস্ট করুন', activate: 'সক্রিয় করুন', validating: 'যাচাই করা হচ্ছে...' }, bonus: { ...en.bonus, title: 'বোনাস পয়েন্ট', claim: '⚡ +১০ পয়েন্ট নিন', claimed: '✓ নেওয়া হয়েছে!' }, status: { ...en.status, title: 'প্যানেল স্ট্যাটাস' }, announcements: { ...en.announcements, title: 'ঘোষণা' }, common: { ...en.common } },
+  th: { ...en, nav: { ...en.nav, dashboard: 'หน้าแรก', shop: 'ร้านค้า', licenses: 'ใบอนุญาต', chat: 'แชท', support: 'สนับสนุน', status: 'สถานะ', bonus: 'โบนัส', announcements: 'ข่าว', wallet: 'ร้านค้า', logout: 'ออกจากระบบ' }, dashboard: { ...en.dashboard, welcome: 'ยินดีต้อนรับกลับ', balance: 'ยอดเงิน', activeKeys: 'คีย์ที่ใช้งาน', claimNow: 'รับเลย', nextClaim: 'รับครั้งถัดไปใน' }, shop: { ...en.shop, title: 'ร้านค้า', addBalance: 'เติมเงิน', selectAmount: 'เลือกจำนวนเงิน', continue: 'ดำเนินการต่อ', submit: 'ส่งการชำระเงิน', back: 'กลับ', history: 'ประวัติธุรกรรม' }, license: { ...en.license, title: 'เปิดใช้งานใบอนุญาต', placeholder: 'วางคีย์ใบอนุญาต', activate: 'เปิดใช้งาน', validating: 'กำลังตรวจสอบ...' }, bonus: { ...en.bonus, title: 'คะแนนโบนัส', claim: '⚡ รับ +10 คะแนน', claimed: '✓ รับแล้ว!' }, status: { ...en.status, title: 'สถานะแผง' }, announcements: { ...en.announcements, title: 'ประกาศ' }, common: { ...en.common } },
+};
+
+// For languages without full translations, fall back to English
+['vi','es','pt','hi','fr','de','ja','ko','zh','ru','tr'].forEach(code => {
+  translations[code] = { ...en };
 });
+
+i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources: Object.fromEntries(Object.entries(translations).map(([k,v]) => [k, { translation: v }])),
+    fallbackLng: 'en',
+    interpolation: { escapeValue: false },
+    detection: { order: ['localStorage', 'navigator'], caches: ['localStorage'] },
+  });
 
 export default i18n;

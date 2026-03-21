@@ -69,10 +69,10 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
         <nav
           className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-white/10 shadow-2xl shadow-black/40"
           style={{
-            background: 'rgba(10, 10, 20, 0.65)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            maxWidth: '1200px',
+            background: 'rgba(6,6,15,0.85)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            maxWidth: '1400px',
             width: '100%',
           }}
         >
@@ -85,7 +85,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
               style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}>
               <Zap className="w-4 h-4 text-white" />
             </div>
-            <span className="text-sm font-bold text-white hidden sm:block">1999X</span>
+            <span className="hidden sm:block" style={{ fontSize: 15, fontWeight: 700, color: "white", fontFamily: "Space Grotesk, sans-serif" }}>1999X</span>
           </button>
 
           {/* Desktop nav links — centered */}
