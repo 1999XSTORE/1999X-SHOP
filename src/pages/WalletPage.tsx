@@ -526,7 +526,7 @@ export default function WalletPage() {
   // ── Admin view ────────────────────────────────────────────
   if (isAdmin || isSupport) {
     return (
-      <div className="space-y-6 w-full">
+      <div style={{display:'flex',flexDirection:'column',gap:18}}>
         <div className="rounded-2xl p-5 border border-white/10 bg-white/3">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
@@ -545,7 +545,7 @@ export default function WalletPage() {
 
   // ── User view ─────────────────────────────────────────────
   return (
-    <div className="space-y-6 w-full">
+    <div style={{display:'flex',flexDirection:'column',gap:18}}>
 
       {/* Products */}
       <div>

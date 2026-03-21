@@ -9,9 +9,9 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children, currentPath, onNavigate, onLogout }: AppLayoutProps) {
   return (
-    <div className="min-h-screen" style={{ background: '#06060f' }}>
+    <div style={{ minHeight: '100svh', background: 'var(--bg)' }}>
       <Topbar currentPath={currentPath} onNavigate={onNavigate} onLogout={onLogout} />
-      <main className="pt-20 px-4 sm:px-6 pb-16">
+      <main style={{ paddingTop: 82, paddingBottom: 48, paddingLeft: 16, paddingRight: 16 }}>
         <div style={{ maxWidth: 1400, margin: '0 auto' }}>
           {children}
         </div>
