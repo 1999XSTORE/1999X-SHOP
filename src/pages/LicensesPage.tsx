@@ -263,18 +263,12 @@ function LicenseCard({ lic, onCopy, onReset, accentColor }: {
 export default function LicensesPage() {
   const { t } = useTranslation();
 
-  // Safe destructure with fallbacks
-  let storeData: any = {};
-  try {
-    storeData = useAppStore();
-  } catch (e) {
-    console.error('Store error:', e);
-  }
-
-  const licenses      = storeData?.licenses     ?? [];
-  const resetHwid     = storeData?.resetHwid    ?? (() => false);
-  const addLicense    = storeData?.addLicense   ?? (() => {});
-  const user          = storeData?.user         ?? null;
+  // Hooks must NEVER be inside try/catch — call them directly at top level
+  const rawStore      = useAppStore();
+  const licenses      = rawStore?.licenses   ?? [];
+  const resetHwid     = rawStore?.resetHwid  ?? (() => false);
+  const addLicense    = rawStore?.addLicense ?? (() => {});
+  const user          = rawStore?.user       ?? null;
 
   const [keyValue,    setKeyValue]    = useState('');
   const [loading,     setLoading]     = useState(false);

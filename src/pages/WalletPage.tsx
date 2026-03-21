@@ -78,7 +78,12 @@ function PayPalButton({ amount, user }: { amount: number; user: any }) {
           <div>
             <div style={{ fontSize:12,fontWeight:800,color:'var(--amber)',marginBottom:5 }}>PayPal opened — complete these steps:</div>
             <div style={{ display:'flex',flexDirection:'column',gap:4 }}>
-              {['1. Log in to PayPal and complete the payment','2. Copy the Transaction ID from PayPal receipt','3. Come back here → click "I've Sent Payment"','4. Paste the Transaction ID → Submit'].map((step,i) => (
+              {[
+                "1. Log in to PayPal and complete the payment",
+                "2. Copy the Transaction ID from PayPal receipt",
+                "3. Come back here and click I've Sent Payment",
+                "4. Paste the Transaction ID and Submit"
+              ].map((step,i) => (
                 <div key={i} style={{ fontSize:11,color:'var(--muted)',display:'flex',gap:7,alignItems:'flex-start' }}>
                   <span style={{ color:'var(--green)',fontWeight:700,flexShrink:0 }}>✓</span>{step}
                 </div>
@@ -728,7 +733,7 @@ export default function WalletPage() {
               <PayCard method={selMethod} amount={selAmount} user={user}/>
               <div style={{ display:'flex',gap:10 }}>
                 <button onClick={()=>setStep(1)} className="btn btn-ghost" style={{ padding:'11px 18px' }}><ArrowLeft size={15}/> Back</button>
-                <button onClick={()=>setStep(3)} className="btn btn-p btn-lg" style={{ flex:1 }}>I've Sent Payment <ArrowRight size={15}/></button>
+                <button onClick={()=>setStep(3)} className="btn btn-p btn-lg" style={{ flex:1 }}>I&apos;ve Sent Payment <ArrowRight size={15}/></button>
               </div>
             </div>
           )}
