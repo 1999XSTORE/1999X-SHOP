@@ -259,6 +259,68 @@ function LicenseCard({ lic, onCopy, onReset, accentColor }: {
   );
 }
 
+
+// ── Expired License History ──────────────────────────────────
+function ExpiredHistory({ intExpired, lagExpired }: { intExpired: any[]; lagExpired: any[] }) {
+  const [show, setShow] = useState(false);
+  const all = [...intExpired, ...lagExpired].sort((a, b) =>
+    new Date(b?.expiresAt ?? 0).getTime() - new Date(a?.expiresAt ?? 0).getTime()
+  );
+
+  return (
+    <div className="fu" style={{ animationDelay:'120ms' }}>
+      <button onClick={() => setShow(!show)}
+        style={{ display:'flex',alignItems:'center',gap:10,width:'100%',padding:'14px 18px',borderRadius:14,background:'rgba(255,255,255,.02)',border:'1px solid rgba(255,255,255,.06)',cursor:'pointer',fontFamily:'inherit',transition:'all .15s' }}
+        onMouseEnter={e=>(e.currentTarget.style.background='rgba(255,255,255,.04)')}
+        onMouseLeave={e=>(e.currentTarget.style.background='rgba(255,255,255,.02)')}>
+        <div style={{ width:28,height:28,borderRadius:8,background:'rgba(248,113,113,.08)',border:'1px solid rgba(248,113,113,.15)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+          <Clock size={14} color="var(--red)" />
+        </div>
+        <div style={{ flex:1,textAlign:'left' }}>
+          <div style={{ fontSize:13,fontWeight:700,color:'rgba(255,255,255,.6)' }}>Expired Licenses</div>
+          <div style={{ fontSize:11,color:'var(--dim)',marginTop:1 }}>{all.length} expired key{all.length!==1?'s':''} in history</div>
+        </div>
+        <div style={{ fontSize:11,color:'var(--dim)',padding:'4px 10px',borderRadius:20,background:'rgba(255,255,255,.04)',border:'1px solid var(--border)' }}>
+          {show?'Hide':'Show'}
+        </div>
+      </button>
+      {show && (
+        <div style={{ marginTop:10,display:'flex',flexDirection:'column',gap:8 }}>
+          {all.map((l: any) => {
+            const rawKey     = l?.key ?? '';
+            const displayKey = rawKey.endsWith('_INTERNAL') ? rawKey.replace('_INTERNAL','') : rawKey;
+            const isInternal = rawKey.endsWith('_INTERNAL') || l?.productId === 'keyauth-internal';
+            const expiredOn  = l?.expiresAt ? new Date(l.expiresAt).toLocaleDateString() : 'Unknown';
+            const copy = () => { navigator.clipboard.writeText(displayKey); toast.success('Copied!'); };
+            return (
+              <div key={l?.id || Math.random()}
+                style={{ display:'flex',alignItems:'center',gap:14,padding:'13px 16px',borderRadius:12,background:'rgba(248,113,113,.04)',border:'1px solid rgba(248,113,113,.1)',opacity:.75 }}>
+                <div style={{ width:32,height:32,borderRadius:9,background:'rgba(248,113,113,.08)',border:'1px solid rgba(248,113,113,.15)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+                  <Key size={14} color="var(--red)" />
+                </div>
+                <div style={{ flex:1,minWidth:0 }}>
+                  <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:3 }}>
+                    <span style={{ fontSize:12,fontWeight:700,color:'rgba(255,255,255,.5)' }}>{isInternal?'Internal':'Fake Lag'}</span>
+                    <span className="badge badge-red" style={{ fontSize:9 }}>Expired</span>
+                  </div>
+                  <code style={{ fontSize:11,fontFamily:'monospace',color:'rgba(255,255,255,.3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'block' }}>
+                    {displayKey || '(no key)'}
+                  </code>
+                  <div style={{ fontSize:10,color:'var(--dim)',marginTop:2 }}>Expired: {expiredOn}</div>
+                </div>
+                <button onClick={copy}
+                  style={{ padding:'5px 10px',borderRadius:8,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',cursor:'pointer',color:'var(--dim)',flexShrink:0 }}>
+                  <Copy size={12}/>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ────────────────────────────────────────────────
 export default function LicensesPage() {
   const { t } = useTranslation();
@@ -299,10 +361,23 @@ export default function LicensesPage() {
 
     const alreadyLag = licenses.some((l: any) => l?.productId === 'keyauth-lag' && l?.key === trimmedKey);
     const alreadyInt = licenses.some((l: any) => l?.productId === 'keyauth-internal' && l?.key === trimmedKey + '_INTERNAL');
-    if (alreadyLag && alreadyInt) { toast.error('Key already activated'); return; }
+    if (alreadyLag && alreadyInt) { toast.error('Key already activated on this account'); return; }
 
     setLoading(true);
     try {
+      // ── Step 1: Check if key is already bound to a different Gmail ──
+      const { data: existingBinding } = await fetch(`${SUPABASE_URL}/rest/v1/key_bindings?key=eq.${encodeURIComponent(trimmedKey)}&select=user_email`, {
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` }
+      }).then(r => r.json()).then(data => ({ data: Array.isArray(data) ? data[0] : null })).catch(() => ({ data: null }));
+
+      if (existingBinding && existingBinding.user_email !== user.email) {
+        setErrorMsg(`❌ This key is already bound to a different Google account (${existingBinding.user_email.replace(/(.{3}).*(@.*)/, '$1***$2')}). Each key can only be used by one Gmail account.`);
+        toast.error('Key is bound to another account');
+        setLoading(false);
+        return;
+      }
+
+      // ── Step 2: Validate with KeyAuth ──
       const [lagResult, intResult] = await Promise.all([
         alreadyLag ? { success: false, message: 'skip', info: null } : validatePanel(trimmedKey, 'lag'),
         alreadyInt ? { success: false, message: 'skip', info: null } : validatePanel(trimmedKey, 'internal'),
@@ -320,8 +395,9 @@ export default function LicensesPage() {
         return;
       }
 
-      let lastKey = '';
+      let lastKey  = '';
       let lastName = '';
+      const panelType = lagOk && intOk ? 'both' : lagOk ? 'lag' : 'internal';
 
       if (lagOk) {
         const lic = {
@@ -347,6 +423,25 @@ export default function LicensesPage() {
         lastKey = trimmedKey + '_INTERNAL'; lastName = 'Internal';
       }
 
+      // ── Step 3: Bind key to Gmail in Supabase ──
+      if (!existingBinding) {
+        await fetch(`${SUPABASE_URL}/rest/v1/key_bindings`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON,
+            'Authorization': `Bearer ${SUPABASE_ANON}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({
+            key:        trimmedKey,
+            user_id:    user.id,
+            user_email: user.email,
+            panel_type: panelType,
+          }),
+        }).catch(() => {});
+      }
+
       const count = (lagOk ? 1 : 0) + (intOk ? 1 : 0);
       if (count === 2) toast.success('🎉 Both panels activated!');
       else if (count === 1) toast.success(`✅ ${lastName} activated!`);
@@ -363,9 +458,17 @@ export default function LicensesPage() {
 
   handleActivateRef.current = handleActivate;
 
-  // Safe filter
-  const lagLicenses = (licenses || []).filter((l: any) => l?.productId === 'keyauth-lag');
-  const intLicenses = (licenses || []).filter((l: any) => l?.productId === 'keyauth-internal' || l?.key?.endsWith?.('_INTERNAL'));
+  // Safe filter — split active vs expired
+  const now = Date.now();
+  const isExpiredLic = (l: any) => new Date(l?.expiresAt ?? 0).getTime() < now;
+
+  const lagActive   = (licenses || []).filter((l: any) => l?.productId === 'keyauth-lag' && !isExpiredLic(l));
+  const lagExpired  = (licenses || []).filter((l: any) => l?.productId === 'keyauth-lag' && isExpiredLic(l));
+  const intActive   = (licenses || []).filter((l: any) => (l?.productId === 'keyauth-internal' || l?.key?.endsWith?.('_INTERNAL')) && !isExpiredLic(l));
+  const intExpired  = (licenses || []).filter((l: any) => (l?.productId === 'keyauth-internal' || l?.key?.endsWith?.('_INTERNAL')) && isExpiredLic(l));
+
+  const hasActive   = lagActive.length > 0 || intActive.length > 0;
+  const hasExpired  = lagExpired.length > 0 || intExpired.length > 0;
   const hasAny      = (licenses || []).length > 0;
 
   return (
@@ -405,35 +508,36 @@ export default function LicensesPage() {
         )}
       </div>
 
-      {/* Internal licenses */}
-      {intLicenses.length > 0 && (
+      {/* ── Active Internal licenses ── */}
+      {intActive.length > 0 && (
         <div className="fu" style={{ animationDelay:'40ms' }}>
           <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:12 }}>
-            <div className="dot" style={{ background:'var(--blue)',boxShadow:'0 0 7px var(--blue)',width:6,height:6,borderRadius:'50%' }} />
+            <div className="dot" style={{ background:'var(--blue)',boxShadow:'0 0 7px var(--blue)',width:6,height:6,borderRadius:'50%',animation:'blink 2s infinite' }} />
             <div style={{ fontSize:12,fontWeight:700,color:'var(--blue)',textTransform:'uppercase',letterSpacing:'.1em' }}>1999X Internal Panel</div>
           </div>
           <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
-            {intLicenses.map((l: any) => <LicenseCard key={l?.id || Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} accentColor="blue" />)}
+            {intActive.map((l: any) => <LicenseCard key={l?.id || Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} accentColor="blue" />)}
           </div>
         </div>
       )}
 
-      {/* Lag licenses */}
-      {lagLicenses.length > 0 && (
+      {/* ── Active Fake Lag licenses ── */}
+      {lagActive.length > 0 && (
         <div className="fu" style={{ animationDelay:'80ms' }}>
           <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:12 }}>
             <div className="dot dot-purple" />
             <div style={{ fontSize:12,fontWeight:700,color:'var(--purple)',textTransform:'uppercase',letterSpacing:'.1em' }}>1999X Fake Lag Panel</div>
           </div>
           <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
-            {lagLicenses.map((l: any) => <LicenseCard key={l?.id || Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} accentColor="purple" />)}
+            {lagActive.map((l: any) => <LicenseCard key={l?.id || Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} accentColor="purple" />)}
           </div>
         </div>
       )}
 
-      {hasAny && <DownloadSection />}
+      {hasActive && <DownloadSection />}
 
-      {!hasAny && (
+      {/* ── No active licenses ── */}
+      {!hasActive && (
         <div className="g fu" style={{ padding:'60px 20px',textAlign:'center',borderStyle:'dashed',animationDelay:'60ms' }}>
           <div style={{ width:64,height:64,borderRadius:20,background:'rgba(139,92,246,.08)',border:'1px solid rgba(139,92,246,.15)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px' }}>
             <Key size={28} color="rgba(139,92,246,.35)" />
@@ -442,6 +546,9 @@ export default function LicensesPage() {
           <p style={{ fontSize:13,color:'var(--dim)' }}>Paste your license key above to get started</p>
         </div>
       )}
+
+      {/* ── Expired History Section ── */}
+      {hasExpired && <ExpiredHistory intExpired={intExpired} lagExpired={lagExpired} />}
     </div>
   );
 }

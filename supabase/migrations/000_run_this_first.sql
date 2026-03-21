@@ -94,3 +94,26 @@ end $$;
 
 -- ── Enable realtime on transactions (required for instant balance updates) ──
 alter publication supabase_realtime add table public.transactions;
+
+-- Key bindings table — binds license key to Gmail
+CREATE TABLE IF NOT EXISTS public.key_bindings (
+  id         uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  key        text NOT NULL UNIQUE,
+  user_id    uuid NOT NULL REFERENCES auth.users(id),
+  user_email text NOT NULL,
+  panel_type text NOT NULL,
+  bound_at   timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.key_bindings ENABLE ROW LEVEL SECURITY;
+
+-- Users can only see their own bindings
+CREATE POLICY "users_own_bindings" ON public.key_bindings
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Users can insert their own bindings
+CREATE POLICY "users_insert_bindings" ON public.key_bindings
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Index for fast key lookup
+CREATE INDEX IF NOT EXISTS key_bindings_key ON public.key_bindings (key);

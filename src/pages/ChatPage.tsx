@@ -1,17 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppStore } from '@/lib/store';
-import { Send, Trash2, Star, Edit2, Reply, X, Users } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Send, Trash2, Edit2, Reply, X, Crown, Shield, Copy, Smile, Hash, Lock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
-const roleBadge: Record<string, { label: string; className: string }> = {
-  admin:   { label: 'ADMIN',   className: 'bg-red-500/15 text-red-400 border-red-500/20' },
-  support: { label: 'SUPPORT', className: 'bg-purple-500/15 text-purple-400 border-purple-500/20' },
-};
-
-interface RealtimeMsg {
+// ── Types ────────────────────────────────────────────────────
+interface Msg {
   id: string;
   user_id: string;
   user_name: string;
@@ -20,238 +14,577 @@ interface RealtimeMsg {
   message: string;
   created_at: string;
   reply_to?: string | null;
+  is_private?: boolean;
 }
 
-export default function ChatPage() {
-  const { t } = useTranslation();
-  const { user } = useAppStore();
-  const [messages, setMessages]     = useState<RealtimeMsg[]>([]);
-  const [message, setMessage]       = useState('');
-  const [editId, setEditId]         = useState<string | null>(null);
-  const [editText, setEditText]     = useState('');
-  const [replyTo, setReplyTo]       = useState<RealtimeMsg | null>(null);
-  const [typing, setTyping]         = useState<string[]>([]);
-  const [onlineCount, setOnlineCount] = useState(1);
-  const bottomRef   = useRef<HTMLDivElement>(null);
-  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+interface OnlineUser {
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  userRole: string;
+}
 
-  // Load messages & subscribe to realtime
-  useEffect(() => {
-    // Initial load
-    supabase
-      .from('chat_messages')
-      .select('*')
-      .order('created_at', { ascending: true })
-      .limit(100)
-      .then(({ data }) => { if (data) setMessages(data); });
+// ── Helpers ──────────────────────────────────────────────────
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 5)  return 'Just now';
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
 
-    // Realtime subscription
-    const channel = supabase
-      .channel('chat_room')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, payload => {
-        setMessages(prev => [...prev, payload.new as RealtimeMsg]);
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, payload => {
-        setMessages(prev => prev.map(m => m.id === (payload.new as RealtimeMsg).id ? payload.new as RealtimeMsg : m));
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'chat_messages' }, payload => {
-        setMessages(prev => prev.filter(m => m.id !== payload.old.id));
-      })
-      // Typing indicator via broadcast
-      .on('broadcast', { event: 'typing' }, ({ payload }) => {
-        if (payload.userId === user?.id) return;
-        setTyping(prev => {
-          if (!prev.includes(payload.userName)) return [...prev, payload.userName];
-          return prev;
-        });
-        setTimeout(() => setTyping(prev => prev.filter(u => u !== payload.userName)), 3000);
-      })
-      .subscribe();
+function Avatar({ src, name, size = 36, role }: { src?: string; name: string; size?: number; role?: string }) {
+  const colors: Record<string, string> = {
+    admin:   'linear-gradient(135deg,#ef4444,#b91c1c)',
+    support: 'linear-gradient(135deg,#3b82f6,#1d4ed8)',
+    user:    'linear-gradient(135deg,#8b5cf6,#6d28d9)',
+  };
+  const bg = colors[role ?? 'user'] ?? colors.user;
 
-    return () => { supabase.removeChannel(channel); };
-  }, []);
+  if (src) return (
+    <img src={src} alt={name} style={{ width:size, height:size, borderRadius:'50%', objectFit:'cover', flexShrink:0 }}
+      onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+  );
+  return (
+    <div style={{ width:size, height:size, borderRadius:'50%', background:bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:size*0.38, fontWeight:800, color:'#fff', flexShrink:0 }}>
+      {(name || '?').charAt(0).toUpperCase()}
+    </div>
+  );
+}
 
-  // Auto-scroll
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+function RoleBadge({ role }: { role: string }) {
+  if (role === 'admin') return (
+    <span style={{ display:'inline-flex',alignItems:'center',gap:3,fontSize:9,fontWeight:800,padding:'2px 7px',borderRadius:20,background:'rgba(239,68,68,.12)',color:'#f87171',border:'1px solid rgba(239,68,68,.25)',letterSpacing:'.05em' }}>
+      <Crown size={8} /> ADMIN
+    </span>
+  );
+  if (role === 'support') return (
+    <span style={{ display:'inline-flex',alignItems:'center',gap:3,fontSize:9,fontWeight:800,padding:'2px 7px',borderRadius:20,background:'rgba(59,130,246,.12)',color:'#60a5fa',border:'1px solid rgba(59,130,246,.25)',letterSpacing:'.05em' }}>
+      <Shield size={8} /> SUPPORT
+    </span>
+  );
+  return null;
+}
 
-  const broadcastTyping = () => {
-    if (!user) return;
-    supabase.channel('chat_room').send({ type: 'broadcast', event: 'typing', payload: { userId: user.id, userName: user.name } });
-    if (typingTimer.current) clearTimeout(typingTimer.current);
+const REACTIONS = ['👍','❤️','🔥','😂','😮','😢'];
+
+// ── Message Component ────────────────────────────────────────
+function Message({ msg, isOwn, isMod, currentUserId, currentUserRole, onReply, onDelete, onEdit, allMsgs }: {
+  msg: Msg; isOwn: boolean; isMod: boolean;
+  currentUserId: string; currentUserRole: string;
+  onReply: (m: Msg) => void; onDelete: (id: string) => void; onEdit: (m: Msg) => void;
+  allMsgs: Msg[];
+}) {
+  const [hovered,   setHovered]   = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [reactions, setReactions] = useState<Record<string, string[]>>({});
+  const replyMsg = msg.reply_to ? allMsgs.find(m => m.id === msg.reply_to) : null;
+
+  // Private message visibility
+  const isPrivate = msg.is_private || msg.message.includes('@admin') || msg.message.includes('@support');
+  const canSeePrivate = isMod || msg.user_id === currentUserId;
+  if (isPrivate && !canSeePrivate) return null;
+
+  const isAdminMsg  = msg.user_role === 'admin';
+  const isSupportMsg = msg.user_role === 'support';
+
+  const msgBg = isPrivate
+    ? 'rgba(139,92,246,.08)'
+    : isAdminMsg
+    ? 'rgba(239,68,68,.04)'
+    : isSupportMsg
+    ? 'rgba(59,130,246,.04)'
+    : hovered ? 'rgba(255,255,255,.025)' : 'transparent';
+
+  const msgBorder = isPrivate ? '1px solid rgba(139,92,246,.2)' : 'none';
+  const msgGlow   = isAdminMsg ? '0 0 20px rgba(239,68,68,.06)' : isSupportMsg ? '0 0 20px rgba(59,130,246,.06)' : 'none';
+
+  const copy = () => { navigator.clipboard.writeText(msg.message); toast.success('Copied!'); };
+
+  const addReaction = (emoji: string) => {
+    setReactions(prev => {
+      const users = prev[emoji] ?? [];
+      const hasIt = users.includes(currentUserId);
+      return { ...prev, [emoji]: hasIt ? users.filter(u => u !== currentUserId) : [...users, currentUserId] };
+    });
+    setShowEmoji(false);
   };
 
-  const handleSend = async () => {
-    if (!message.trim() || !user) return;
-    const msg = message.trim();
-    setMessage('');
+  return (
+    <div
+      style={{ display:'flex',gap:12,padding:'8px 14px',borderRadius:14,transition:'background .15s',background:msgBg,border:msgBorder,boxShadow:msgGlow,position:'relative',marginBottom:2 }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => { setHovered(false); setShowEmoji(false); }}>
+
+      <Avatar src={msg.user_avatar} name={msg.user_name} role={msg.user_role} />
+
+      <div style={{ flex:1,minWidth:0 }}>
+        {/* Header */}
+        <div style={{ display:'flex',alignItems:'center',gap:7,marginBottom:3,flexWrap:'wrap' }}>
+          <span style={{ fontSize:14,fontWeight:700,color:isAdminMsg?'#f87171':isSupportMsg?'#60a5fa':'#fff' }}>
+            {msg.user_name}
+          </span>
+          <RoleBadge role={msg.user_role} />
+          {isPrivate && (
+            <span style={{ display:'inline-flex',alignItems:'center',gap:3,fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:20,background:'rgba(139,92,246,.1)',color:'var(--purple)',border:'1px solid rgba(139,92,246,.2)' }}>
+              <Lock size={8}/> Support Only
+            </span>
+          )}
+          <span style={{ fontSize:10,color:'rgba(255,255,255,.25)' }}>{timeAgo(msg.created_at)}</span>
+        </div>
+
+        {/* Reply preview */}
+        {replyMsg && (
+          <div style={{ display:'flex',alignItems:'center',gap:6,marginBottom:5,padding:'5px 10px',borderRadius:8,background:'rgba(255,255,255,.04)',borderLeft:'2px solid rgba(255,255,255,.15)' }}>
+            <Avatar src={replyMsg.user_avatar} name={replyMsg.user_name} size={16} />
+            <span style={{ fontSize:11,color:'rgba(255,255,255,.4)',fontWeight:600 }}>{replyMsg.user_name}:</span>
+            <span style={{ fontSize:11,color:'rgba(255,255,255,.3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{replyMsg.message}</span>
+          </div>
+        )}
+
+        {/* Message text */}
+        <p style={{ fontSize:14,color:'rgba(255,255,255,.82)',lineHeight:1.55,wordBreak:'break-word',whiteSpace:'pre-wrap' }}>
+          {msg.message.split(/(@admin|@support)/g).map((part, i) =>
+            part === '@admin' || part === '@support'
+              ? <span key={i} style={{ color:'var(--purple)',fontWeight:700,background:'rgba(139,92,246,.1)',padding:'1px 4px',borderRadius:4 }}>{part}</span>
+              : part
+          )}
+        </p>
+
+        {/* Reactions */}
+        {Object.entries(reactions).filter(([,u]) => u.length > 0).length > 0 && (
+          <div style={{ display:'flex',gap:5,marginTop:6,flexWrap:'wrap' }}>
+            {Object.entries(reactions).filter(([,u]) => u.length > 0).map(([emoji, users]) => (
+              <button key={emoji} onClick={() => addReaction(emoji)}
+                style={{ display:'flex',alignItems:'center',gap:4,padding:'3px 8px',borderRadius:20,background:users.includes(currentUserId)?'rgba(139,92,246,.15)':'rgba(255,255,255,.05)',border:users.includes(currentUserId)?'1px solid rgba(139,92,246,.3)':'1px solid rgba(255,255,255,.08)',cursor:'pointer',fontSize:12,color:'#fff',fontFamily:'inherit' }}>
+                {emoji} <span style={{ fontSize:11,color:'rgba(255,255,255,.5)' }}>{users.length}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Hover actions */}
+      {hovered && (
+        <div style={{ position:'absolute',top:-14,right:12,display:'flex',gap:3,background:'rgba(20,20,30,.95)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'4px 6px',boxShadow:'0 4px 20px rgba(0,0,0,.5)',zIndex:10 }}>
+          {/* Emoji react */}
+          <div style={{ position:'relative' }}>
+            <button onClick={() => setShowEmoji(!showEmoji)} title="React"
+              style={{ padding:'5px 7px',borderRadius:7,background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,.5)',display:'flex',alignItems:'center',transition:'all .15s' }}
+              onMouseEnter={e => (e.currentTarget.style.background='rgba(255,255,255,.08)')}
+              onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
+              <Smile size={14}/>
+            </button>
+            {showEmoji && (
+              <div style={{ position:'absolute',bottom:'110%',right:0,background:'rgba(20,20,30,.98)',border:'1px solid rgba(255,255,255,.1)',borderRadius:12,padding:8,display:'flex',gap:5,boxShadow:'0 8px 32px rgba(0,0,0,.6)',zIndex:20 }}>
+                {REACTIONS.map(e => (
+                  <button key={e} onClick={() => addReaction(e)}
+                    style={{ fontSize:18,padding:'3px 5px',borderRadius:8,background:'transparent',border:'none',cursor:'pointer',transition:'transform .1s' }}
+                    onMouseEnter={e2 => (e2.currentTarget.style.transform='scale(1.3)')}
+                    onMouseLeave={e2 => (e2.currentTarget.style.transform='scale(1)')}>
+                    {e}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* Reply */}
+          <button onClick={() => onReply(msg)} title="Reply"
+            style={{ padding:'5px 7px',borderRadius:7,background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,.5)',display:'flex',alignItems:'center',transition:'all .15s' }}
+            onMouseEnter={e => (e.currentTarget.style.background='rgba(255,255,255,.08)')}
+            onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
+            <Reply size={14}/>
+          </button>
+          {/* Copy */}
+          <button onClick={copy} title="Copy"
+            style={{ padding:'5px 7px',borderRadius:7,background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,.5)',display:'flex',alignItems:'center',transition:'all .15s' }}
+            onMouseEnter={e => (e.currentTarget.style.background='rgba(255,255,255,.08)')}
+            onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
+            <Copy size={14}/>
+          </button>
+          {/* Edit (own messages) */}
+          {isOwn && (
+            <button onClick={() => onEdit(msg)} title="Edit"
+              style={{ padding:'5px 7px',borderRadius:7,background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,.5)',display:'flex',alignItems:'center',transition:'all .15s' }}
+              onMouseEnter={e => (e.currentTarget.style.background='rgba(255,255,255,.08)')}
+              onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
+              <Edit2 size={14}/>
+            </button>
+          )}
+          {/* Delete (own or mod) */}
+          {(isOwn || isMod) && (
+            <button onClick={() => onDelete(msg.id)} title="Delete"
+              style={{ padding:'5px 7px',borderRadius:7,background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,.5)',display:'flex',alignItems:'center',transition:'all .15s' }}
+              onMouseEnter={e => { e.currentTarget.style.background='rgba(239,68,68,.12)'; e.currentTarget.style.color='#f87171'; }}
+              onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='rgba(255,255,255,.5)'; }}>
+              <Trash2 size={14}/>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Typing dots animation ────────────────────────────────────
+function TypingDots() {
+  return (
+    <span style={{ display:'inline-flex',gap:3,alignItems:'center' }}>
+      {[0,1,2].map(i => (
+        <span key={i} style={{ width:4,height:4,borderRadius:'50%',background:'rgba(255,255,255,.4)',animation:`typingDot 1.2s ease-in-out ${i*0.2}s infinite` }}/>
+      ))}
+    </span>
+  );
+}
+
+// ── Main ChatPage ─────────────────────────────────────────────
+export default function ChatPage() {
+  const { user } = useAppStore();
+  const [messages,     setMessages]     = useState<Msg[]>([]);
+  const [input,        setInput]        = useState('');
+  const [editId,       setEditId]       = useState<string | null>(null);
+  const [editText,     setEditText]     = useState('');
+  const [replyTo,      setReplyTo]      = useState<Msg | null>(null);
+  const [typingUsers,  setTypingUsers]  = useState<Record<string, string>>({});
+  const [onlineUsers,  setOnlineUsers]  = useState<OnlineUser[]>([]);
+  const [showSidebar,  setShowSidebar]  = useState(true);
+  const [loading,      setLoading]      = useState(true);
+
+  const bottomRef    = useRef<HTMLDivElement>(null);
+  const inputRef     = useRef<HTMLTextAreaElement>(null);
+  const typingTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSent     = useRef(0);
+  const channelRef   = useRef<any>(null);
+
+  const isMod = user?.role === 'admin' || user?.role === 'support';
+
+  // ── Load messages ──────────────────────────────────────────
+  useEffect(() => {
+    supabase.from('chat_messages').select('*').order('created_at', { ascending: true }).limit(100)
+      .then(({ data }) => { if (data) setMessages(data); setLoading(false); });
+  }, []);
+
+  // ── Realtime subscription ──────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+
+    const ch = supabase.channel('chat_v2', { config: { presence: { key: user.id } } });
+
+    // Messages
+    ch.on('postgres_changes', { event:'INSERT', schema:'public', table:'chat_messages' }, ({ new: m }) => {
+      setMessages(p => {
+        if (p.find(x => x.id === (m as Msg).id)) return p;
+        return [...p, m as Msg];
+      });
+    })
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'chat_messages' }, ({ new: m }) => {
+      setMessages(p => p.map(x => x.id === (m as Msg).id ? m as Msg : x));
+    })
+    .on('postgres_changes', { event:'DELETE', schema:'public', table:'chat_messages' }, ({ old: m }) => {
+      setMessages(p => p.filter(x => x.id !== (m as any).id));
+    })
+
+    // Typing broadcast
+    .on('broadcast', { event:'typing' }, ({ payload }) => {
+      if (payload.userId === user.id) return;
+      setTypingUsers(p => ({ ...p, [payload.userId]: payload.userName }));
+      if (typingTimer.current) clearTimeout(typingTimer.current);
+      typingTimer.current = setTimeout(() => {
+        setTypingUsers(p => { const n = { ...p }; delete n[payload.userId]; return n; });
+      }, 3000);
+    })
+
+    // Presence — online users
+    .on('presence', { event:'sync' }, () => {
+      const state = ch.presenceState();
+      const users: OnlineUser[] = Object.values(state).flatMap((s: any) => s).map((s: any) => ({
+        userId:     s.userId,
+        userName:   s.userName,
+        userAvatar: s.userAvatar || '',
+        userRole:   s.userRole || 'user',
+      }));
+      setOnlineUsers(users);
+    });
+
+    ch.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await ch.track({
+          userId:     user.id,
+          userName:   user.name,
+          userAvatar: user.avatar || '',
+          userRole:   user.role || 'user',
+        });
+      }
+    });
+
+    channelRef.current = ch;
+    return () => { supabase.removeChannel(ch); };
+  }, [user?.id]);
+
+  // ── Auto-scroll ────────────────────────────────────────────
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, typingUsers]);
+
+  // ── Typing broadcast ───────────────────────────────────────
+  const broadcastTyping = useCallback(() => {
+    if (!user || !channelRef.current) return;
+    channelRef.current.send({ type:'broadcast', event:'typing', payload:{ userId:user.id, userName:user.name } });
+  }, [user?.id]);
+
+  // ── Send message ───────────────────────────────────────────
+  const handleSend = useCallback(async () => {
+    const txt = input.trim();
+    if (!txt || !user) return;
+
+    // Rate limit: 1 message per second
+    if (Date.now() - lastSent.current < 1000) { toast.error('Slow down!'); return; }
+    lastSent.current = Date.now();
+
+    const isPrivate = txt.includes('@admin') || txt.includes('@support');
+
+    setInput('');
     setReplyTo(null);
 
-    const { error } = await supabase.from('chat_messages').insert({
+    // Optimistic UI — add immediately
+    const tempId = `temp_${Date.now()}`;
+    const optimistic: Msg = {
+      id:          tempId,
       user_id:     user.id,
       user_name:   user.name,
       user_avatar: user.avatar || '',
-      user_role:   user.role,
-      message:     msg,
+      user_role:   user.role || 'user',
+      message:     txt,
+      created_at:  new Date().toISOString(),
       reply_to:    replyTo?.id || null,
-    });
+      is_private:  isPrivate,
+    };
+    setMessages(p => [...p, optimistic]);
+
+    const { data, error } = await supabase.from('chat_messages').insert({
+      user_id:     user.id,
+      user_name:   user.name,
+      user_avatar: user.avatar || '',
+      user_role:   user.role || 'user',
+      message:     txt,
+      reply_to:    replyTo?.id || null,
+      is_private:  isPrivate,
+    }).select().single();
+
     if (error) {
-      toast.error('Failed to send message');
-      setMessage(msg);
+      toast.error('Failed to send');
+      setMessages(p => p.filter(m => m.id !== tempId));
+      setInput(txt);
+    } else if (data) {
+      // Replace optimistic with real
+      setMessages(p => p.map(m => m.id === tempId ? data : m));
     }
-  };
+  }, [input, user, replyTo]);
 
-  const handleDelete = async (id: string) => {
-    await supabase.from('chat_messages').delete().eq('id', id);
-  };
-
+  const handleDelete   = async (id: string) => { await supabase.from('chat_messages').delete().eq('id', id); };
   const handleEditSave = async () => {
     if (!editText.trim() || !editId) return;
     await supabase.from('chat_messages').update({ message: editText }).eq('id', editId);
     setEditId(null); setEditText('');
   };
 
-  const isModRole = user?.role === 'admin' || user?.role === 'support';
-
-  const getReplyMsg = (id: string | null) => id ? messages.find(m => m.id === id) : null;
+  // Sort online users: admin → support → user
+  const roleOrder: Record<string, number> = { admin:0, support:1, user:2 };
+  const sortedOnline = [...onlineUsers].sort((a, b) => (roleOrder[a.userRole]??2) - (roleOrder[b.userRole]??2));
+  const typingList = Object.values(typingUsers);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)] w-full gap-3">
-      {/* Header */}
-      <div className="flex items-center justify-between px-1">
-        <h2 className="text-sm font-bold text-white flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          Community Chat
-        </h2>
-        <div className="flex items-center gap-1.5 text-[10px] text-white/30">
-          <Users className="w-3 h-3" />
-          {onlineCount} online
-        </div>
-      </div>
+    <>
+      <style>{`
+        @keyframes typingDot { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-4px);opacity:1} }
+        @keyframes msgIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .chat-msg-in { animation: msgIn .2s ease-out; }
+        .chat-scroll::-webkit-scrollbar { width:4px; }
+        .chat-scroll::-webkit-scrollbar-track { background:transparent; }
+        .chat-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,.08); border-radius:4px; }
+        .chat-scroll::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.15); }
+        .chat-input { resize:none; background:transparent; border:none; outline:none; color:#fff; font-family:inherit; font-size:14px; width:100%; max-height:120px; line-height:1.5; }
+        .chat-input::placeholder { color:rgba(255,255,255,.25); }
+      `}</style>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-0.5 pr-1">
-        {messages.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-xs text-white/20">No messages yet. Start the conversation!</p>
+      <div style={{ display:'flex', height:'calc(100vh - 90px)', gap:12, overflow:'hidden' }}>
+
+        {/* ── Main chat area ── */}
+        <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0, background:'rgba(255,255,255,.02)', border:'1px solid rgba(255,255,255,.06)', borderRadius:20, overflow:'hidden' }}>
+
+          {/* Header */}
+          <div style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 18px', borderBottom:'1px solid rgba(255,255,255,.06)', background:'rgba(255,255,255,.02)', flexShrink:0 }}>
+            <div style={{ width:32,height:32,borderRadius:10,background:'rgba(139,92,246,.12)',border:'1px solid rgba(139,92,246,.2)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+              <Hash size={16} color="var(--purple)"/>
+            </div>
+            <div>
+              <div style={{ fontSize:15,fontWeight:800,color:'#fff' }}>Community Chat</div>
+              <div style={{ fontSize:11,color:'var(--muted)' }}>{sortedOnline.length} online · Real-time</div>
+            </div>
+            <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:8 }}>
+              <div className="dot dot-green" style={{ width:6,height:6 }}/>
+              <span style={{ fontSize:12, color:'var(--green)', fontWeight:600 }}>{sortedOnline.length} online</span>
+              <button onClick={() => setShowSidebar(!showSidebar)}
+                style={{ padding:'6px 12px', borderRadius:9, background:'rgba(255,255,255,.05)', border:'1px solid var(--border)', cursor:'pointer', fontSize:11, color:'var(--muted)', fontFamily:'inherit' }}>
+                {showSidebar ? 'Hide' : 'Members'}
+              </button>
+            </div>
           </div>
-        )}
-        {messages.map((msg) => {
-          const badge = roleBadge[msg.user_role];
-          const replyMsg = getReplyMsg(msg.reply_to || null);
-          const isOwn = msg.user_id === user?.id;
 
-          return (
-            <div key={msg.id} className={cn(
-              'group flex gap-3 p-3 rounded-xl transition-colors hover:bg-white/3',
-            )}>
-              {/* Avatar */}
-              {msg.user_avatar ? (
-                <img src={msg.user_avatar} alt={msg.user_name} className="w-9 h-9 rounded-full object-cover flex-shrink-0 mt-0.5" />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-purple-500/20 flex items-center justify-center text-xs font-bold text-purple-400 flex-shrink-0 mt-0.5">
-                  {msg.user_name.charAt(0)}
-                </div>
-              )}
-
-              <div className="flex-1 min-w-0">
-                {/* Name + badge + time */}
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-semibold text-white">{msg.user_name}</span>
-                  {badge && (
-                    <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded border', badge.className)}>
-                      {badge.label}
-                    </span>
-                  )}
-                  <span className="text-[10px] text-white/20">
-                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-
-                {/* Reply preview */}
-                {replyMsg && (
-                  <div className="mb-1.5 pl-3 border-l-2 border-white/10 text-[10px] text-white/30 truncate">
-                    <span className="font-semibold text-white/50">{replyMsg.user_name}:</span> {replyMsg.message}
-                  </div>
-                )}
-
-                {/* Message body */}
+          {/* Messages */}
+          <div className="chat-scroll" style={{ flex:1, overflowY:'auto', padding:'12px 4px' }}>
+            {loading && (
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'40px 0', color:'var(--muted)', fontSize:13 }}>
+                Loading messages...
+              </div>
+            )}
+            {!loading && messages.length === 0 && (
+              <div style={{ textAlign:'center', padding:'60px 20px' }}>
+                <div style={{ fontSize:32, marginBottom:12 }}>👋</div>
+                <div style={{ fontSize:15, fontWeight:600, color:'rgba(255,255,255,.4)', marginBottom:6 }}>No messages yet</div>
+                <div style={{ fontSize:13, color:'var(--dim)' }}>Be the first to say something!</div>
+              </div>
+            )}
+            {messages.map((msg) => (
+              <div key={msg.id} className="chat-msg-in">
                 {editId === msg.id ? (
-                  <div className="flex gap-2">
-                    <input
-                      value={editText}
-                      onChange={e => setEditText(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleEditSave()}
-                      className="flex-1 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500/40"
-                    />
-                    <button onClick={handleEditSave} className="px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 text-xs font-semibold">Save</button>
-                    <button onClick={() => setEditId(null)} className="p-1.5 rounded-lg hover:bg-white/5"><X className="w-3.5 h-3.5 text-white/30" /></button>
+                  <div style={{ display:'flex',gap:8,padding:'8px 14px',alignItems:'center' }}>
+                    <Avatar src={msg.user_avatar} name={msg.user_name} role={msg.user_role} size={32}/>
+                    <input value={editText} onChange={e => setEditText(e.target.value)}
+                      onKeyDown={e => { if(e.key==='Enter') handleEditSave(); if(e.key==='Escape'){setEditId(null);setEditText('');} }}
+                      style={{ flex:1,padding:'8px 12px',borderRadius:10,background:'rgba(255,255,255,.06)',border:'1px solid rgba(139,92,246,.3)',color:'#fff',fontFamily:'inherit',fontSize:14,outline:'none' }}
+                      autoFocus/>
+                    <button onClick={handleEditSave} className="btn btn-p btn-sm">Save</button>
+                    <button onClick={() => { setEditId(null); setEditText(''); }}
+                      style={{ padding:'6px',borderRadius:8,background:'rgba(255,255,255,.05)',border:'1px solid var(--border)',cursor:'pointer',color:'var(--muted)',display:'flex' }}>
+                      <X size={14}/>
+                    </button>
                   </div>
                 ) : (
-                  <p className="text-sm text-white/70 break-words leading-relaxed">{msg.message}</p>
+                  <Message
+                    msg={msg} isOwn={msg.user_id === user?.id} isMod={isMod}
+                    currentUserId={user?.id ?? ''} currentUserRole={user?.role ?? 'user'}
+                    onReply={setReplyTo} onDelete={handleDelete}
+                    onEdit={m => { setEditId(m.id); setEditText(m.message); }}
+                    allMsgs={messages}
+                  />
                 )}
               </div>
+            ))}
 
-              {/* Action buttons (hover) */}
-              <div className="opacity-0 group-hover:opacity-100 flex items-start gap-1 transition-opacity flex-shrink-0">
-                <button onClick={() => setReplyTo(msg)} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" title="Reply">
-                  <Reply className="w-3.5 h-3.5 text-white/30 hover:text-white/60" />
-                </button>
-                {(isOwn || isModRole) && (
-                  <>
-                    <button onClick={() => { setEditId(msg.id); setEditText(msg.message); }} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" title="Edit">
-                      <Edit2 className="w-3.5 h-3.5 text-white/30 hover:text-white/60" />
-                    </button>
-                    <button onClick={() => handleDelete(msg.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors" title="Delete">
-                      <Trash2 className="w-3.5 h-3.5 text-white/30 hover:text-red-400" />
-                    </button>
-                  </>
-                )}
+            {/* Typing indicator */}
+            {typingList.length > 0 && (
+              <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 14px', color:'rgba(255,255,255,.4)', fontSize:12 }}>
+                <TypingDots/>
+                <span>
+                  {typingList.slice(0,2).join(', ')}
+                  {typingList.length > 2 ? ` +${typingList.length-2} more` : ''}
+                  {' '}{typingList.length === 1 ? 'is' : 'are'} typing...
+                </span>
+              </div>
+            )}
+            <div ref={bottomRef}/>
+          </div>
+
+          {/* Reply bar */}
+          {replyTo && (
+            <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 18px', borderTop:'1px solid rgba(255,255,255,.06)', background:'rgba(139,92,246,.05)', flexShrink:0 }}>
+              <Reply size={13} color="var(--purple)"/>
+              <div style={{ flex:1, minWidth:0 }}>
+                <span style={{ fontSize:11, color:'var(--purple)', fontWeight:700 }}>Replying to {replyTo.user_name}: </span>
+                <span style={{ fontSize:11, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{replyTo.message}</span>
+              </div>
+              <button onClick={() => setReplyTo(null)} style={{ padding:4, borderRadius:6, background:'none', border:'none', cursor:'pointer', color:'var(--dim)', display:'flex' }}>
+                <X size={13}/>
+              </button>
+            </div>
+          )}
+
+          {/* Input */}
+          <div style={{ padding:'12px 14px', borderTop:'1px solid rgba(255,255,255,.06)', flexShrink:0, background:'rgba(255,255,255,.01)' }}>
+            <div style={{ display:'flex', gap:12, alignItems:'flex-end', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:14, padding:'10px 14px', transition:'border-color .15s' }}
+              onFocus={() => {}} >
+              <Avatar src={user?.avatar} name={user?.name || '?'} role={user?.role} size={30}/>
+              <textarea
+                ref={inputRef}
+                className="chat-input"
+                value={input}
+                rows={1}
+                onChange={e => {
+                  setInput(e.target.value);
+                  broadcastTyping();
+                  // Auto-resize
+                  e.target.style.height = 'auto';
+                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+                }}
+                placeholder={user ? 'Message #community (Shift+Enter for newline)' : 'Login to chat...'}
+                disabled={!user}
+              />
+              <button onClick={handleSend} disabled={!input.trim() || !user}
+                style={{ padding:'8px 10px', borderRadius:10, border:'none', cursor:input.trim()&&user?'pointer':'not-allowed', background:input.trim()&&user?'linear-gradient(135deg,#8b5cf6,#6d28d9)':'rgba(255,255,255,.05)', color:'#fff', display:'flex', alignItems:'center', flexShrink:0, transition:'all .15s', opacity:input.trim()&&user?1:0.4, boxShadow:input.trim()&&user?'0 0 20px rgba(109,40,217,.4)':'none' }}>
+                <Send size={15}/>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Online Users Sidebar ── */}
+        {showSidebar && (
+          <div style={{ width:220, display:'flex', flexDirection:'column', background:'rgba(255,255,255,.02)', border:'1px solid rgba(255,255,255,.06)', borderRadius:20, overflow:'hidden', flexShrink:0 }}>
+            <div style={{ padding:'14px 16px', borderBottom:'1px solid rgba(255,255,255,.06)', flexShrink:0 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.1em', marginBottom:2 }}>
+                Online — {sortedOnline.length}
               </div>
             </div>
-          );
-        })}
+            <div className="chat-scroll" style={{ flex:1, overflowY:'auto', padding:'10px 10px' }}>
 
-        {/* Typing indicator */}
-        {typing.length > 0 && (
-          <div className="px-3 py-2 text-[11px] text-white/30 italic">
-            {typing.join(', ')} {typing.length === 1 ? 'is' : 'are'} typing...
+              {/* Group by role */}
+              {(['admin','support','user'] as const).map(role => {
+                const group = sortedOnline.filter(u => (u.userRole || 'user') === role);
+                if (!group.length) return null;
+                const roleLabel = role === 'admin' ? 'Admin' : role === 'support' ? 'Support' : 'Members';
+                const roleColor = role === 'admin' ? '#f87171' : role === 'support' ? '#60a5fa' : 'var(--muted)';
+                return (
+                  <div key={role} style={{ marginBottom:14 }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:roleColor, textTransform:'uppercase', letterSpacing:'.1em', padding:'0 6px', marginBottom:6 }}>
+                      {roleLabel} — {group.length}
+                    </div>
+                    {group.map(u => (
+                      <div key={u.userId} style={{ display:'flex', alignItems:'center', gap:9, padding:'6px 8px', borderRadius:10, marginBottom:2, transition:'background .15s', cursor:'default' }}
+                        onMouseEnter={e => (e.currentTarget.style.background='rgba(255,255,255,.04)')}
+                        onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
+                        <div style={{ position:'relative', flexShrink:0 }}>
+                          <Avatar src={u.userAvatar} name={u.userName} role={u.userRole} size={30}/>
+                          <div style={{ position:'absolute', bottom:0, right:0, width:9, height:9, borderRadius:'50%', background:'var(--green)', border:'2px solid var(--bg)', boxShadow:'0 0 6px var(--green)' }}/>
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:12, fontWeight:600, color:role==='admin'?'#f87171':role==='support'?'#60a5fa':'rgba(255,255,255,.75)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            {u.userName}
+                          </div>
+                          {(role === 'admin' || role === 'support') && (
+                            <div style={{ fontSize:10, color:roleColor, opacity:.7 }}>{roleLabel}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+
+              {sortedOnline.length === 0 && (
+                <div style={{ textAlign:'center', padding:'20px 0', fontSize:12, color:'var(--dim)' }}>No one online</div>
+              )}
+            </div>
           </div>
         )}
-        <div ref={bottomRef} />
       </div>
-
-      {/* Reply preview bar */}
-      {replyTo && (
-        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10">
-          <Reply className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <span className="text-[10px] text-white/50 font-semibold">Replying to {replyTo.user_name}: </span>
-            <span className="text-[10px] text-white/30 truncate">{replyTo.message}</span>
-          </div>
-          <button onClick={() => setReplyTo(null)} className="p-1 rounded hover:bg-white/5">
-            <X className="w-3.5 h-3.5 text-white/30" />
-          </button>
-        </div>
-      )}
-
-      {/* Input */}
-      <div className="flex gap-2 p-3 rounded-xl border border-white/10 bg-white/3">
-        <input
-          value={message}
-          onChange={e => { setMessage(e.target.value); broadcastTyping(); }}
-          onKeyDown={e => e.key === 'Enter' && handleSend()}
-          placeholder={t('chat.placeholder')}
-          className="flex-1 bg-transparent text-sm text-white placeholder:text-white/20 focus:outline-none"
-        />
-        <button
-          onClick={handleSend}
-          disabled={!message.trim()}
-          className="p-2.5 rounded-lg text-white transition-all active:scale-[0.95] disabled:opacity-40"
-          style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}
-        >
-          <Send className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
