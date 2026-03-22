@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { safeQuery } from '@/lib/safeFetch';
+import { logActivity } from '@/lib/activity';
 import AppLayout from '@/components/layout/AppLayout';
 import LoginPage from '@/pages/LoginPage';
 import DashboardPage from '@/pages/DashboardPage';
@@ -12,6 +13,7 @@ import PanelStatusPage from '@/pages/PanelStatusPage';
 import WalletPage from '@/pages/WalletPage';
 import BonusPage from '@/pages/BonusPage';
 import AnnouncementsPage from '@/pages/AnnouncementsPage';
+import AdminActivityPage from '@/pages/AdminActivityPage';
 
 const pageComponents: Record<string, React.FC> = {
   '/':              DashboardPage,
@@ -21,7 +23,8 @@ const pageComponents: Record<string, React.FC> = {
   '/panel-status':  PanelStatusPage,
   '/wallet':        WalletPage,
   '/bonus':         BonusPage,
-  '/announcements': AnnouncementsPage,
+  '/announcements':    AnnouncementsPage,
+  '/admin-activity':   AdminActivityPage,
 };
 
 
@@ -72,13 +75,15 @@ export default function Index() {
       loggingIn.current = true;
       const email = session.user.email ?? '';
       const role  = await fetchRole(email);
+      const userName = session.user.user_metadata?.full_name ?? email ?? 'User';
       login({
         id:     session.user.id,
         email,
-        name:   session.user.user_metadata?.full_name ?? email ?? 'User',
+        name:   userName,
         avatar: session.user.user_metadata?.avatar_url ?? '',
         role,
       });
+      logActivity({ userId:session.user.id, userEmail:email, userName, action:'login', status:'success', meta:{ role } });
       loggingIn.current = false;
       setAuthReady(true);
     };

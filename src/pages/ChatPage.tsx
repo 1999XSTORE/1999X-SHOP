@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Send, Trash2, Edit2, Reply, X, Crown, Shield, Copy, Smile, Hash, Lock, Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { logActivity, notifyAll } from '@/lib/activity';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -242,7 +243,9 @@ export default function ChatPage() {
       setMessages(p=>p.map(x=>x.id===(m as Msg).id?m as Msg:x));
     })
     .on('postgres_changes',{event:'DELETE',schema:'public',table:'chat_messages'},({old:m})=>{
-      setMessages(p=>p.filter(x=>x.id!==(m as any).id));
+      // Guard: REPLICA IDENTITY FULL ensures id is present; always filter only the targeted id
+      const deletedId = (m as any)?.id;
+      if (deletedId) setMessages(p => p.filter(x => x.id !== deletedId));
     })
     .on('broadcast',{event:'typing'},({payload})=>{
       if(payload.userId===user.id) return;
@@ -292,10 +295,26 @@ export default function ChatPage() {
     setMessages(p=>[...p,optimistic]);
     const {data,error}=await supabase.from('chat_messages').insert({user_id:user.id,user_name:user.name,user_avatar:user.avatar||'',user_role:user.role||'user',message:txt,reply_to:replyTo?.id||null,is_private:isPrivate}).select().single();
     if(error){toast.error('Failed to send');setMessages(p=>p.filter(m=>m.id!==tempId));setInput(txt);}
-    else if(data){setMessages(p=>p.map(m=>m.id===tempId?data:m));}
+    else if(data){
+      setMessages(p=>p.map(m=>m.id===tempId?data:m));
+      // Log activity (skip private messages to avoid spamming logs)
+      if(!isPrivate && user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'message_sent', status:'success', meta:{ preview:txt.slice(0,40) } });
+      // Notify all users of new chat message (small badge increment)
+      if(!isPrivate) notifyAll({ type:'chat', title:`💬 ${user?.name?.split(' ')[0]}: ${txt.slice(0,50)}`, body:'', linkPath:'/chat' });
+    }
   },[input,user,replyTo]);
 
-  const handleDelete=async(id:string)=>{ await supabase.from('chat_messages').delete().eq('id',id); };
+  const handleDelete = async (id: string) => {
+    // Optimistic: remove immediately from local state, realtime confirms for other users
+    setMessages(p => p.filter(x => x.id !== id));
+    const { error } = await supabase.from('chat_messages').delete().eq('id', id);
+    if (error) {
+      // Rollback on failure — reload messages
+      toast.error('Delete failed');
+      supabase.from('chat_messages').select('*').order('created_at',{ascending:true}).limit(100)
+        .then(({data}) => { if (data) setMessages(data); });
+    }
+  };
   const handleEditSave=async()=>{
     if(!editText.trim()||!editId) return;
     await supabase.from('chat_messages').update({message:editText}).eq('id',editId);

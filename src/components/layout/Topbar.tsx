@@ -3,6 +3,7 @@ import { useAppStore } from '@/lib/store';
 import { Menu, X, LogOut, Globe, Wallet, Crown, Shield, Home, ShoppingBag, Key, MessageCircle, Gift, Activity } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import NotificationBell from './NotificationBell';
 
 // Nav order: Home > Shop > License > Chat > Bonus > Status
 const navItems = [
@@ -170,6 +171,9 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
               <Wallet size={12} />${balance.toFixed(2)}
             </button>
 
+            {/* Notification bell */}
+            <NotificationBell onNavigate={handleNav} />
+
             {/* Language */}
             <div style={{ position:'relative' }} ref={langRef}>
               <button onClick={() => setLangOpen(!langOpen)} className="nav-btn" title="Language">
@@ -231,6 +235,15 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                         </div>
                       </div>
                     </div>
+                  )}
+                  {user?.role === 'admin' && (
+                    <>
+                      <button onClick={() => { handleNav('/admin-activity'); setProfileOpen(false); }} className="dropdown-item">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        Activity Logs
+                      </button>
+                      <div style={{ height:1,background:'rgba(255,255,255,.06)',margin:'4px 0' }}/>
+                    </>
                   )}
                   <button onClick={() => { onLogout(); setProfileOpen(false); }} className="dropdown-item" style={{ color:'#f87171' }}>
                     <LogOut size={14} /> {t('nav.signOut')}

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Gift, Clock, Coins, CheckCircle, Copy, Loader2, X } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { logActivity } from '@/lib/activity';
 import { toast } from 'sonner';
 
 const SUPABASE_URL  = 'https://wkjqrjafogufqeasfeev.supabase.co';
@@ -87,7 +88,7 @@ function RewardModal({ bonusPoints, userId, userEmail, onClose, onRedeem }: {
     onRedeem(newPts);
     await upsertBonusRow(userId, userEmail, newPts, null);
     setSuccess('balance');
-    toast.success('💰 $3 added to your balance!');
+    toast.success('💰 $3 added to your balance!'); logActivity({ userId, userEmail, userName:userEmail, action:'balance_add', amount:3, status:'success', meta:{ source:'bonus_redeem' } });
   };
 
   const claimKey = async () => {
@@ -112,7 +113,7 @@ function RewardModal({ bonusPoints, userId, userEmail, onClose, onRedeem }: {
       await upsertBonusRow(userId, userEmail, newPts, null);
       setGenKey(k);
       setSuccess('key');
-      toast.success('🔑 3-Day license key generated!');
+      toast.success('🔑 3-Day license key generated!'); logActivity({ userId, userEmail, userName:userEmail, action:'key_generated', product:'3-Day Key (Bonus)', status:'success', meta:{ source:'bonus_redeem' } });
     } else {
       toast.error('Key generation failed: ' + (result.message ?? 'Unknown error'));
     }
@@ -353,7 +354,7 @@ export default function BonusPage() {
             {/* Progress */}
             <div style={{marginBottom:22}}>
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
-                <span style={{fontSize:12,color:'var(--muted)'}}>{t('bonus.progressLabel')}</span>
+                <span style={{fontSize:12,color:'var(--muted)'}}>{t('bonus.progressTo')}</span>
                 <span style={{fontSize:12,color:'var(--amber)',fontWeight:600}}>{prog}/100</span>
               </div>
               <div className="prog" style={{height:7,borderRadius:4}}>

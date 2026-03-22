@@ -1,3 +1,4 @@
+import { logActivity } from '@/lib/activity';
 import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { useTranslation } from 'react-i18next';
@@ -332,6 +333,7 @@ export default function LicensesPage() {
   const resetHwid     = rawStore?.resetHwid  ?? (() => false);
   const addLicense    = rawStore?.addLicense ?? (() => {});
   const user          = rawStore?.user       ?? null;
+  const user          = rawStore?.user       ?? null;
 
   const [keyValue,    setKeyValue]    = useState('');
   const [loading,     setLoading]     = useState(false);
@@ -349,7 +351,7 @@ export default function LicensesPage() {
   const confirmResetHwid = () => {
     if (!hwidTarget) return;
     try {
-      if (resetHwid(hwidTarget)) toast.success('HWID reset successfully');
+      if (resetHwid(hwidTarget)) { toast.success('HWID reset successfully'); if(user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'hwid_reset', product:hwidTarget, status:'success' }); }
       else toast.error('Reset limit reached (2/month)');
     } catch { toast.error('Reset failed'); }
     setHwidTarget(null);
