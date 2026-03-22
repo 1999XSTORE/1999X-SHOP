@@ -68,7 +68,7 @@ const en = {
   },
   chat: { title:'Community Chat', placeholder:'Send a message...', send:'Send' },
   support: { title:'Support', placeholder:'Describe your issue...' },
-  common: { loading:'Loading...', error:'Error', cancel:'Cancel', confirm:'Confirm', copy:'Copy', copied:'Copied!', done:'Done', status:'Status', method:'Method', txnId:'Transaction ID' },
+  common: { loading:'Loading...', error:'Error', cancel:'Cancel', confirm:'Confirm', copy:'Copy', copied:'Copied!', done:'Done', status:'Status', method:'Method', txnId:'Transaction ID', or:'or' },
 };
 
 type Translations = typeof en;
@@ -85,7 +85,7 @@ const ar: Translations = {
   announcements: { title:'الإعلانات', subtitle:'رسالة', subtitlePlural:'رسائل', noAnnouncements:'لا توجد إعلانات بعد', checkBack:'تحقق لاحقًا للتحديثات' },
   chat: { title:'الدردشة المجتمعية', placeholder:'أرسل رسالة...', send:'إرسال' },
   support: { title:'الدعم', placeholder:'اشرح مشكلتك...' },
-  common: { loading:'تحميل...', error:'خطأ', cancel:'إلغاء', confirm:'تأكيد', copy:'نسخ', copied:'تم النسخ!', done:'تم', status:'الحالة', method:'الطريقة', txnId:'رقم المعاملة' },
+  common: { loading:'تحميل...', error:'خطأ', cancel:'إلغاء', confirm:'تأكيد', copy:'نسخ', copied:'تم النسخ!', done:'تم', status:'الحالة', method:'الطريقة', txnId:'رقم المعاملة', or:'أو' },
 };
 
 // Bengali
@@ -100,7 +100,7 @@ const bn: Translations = {
   announcements: { title:'ঘোষণা', subtitle:'বার্তা', subtitlePlural:'বার্তা', noAnnouncements:'এখনো কোনো ঘোষণা নেই', checkBack:'পরে আবার দেখুন' },
   chat: { title:'কমিউনিটি চ্যাট', placeholder:'একটি বার্তা পাঠান...', send:'পাঠান' },
   support: { title:'সাপোর্ট', placeholder:'আপনার সমস্যা বর্ণনা করুন...' },
-  common: { loading:'লোড হচ্ছে...', error:'ত্রুটি', cancel:'বাতিল', confirm:'নিশ্চিত', copy:'কপি', copied:'কপি হয়েছে!', done:'সম্পন্ন', status:'স্ট্যাটাস', method:'পদ্ধতি', txnId:'লেনদেন আইডি' },
+  common: { loading:'লোড হচ্ছে...', error:'ত্রুটি', cancel:'বাতিল', confirm:'নিশ্চিত', copy:'কপি', copied:'কপি হয়েছে!', done:'সম্পন্ন', status:'স্ট্যাটাস', method:'পদ্ধতি', txnId:'লেনদেন আইডি', or:'বা' },
 };
 
 // Thai
@@ -115,7 +115,7 @@ const th: Translations = {
   announcements: { title:'ประกาศ', subtitle:'ข้อความ', subtitlePlural:'ข้อความ', noAnnouncements:'ยังไม่มีประกาศ', checkBack:'กลับมาตรวจสอบในภายหลัง' },
   chat: { title:'แชทชุมชน', placeholder:'ส่งข้อความ...', send:'ส่ง' },
   support: { title:'สนับสนุน', placeholder:'อธิบายปัญหาของคุณ...' },
-  common: { loading:'กำลังโหลด...', error:'ข้อผิดพลาด', cancel:'ยกเลิก', confirm:'ยืนยัน', copy:'คัดลอก', copied:'คัดลอกแล้ว!', done:'เสร็จสิ้น', status:'สถานะ', method:'วิธี', txnId:'รหัสธุรกรรม' },
+  common: { loading:'กำลังโหลด...', error:'ข้อผิดพลาด', cancel:'ยกเลิก', confirm:'ยืนยัน', copy:'คัดลอก', copied:'คัดลอกแล้ว!', done:'เสร็จสิ้น', status:'สถานะ', method:'วิธี', txnId:'รหัสธุรกรรม', or:'หรือ' },
 };
 
 // Build translations object — all other languages use English as fallback

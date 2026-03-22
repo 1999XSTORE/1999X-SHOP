@@ -1,16 +1,17 @@
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/lib/store';
-import { Menu, X, LogOut, Globe, Wallet, Crown, Shield } from 'lucide-react';
+import { Menu, X, LogOut, Globe, Wallet, Crown, Shield, Home, ShoppingBag, Key, MessageCircle, Gift, Activity } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
+// Nav order: Home > Shop > License > Chat > Bonus > Status
 const navItems = [
-  { key: 'dashboard',   path: '/',             tKey: 'nav.home'    },
-  { key: 'licenses',    path: '/licenses',     tKey: 'nav.license' },
-  { key: 'chat',        path: '/chat',         tKey: 'nav.chat'    },
-  { key: 'wallet',      path: '/wallet',       tKey: 'nav.shop'    },
-  { key: 'bonus',       path: '/bonus',        tKey: 'nav.bonus'   },
-  { key: 'panelStatus', path: '/panel-status', tKey: 'nav.status'  },
+  { key: 'dashboard',   path: '/',            tKey: 'nav.home',    Icon: Home          },
+  { key: 'store',       path: '/store',        tKey: 'nav.shop',    Icon: ShoppingBag   },
+  { key: 'licenses',    path: '/licenses',     tKey: 'nav.license', Icon: Key           },
+  { key: 'chat',        path: '/chat',         tKey: 'nav.chat',    Icon: MessageCircle },
+  { key: 'bonus',       path: '/bonus',        tKey: 'nav.bonus',   Icon: Gift          },
+  { key: 'panelStatus', path: '/panel-status', tKey: 'nav.status',  Icon: Activity      },
 ];
 
 const LANGUAGES = [
@@ -62,53 +63,50 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
       <style>{`
         .nav-pill {
           position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
-          z-index: 50; width: calc(100% - 32px); max-width: 1100px;
+          z-index: 50; width: calc(100% - 24px); max-width: 1100px;
         }
         .nav-inner {
-          display: flex; align-items: center; gap: 6px;
-          padding: 8px 10px; border-radius: 22px;
-          background: rgba(8, 8, 18, 0.82);
+          display: flex; align-items: center; gap: 3px;
+          padding: 7px 8px; border-radius: 22px;
+          background: rgba(8, 8, 18, 0.9);
           backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
           border: 1px solid rgba(255,255,255,0.08);
-          box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03) inset;
+          box-shadow: 0 8px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.03) inset;
         }
         .nav-link {
-          padding: 7px 14px; border-radius: 14px; font-size: 13px;
+          padding: 7px 11px; border-radius: 13px; font-size: 12.5px;
           font-weight: 500; cursor: pointer; border: none; background: transparent;
-          color: rgba(255,255,255,0.5); transition: all 0.18s ease;
+          color: rgba(255,255,255,0.45); transition: all 0.18s ease;
           font-family: inherit; white-space: nowrap;
+          display: flex; align-items: center; gap: 5px;
           position: relative;
         }
-        .nav-link:hover {
-          color: rgba(255,255,255,0.9);
-          background: rgba(255,255,255,0.07);
-        }
+        .nav-link:hover { color: rgba(255,255,255,0.9); background: rgba(255,255,255,0.06); }
         .nav-link.active {
           color: #fff;
           background: rgba(139,92,246,0.18);
-          border: 1px solid rgba(139,92,246,0.3);
-          box-shadow: 0 0 16px rgba(109,40,217,0.25);
+          border: 1px solid rgba(139,92,246,0.28);
+          box-shadow: 0 0 18px rgba(109,40,217,0.22);
           font-weight: 600;
         }
+        .nav-link .nav-ic { opacity: 0.55; transition: opacity 0.18s; }
+        .nav-link:hover .nav-ic, .nav-link.active .nav-ic { opacity: 1; }
         .nav-btn {
-          padding: 7px 10px; border-radius: 13px; border: none; cursor: pointer;
+          padding: 7px 9px; border-radius: 13px; border: none; cursor: pointer;
           background: transparent; color: rgba(255,255,255,0.45); display: flex;
           align-items: center; justify-content: center; transition: all 0.18s;
           font-family: inherit;
         }
         .nav-btn:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.8); }
         .balance-pill {
-          display: flex; align-items: center; gap: 6px; padding: 6px 14px;
-          border-radius: 14px; border: 1px solid rgba(139,92,246,0.25);
+          display: flex; align-items: center; gap: 5px; padding: 6px 12px;
+          border-radius: 13px; border: 1px solid rgba(139,92,246,0.25);
           background: rgba(139,92,246,0.1); color: #c4b5fd; font-size: 12px;
           font-weight: 700; cursor: pointer; transition: all 0.18s; font-family: inherit;
           white-space: nowrap;
         }
-        .balance-pill:hover { background: rgba(139,92,246,0.18); border-color: rgba(139,92,246,0.4); }
-        .logo-img {
-          height: 34px; width: auto; object-fit: contain;
-          filter: drop-shadow(0 0 10px rgba(139,92,246,0.5));
-        }
+        .balance-pill:hover { background: rgba(139,92,246,0.18); border-color: rgba(139,92,246,0.4); box-shadow: 0 0 14px rgba(109,40,217,0.25); }
+        .logo-img { height: 30px; width: auto; object-fit: contain; filter: drop-shadow(0 0 10px rgba(139,92,246,0.5)); }
         .dropdown {
           position: absolute; right: 0; top: calc(100% + 10px);
           background: rgba(10,10,22,0.97); backdrop-filter: blur(24px);
@@ -124,58 +122,58 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
         }
         .dropdown-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
         .avatar-ring { border-radius: 50%; border: 2px solid rgba(139,92,246,0.3); }
+        .mob-nav-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+        .mob-nav-item {
+          padding: 11px 6px; border-radius: 13px; font-size: 11.5px; font-weight: 500;
+          cursor: pointer; border: 1px solid rgba(255,255,255,0.06);
+          background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.5);
+          text-align: center; font-family: inherit; transition: all 0.15s;
+          display: flex; flex-direction: column; align-items: center; gap: 5px;
+        }
+        .mob-nav-item.active { border-color: rgba(139,92,246,0.3); background: rgba(139,92,246,0.12); color: #c4b5fd; }
       `}</style>
 
       <div className="nav-pill">
         <div className="nav-inner">
 
           {/* Logo */}
-          <button onClick={() => handleNav('/')} style={{ display:'flex', alignItems:'center', marginRight:4, flexShrink:0, background:'none', border:'none', cursor:'pointer', padding:'4px 6px', borderRadius:12 }}>
+          <button onClick={() => handleNav('/')} style={{ display:'flex', alignItems:'center', marginRight:2, flexShrink:0, background:'none', border:'none', cursor:'pointer', padding:'4px 6px', borderRadius:12 }}>
             <img
               src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1"
-              alt="1999X"
-              className="logo-img"
-              style={{ height:34, width:'auto', objectFit:'contain' }}
+              alt="1999X" className="logo-img"
               onError={e => {
-                const t = e.target as HTMLImageElement;
-                t.style.display = 'none';
-                const span = document.createElement('span');
-                span.textContent = '1999X';
-                span.style.cssText = 'font-size:16px;font-weight:900;color:#fff;letter-spacing:-.02em';
-                t.parentNode?.appendChild(span);
+                const t2 = e.target as HTMLImageElement; t2.style.display='none';
+                const s = document.createElement('span'); s.textContent='1999X';
+                s.style.cssText='font-size:15px;font-weight:900;color:#fff;letter-spacing:-.02em';
+                t2.parentNode?.appendChild(s);
               }}
             />
           </button>
 
-          {/* Divider */}
-          <div style={{ width:1, height:22, background:'rgba(255,255,255,0.08)', flexShrink:0, margin:'0 2px' }} />
+          <div style={{ width:1, height:20, background:'rgba(255,255,255,0.07)', flexShrink:0, margin:'0 2px' }} />
 
-          {/* Nav links — desktop */}
+          {/* Desktop nav */}
           <div className="hidden lg:flex items-center gap-0.5 flex-1 justify-center">
             {navItems.map(item => (
-              <button
-                key={item.key}
-                onClick={() => handleNav(item.path)}
-                className={cn('nav-link', currentPath === item.path && 'active')}
-              >
+              <button key={item.key} onClick={() => handleNav(item.path)}
+                className={cn('nav-link', currentPath === item.path && 'active')}>
+                <item.Icon size={13} className="nav-ic" />
                 {t(item.tKey)}
               </button>
             ))}
           </div>
 
           {/* Right controls */}
-          <div style={{ display:'flex', alignItems:'center', gap:5, marginLeft:'auto', flexShrink:0 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:3, marginLeft:'auto', flexShrink:0 }}>
 
-            {/* Balance */}
             <button onClick={() => handleNav('/wallet')} className="balance-pill hidden sm:flex">
-              <Wallet size={13} />
-              ${balance.toFixed(2)}
+              <Wallet size={12} />${balance.toFixed(2)}
             </button>
 
             {/* Language */}
             <div style={{ position:'relative' }} ref={langRef}>
               <button onClick={() => setLangOpen(!langOpen)} className="nav-btn" title="Language">
-                <Globe size={15} />
+                <Globe size={14} />
               </button>
               {langOpen && (
                 <div className="dropdown" style={{ minWidth:170 }}>
@@ -186,10 +184,10 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                     {LANGUAGES.map(lang => (
                       <button key={lang.code} onClick={() => { i18n.changeLanguage(lang.code); setLangOpen(false); }}
                         className="dropdown-item"
-                        style={{ color: lang.code === i18n.language ? '#c4b5fd' : undefined, fontWeight: lang.code === i18n.language ? 600 : undefined }}>
+                        style={{ color: lang.code===i18n.language?'#c4b5fd':undefined, fontWeight: lang.code===i18n.language?600:undefined }}>
                         <span style={{ fontSize:16 }}>{lang.flag}</span>
                         <span>{lang.label}</span>
-                        {lang.code === i18n.language && <span style={{ marginLeft:'auto', fontSize:10, color:'var(--purple)' }}>✓</span>}
+                        {lang.code===i18n.language && <span style={{ marginLeft:'auto',fontSize:10,color:'var(--purple)' }}>✓</span>}
                       </button>
                     ))}
                   </div>
@@ -200,27 +198,19 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             {/* Profile */}
             <div style={{ position:'relative' }} ref={profileRef}>
               <button onClick={() => setProfileOpen(!profileOpen)}
-                style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 10px 5px 5px', borderRadius:16, border:'1px solid rgba(255,255,255,.08)', background: profileOpen ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.04)', cursor:'pointer', transition:'all .15s' }}
-                onMouseEnter={e => (e.currentTarget.style.background='rgba(255,255,255,.08)')}
-                onMouseLeave={e => (e.currentTarget.style.background=profileOpen?'rgba(255,255,255,.08)':'rgba(255,255,255,.04)')}>
+                style={{ display:'flex',alignItems:'center',gap:7,padding:'5px 9px 5px 5px',borderRadius:15,border:'1px solid rgba(255,255,255,.08)',background:profileOpen?'rgba(255,255,255,.08)':'rgba(255,255,255,.04)',cursor:'pointer',transition:'all .15s' }}
+                onMouseEnter={e=>(e.currentTarget.style.background='rgba(255,255,255,.08)')}
+                onMouseLeave={e=>(e.currentTarget.style.background=profileOpen?'rgba(255,255,255,.08)':'rgba(255,255,255,.04)')}>
                 <div style={{ position:'relative' }}>
                   {user?.avatar
-                    ? <img src={user.avatar} alt={user.name} className="avatar-ring" style={{ width:28,height:28,objectFit:'cover' }}/>
-                    : <div style={{ width:28,height:28,borderRadius:'50%',background:'linear-gradient(135deg,#8b5cf6,#6d28d9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,color:'#fff' }}>{user?.name?.charAt(0)||'U'}</div>
+                    ? <img src={user.avatar} alt={user.name} className="avatar-ring" style={{ width:26,height:26,objectFit:'cover' }}/>
+                    : <div style={{ width:26,height:26,borderRadius:'50%',background:'linear-gradient(135deg,#8b5cf6,#6d28d9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,color:'#fff' }}>{user?.name?.charAt(0)||'U'}</div>
                   }
-                  {user?.role === 'admin' && (
-                    <div style={{ position:'absolute',top:-3,right:-3,width:14,height:14,borderRadius:'50%',background:'#ef4444',border:'2px solid var(--bg)',display:'flex',alignItems:'center',justifyContent:'center' }}>
-                      <Crown size={7} color="#fff"/>
-                    </div>
-                  )}
-                  {user?.role === 'support' && (
-                    <div style={{ position:'absolute',top:-3,right:-3,width:14,height:14,borderRadius:'50%',background:'#3b82f6',border:'2px solid var(--bg)',display:'flex',alignItems:'center',justifyContent:'center' }}>
-                      <Shield size={7} color="#fff"/>
-                    </div>
-                  )}
+                  {user?.role==='admin'   && <div style={{ position:'absolute',top:-3,right:-3,width:13,height:13,borderRadius:'50%',background:'#ef4444',border:'2px solid var(--bg)',display:'flex',alignItems:'center',justifyContent:'center' }}><Crown  size={6} color="#fff"/></div>}
+                  {user?.role==='support' && <div style={{ position:'absolute',top:-3,right:-3,width:13,height:13,borderRadius:'50%',background:'#3b82f6',border:'2px solid var(--bg)',display:'flex',alignItems:'center',justifyContent:'center' }}><Shield size={6} color="#fff"/></div>}
                 </div>
-                <span style={{ fontSize:12,fontWeight:600,color:'rgba(255,255,255,.8)',maxWidth:80,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
-                  {user?.name?.split(' ')[0] || 'User'}
+                <span style={{ fontSize:12,fontWeight:600,color:'rgba(255,255,255,.8)',maxWidth:70,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+                  {user?.name?.split(' ')[0]||'User'}
                 </span>
               </button>
 
@@ -230,8 +220,8 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                     <div style={{ padding:'10px 12px 12px',borderBottom:'1px solid rgba(255,255,255,.06)',marginBottom:4 }}>
                       <div style={{ display:'flex',alignItems:'center',gap:10 }}>
                         {user.avatar
-                          ? <img src={user.avatar} alt={user.name} style={{ width:36,height:36,borderRadius:'50%',objectFit:'cover' }}/>
-                          : <div style={{ width:36,height:36,borderRadius:'50%',background:'linear-gradient(135deg,#8b5cf6,#6d28d9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800,color:'#fff' }}>{user.name.charAt(0)}</div>
+                          ? <img src={user.avatar} alt={user.name} style={{ width:34,height:34,borderRadius:'50%',objectFit:'cover' }}/>
+                          : <div style={{ width:34,height:34,borderRadius:'50%',background:'linear-gradient(135deg,#8b5cf6,#6d28d9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,color:'#fff' }}>{user.name.charAt(0)}</div>
                         }
                         <div style={{ flex:1,minWidth:0 }}>
                           <div style={{ fontSize:13,fontWeight:700,color:'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{user.name}</div>
@@ -243,13 +233,12 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                     </div>
                   )}
                   <button onClick={() => { onLogout(); setProfileOpen(false); }} className="dropdown-item" style={{ color:'#f87171' }}>
-                    <LogOut size={14} /> Sign Out
+                    <LogOut size={14} /> {t('nav.signOut')}
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Mobile hamburger */}
             <button onClick={() => setMobileOpen(!mobileOpen)} className="nav-btn lg:hidden">
               {mobileOpen ? <X size={16}/> : <Menu size={16}/>}
             </button>
@@ -257,28 +246,29 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
         </div>
       </div>
 
-      {/* Mobile dropdown */}
+      {/* Mobile menu */}
       {mobileOpen && (
         <>
           <div style={{ position:'fixed',inset:0,zIndex:40,background:'rgba(0,0,0,.5)' }} onClick={() => setMobileOpen(false)}/>
-          <div style={{ position:'fixed',top:72,left:12,right:12,zIndex:40,borderRadius:20,border:'1px solid rgba(255,255,255,.1)',padding:12,background:'rgba(8,8,18,.97)',backdropFilter:'blur(24px)',boxShadow:'0 20px 60px rgba(0,0,0,.7)' }}>
+          <div style={{ position:'fixed',top:70,left:10,right:10,zIndex:40,borderRadius:20,border:'1px solid rgba(255,255,255,.1)',padding:'14px 12px',background:'rgba(8,8,18,.97)',backdropFilter:'blur(24px)',boxShadow:'0 20px 60px rgba(0,0,0,.7)' }}>
             <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12,paddingBottom:12,borderBottom:'1px solid rgba(255,255,255,.06)' }}>
-              <span style={{ fontSize:12,color:'rgba(255,255,255,.4)' }}>Balance</span>
+              <span style={{ fontSize:12,color:'rgba(255,255,255,.4)' }}>{t('dashboard.balance')}</span>
               <span style={{ fontSize:14,fontWeight:700,color:'#c4b5fd' }}>${balance.toFixed(2)}</span>
             </div>
-            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:6 }}>
+            <div className="mob-nav-grid">
               {navItems.map(item => (
                 <button key={item.key} onClick={() => handleNav(item.path)}
-                  style={{ padding:'10px 14px',borderRadius:14,fontSize:13,fontWeight:500,cursor:'pointer',border:`1px solid ${currentPath===item.path?'rgba(139,92,246,.3)':'rgba(255,255,255,.06)'}`,background:currentPath===item.path?'rgba(139,92,246,.15)':'rgba(255,255,255,.03)',color:currentPath===item.path?'#c4b5fd':'rgba(255,255,255,.6)',textAlign:'left',fontFamily:'inherit',transition:'all .15s' }}>
-                  {t(item.tKey)}
+                  className={cn('mob-nav-item', currentPath===item.path && 'active')}>
+                  <item.Icon size={18} style={{ opacity: currentPath===item.path?1:0.5 }} />
+                  <span>{t(item.tKey)}</span>
                 </button>
               ))}
             </div>
             <button onClick={() => { onLogout(); setMobileOpen(false); }}
-              style={{ width:'100%',marginTop:10,paddingTop:10,borderTop:'1px solid rgba(255,255,255,.06)',display:'flex',alignItems:'center',gap:8,padding:'10px 14px',fontSize:13,color:'#f87171',background:'none',border:'none',cursor:'pointer',borderRadius:14,fontFamily:'inherit',transition:'all .15s' }}
+              style={{ width:'100%',marginTop:10,paddingTop:10,borderTop:'1px solid rgba(255,255,255,.06)',display:'flex',alignItems:'center',gap:8,padding:'10px 14px',fontSize:13,color:'#f87171',background:'none',border:'none',cursor:'pointer',borderRadius:13,fontFamily:'inherit',transition:'all .15s' }}
               onMouseEnter={e=>(e.currentTarget.style.background='rgba(239,68,68,.08)')}
               onMouseLeave={e=>(e.currentTarget.style.background='none')}>
-              <LogOut size={14}/> Sign Out
+              <LogOut size={14}/> {t('nav.signOut')}
             </button>
           </div>
         </>

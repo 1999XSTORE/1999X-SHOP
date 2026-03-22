@@ -26,6 +26,7 @@ const pageComponents: Record<string, React.FC> = {
   '/announcements': AnnouncementsPage,
 };
 
+
 const VALID_PATHS = Object.keys(pageComponents);
 
 // ── Persist current page across refreshes ──────────────────
