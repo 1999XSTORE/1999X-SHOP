@@ -13,6 +13,7 @@ import WalletPage from '@/pages/WalletPage';
 import StorePage from '@/pages/StorePage';
 import BonusPage from '@/pages/BonusPage';
 import AnnouncementsPage from '@/pages/AnnouncementsPage';
+import TrialKeyPage from '@/pages/TrialKeyPage';
 
 const pageComponents: Record<string, React.FC> = {
   '/':              DashboardPage,
@@ -24,6 +25,7 @@ const pageComponents: Record<string, React.FC> = {
   '/store':         StorePage,
   '/bonus':         BonusPage,
   '/announcements': AnnouncementsPage,
+  '/trial':         TrialKeyPage,
 };
 
 const VALID_PATHS = Object.keys(pageComponents);
@@ -66,6 +68,16 @@ export default function Index() {
     setCurrentPath(path);
     savePath(path);
   };
+
+  // Handle custom navigate events (e.g. from TrialKeyPage CTA)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const path = (e as CustomEvent).detail;
+      if (path && VALID_PATHS.includes(path)) navigate(path);
+    };
+    window.addEventListener('navigate', handler);
+    return () => window.removeEventListener('navigate', handler);
+  }, []);
 
   useEffect(() => {
     const loginWithRole = async (session: any) => {

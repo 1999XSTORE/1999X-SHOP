@@ -10,10 +10,22 @@ import { useTranslation } from 'react-i18next';
 const SUPABASE_URL  = 'https://wkjqrjafogufqeasfeev.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
 
+// ── Local currency rates (approximate, update periodically) ──
+// Format: { currencyCode, symbol, rate (per 1 USD), flag, label }
+const LOCAL_CURRENCY: Record<string, { code: string; symbol: string; rate: number; flag: string; label: string }> = {
+  bkash:      { code: 'BDT', symbol: '৳',  rate: 110,    flag: '🇧🇩', label: 'Bangladeshi Taka' },
+  dana:       { code: 'IDR', symbol: 'Rp', rate: 16350,  flag: '🇮🇩', label: 'Indonesian Rupiah' },
+  usdt_trc20: { code: 'USDT', symbol: '₮', rate: 1,      flag: '💲', label: 'Tether (= USD)' },
+  usdt_bep20: { code: 'USDT', symbol: '₮', rate: 1,      flag: '💲', label: 'Tether (= USD)' },
+  litecoin:   { code: 'LTC',  symbol: 'Ł', rate: 0.01,   flag: '🔷', label: 'Litecoin (≈ market)' },
+  binance:    { code: 'USDT', symbol: '$', rate: 1,       flag: '💲', label: 'USD equivalent' },
+  paypal:     { code: 'USD',  symbol: '$', rate: 1,       flag: '🇺🇸', label: 'US Dollar' },
+};
+
 // ── Payment Methods ──────────────────────────────────────────
 const PAYMENT_METHODS = [
   { id:'binance', label:'Binance Pay', color:'#F0B90B', glow:'rgba(240,185,11,0.35)', instruction:'Open Binance → Pay → scan QR or enter Pay ID', hasQr:true, qr:'https://www.dropbox.com/scl/fi/vu9ys724n9vyij3kpnwd2/qr-image-1774043312091.png?rlkey=8601ge6mlljbzjcdkyn4f656i&st=qsf32sfb&dl=1', fields:[{label:'Pay ID',value:'1104953117',note:'Binance Pay ID'}], icon:<svg width="20" height="20" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#1a1a1a"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="#F0B90B" fontSize="11" fontWeight="800">BNB</text></svg>, bgColor:'rgba(240,185,11,0.08)', borderColor:'rgba(240,185,11,0.25)' },
-  { id:'paypal', label:'PayPal', color:'#009CDE', glow:'rgba(0,156,222,0.35)', instruction:'Pay via PayPal — balance added after admin approval', hasQr:false, qr:'', fields:[{label:'PayPal.me',value:'https://paypal.me/JohanMaestre',note:''}], icon:<svg width="20" height="20" viewBox="0 0 24 24"><path d="M7.144 19.532l1.049-5.751c.11-.606.691-1.002 1.304-.948 2.155.194 6.877.1 8.818-4.002 2.554-5.397-.59-7.769-6.295-7.831H5.382a1.31 1.31 0 0 0-1.294 1.109L2.01 18.049a.738.738 0 0 0 .728.852h4.109l.297-1.369z" fill="#009CDE"/><path d="M17.512 7.309c-.673 4.378-3.403 6.025-7.934 6.025H8.354l-1.061 5.82h3.285l.53-2.906h1.722c4.02 0 6.386-1.95 7.006-5.818.48-2.991-.39-5.016-2.324-5.121z" fill="#003087" opacity=".7"/></svg>, bgColor:'rgba(0,112,186,0.08)', borderColor:'rgba(0,112,186,0.25)' },
+  { id:'paypal', label:'PayPal', color:'#009CDE', glow:'rgba(0,156,222,0.35)', instruction:'Complete payment via PayPal — balance is credited automatically after payment.', hasQr:false, qr:'', fields:[{label:'PayPal.me',value:'https://paypal.me/JohanMaestre',note:''}], icon:<svg width="20" height="20" viewBox="0 0 24 24"><path d="M7.144 19.532l1.049-5.751c.11-.606.691-1.002 1.304-.948 2.155.194 6.877.1 8.818-4.002 2.554-5.397-.59-7.769-6.295-7.831H5.382a1.31 1.31 0 0 0-1.294 1.109L2.01 18.049a.738.738 0 0 0 .728.852h4.109l.297-1.369z" fill="#009CDE"/><path d="M17.512 7.309c-.673 4.378-3.403 6.025-7.934 6.025H8.354l-1.061 5.82h3.285l.53-2.906h1.722c4.02 0 6.386-1.95 7.006-5.818.48-2.991-.39-5.016-2.324-5.121z" fill="#003087" opacity=".7"/></svg>, bgColor:'rgba(0,112,186,0.08)', borderColor:'rgba(0,112,186,0.25)' },
   { id:'bkash', label:'bKash', color:'#E2136E', glow:'rgba(226,19,110,0.35)', instruction:'Open bKash → Send Money → enter number', hasQr:true, qr:'https://www.dropbox.com/scl/fi/0sfir9cpytsqso5z7idlw/01760889747-3_44_10-AM-Mar-21-2026.png.jpg?rlkey=dvxxouvnp3nxwrozpz5j12stc&st=33owmssu&dl=1', fields:[{label:'Number',value:'01760880747',note:'Send Money (not Payment)'}], icon:<svg width="20" height="20" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#E2136E"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="14" fontWeight="800">B</text></svg>, bgColor:'rgba(226,19,110,0.08)', borderColor:'rgba(226,19,110,0.25)' },
   { id:'dana', label:'Dana', color:'#118EEA', glow:'rgba(17,142,234,0.35)', instruction:'Open Dana → Transfer → enter number or scan QR', hasQr:true, qr:'YOUR_DANA_QR_URL', fields:[{label:'Name',value:'Dana Account Name',note:''},{label:'Number',value:'08xxxxxxxxxx',note:''}], icon:<svg width="20" height="20" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#118EEA"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="14" fontWeight="800">D</text></svg>, bgColor:'rgba(17,142,234,0.08)', borderColor:'rgba(17,142,234,0.25)' },
   { id:'usdt_trc20', label:'USDT TRC20', color:'#26A17B', glow:'rgba(38,161,123,0.35)', instruction:'Send USDT on Tron (TRC20) network only', hasQr:true, qr:'YOUR_USDT_TRC20_QR_URL', fields:[{label:'TRC20 Address',value:'YOUR_TRC20_ADDRESS',note:'Tron network only'}], icon:<svg width="20" height="20" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#26A17B"/><text x="50%" y="56%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="9" fontWeight="800">USDT</text></svg>, bgColor:'rgba(38,161,123,0.08)', borderColor:'rgba(38,161,123,0.25)' },
@@ -37,33 +49,160 @@ function QRZoomModal({ src, onClose }: { src: string; onClose: () => void }) {
   );
 }
 
-// ── PayPal Button (logic unchanged) ─────────────────────────
-function PayPalButton({ amount, user }: { amount: number; user: any }) {
-  const [clicked, setClicked] = useState(false);
-  const paypalLink = `https://www.paypal.com/paypalme/JohanMaestre/${amount.toFixed(2)}USD`;
-  const handleClick = () => {
-    setClicked(true);
-    window.open(paypalLink, '_blank', 'noopener,noreferrer');
-    setTimeout(() => setClicked(false), 8000);
-  };
+// ── PayPal Auto-Capture Button ───────────────────────────────
+// Uses PayPal JS SDK to create + capture order, then calls our
+// Supabase edge function which verifies with PayPal API and
+// inserts an 'approved' transaction → balance auto-credited.
+//
+// SETUP: Set PAYPAL_CLIENT_ID in your Supabase project secrets.
+// The client ID is safe to expose in the frontend (it's public).
+// Your secret key stays in Supabase edge function env only.
+const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || 'YOUR_PAYPAL_CLIENT_ID';
+
+function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; onSuccess?: () => void }) {
+  const { addBalance } = useAppStore();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [sdkReady,    setSdkReady]    = useState(false);
+  const [sdkError,    setSdkError]    = useState('');
+  const [processing,  setProcessing]  = useState(false);
+  const [paid,        setPaid]        = useState(false);
+  const [rendered,    setRendered]    = useState(false);
+
+  // Load PayPal SDK script once
+  useEffect(() => {
+    if (PAYPAL_CLIENT_ID === 'YOUR_PAYPAL_CLIENT_ID') {
+      setSdkError('PayPal Client ID not configured. Set VITE_PAYPAL_CLIENT_ID in .env');
+      return;
+    }
+    const existing = document.getElementById('paypal-sdk');
+    if (existing) { setSdkReady(true); return; }
+    const script = document.createElement('script');
+    script.id  = 'paypal-sdk';
+    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD&intent=capture`;
+    script.onload  = () => setSdkReady(true);
+    script.onerror = () => setSdkError('Failed to load PayPal SDK');
+    document.head.appendChild(script);
+  }, []);
+
+  // Render PayPal buttons when SDK is ready + amount changes
+  useEffect(() => {
+    if (!sdkReady || !containerRef.current || rendered) return;
+    const win = window as any;
+    if (!win.paypal) return;
+
+    // Clear previous render
+    containerRef.current.innerHTML = '';
+    setRendered(true);
+
+    win.paypal.Buttons({
+      style: { layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay', height: 48 },
+
+      createOrder: (_data: any, actions: any) => {
+        return actions.order.create({
+          purchase_units: [{
+            amount: { value: amount.toFixed(2), currency_code: 'USD' },
+            description: '1999X Panel Balance',
+          }],
+        });
+      },
+
+      onApprove: async (_data: any, actions: any) => {
+        setProcessing(true);
+        try {
+          // Capture client-side first (gets order ID)
+          const order = await actions.order.capture();
+          const orderId = order.id;
+          const capturedAmount = parseFloat(
+            order.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value ?? String(amount)
+          );
+
+          // Call our edge function to verify + record + auto-approve
+          const res = await fetch(`${SUPABASE_URL}/functions/v1/paypal-capture`, {
+            method: 'POST',
+            headers: {
+              'Content-Type':  'application/json',
+              'Authorization': `Bearer ${SUPABASE_ANON}`,
+              'apikey':        SUPABASE_ANON,
+            },
+            body: JSON.stringify({
+              order_id:   orderId,
+              user_id:    user?.id    ?? '',
+              user_email: user?.email ?? '',
+              user_name:  user?.name  ?? '',
+              amount:     capturedAmount,
+            }),
+          });
+          const result = await res.json();
+
+          if (result.success) {
+            // Credit balance immediately in the UI
+            addBalance(capturedAmount);
+            setPaid(true);
+            toast.success(`🎉 $${capturedAmount.toFixed(2)} added to your balance!`);
+            onSuccess?.();
+          } else {
+            toast.error('PayPal capture failed: ' + (result.message ?? 'Unknown error'));
+          }
+        } catch (e) {
+          toast.error('Payment error: ' + String(e));
+        }
+        setProcessing(false);
+      },
+
+      onError: (err: any) => {
+        console.error('PayPal error:', err);
+        toast.error('PayPal error. Try again.');
+      },
+
+      onCancel: () => {
+        toast.info('PayPal payment cancelled.');
+      },
+    }).render(containerRef.current);
+  }, [sdkReady, amount]);
+
+  // Re-render when amount changes
+  useEffect(() => { setRendered(false); }, [amount]);
+
+  if (paid) {
+    return (
+      <div style={{ padding:'16px',borderRadius:14,background:'rgba(16,232,152,.08)',border:'1px solid rgba(16,232,152,.22)',textAlign:'center' }}>
+        <CheckCircle size={28} color="var(--green)" style={{ margin:'0 auto 8px' }}/>
+        <div style={{ fontSize:15,fontWeight:800,color:'#fff',marginBottom:4 }}>Payment Successful!</div>
+        <div style={{ fontSize:12,color:'var(--muted)' }}>Balance has been credited automatically.</div>
+      </div>
+    );
+  }
+
+  if (sdkError) {
+    return (
+      <div style={{ padding:'14px',borderRadius:12,background:'rgba(248,113,113,.07)',border:'1px solid rgba(248,113,113,.18)',fontSize:12,color:'#f87171',textAlign:'center' }}>
+        ⚠️ {sdkError}
+      </div>
+    );
+  }
+
+  if (processing) {
+    return (
+      <div style={{ padding:'16px',borderRadius:12,background:'rgba(0,112,186,.08)',border:'1px solid rgba(0,112,186,.2)',display:'flex',alignItems:'center',justifyContent:'center',gap:10 }}>
+        <Loader2 size={18} className="animate-spin" style={{ color:'#009cde' }}/>
+        <span style={{ fontSize:13,fontWeight:700,color:'#009cde' }}>Processing payment...</span>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
-      <button onClick={handleClick} style={{ width:'100%',padding:'14px 20px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'inherit',fontWeight:800,fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',gap:10,transition:'all .2s',background:'linear-gradient(135deg,#003087,#009cde)',color:'#fff',boxShadow:'0 4px 20px rgba(0,112,186,.4)' }}
-        onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.transform='translateY(-2px)';}}
-        onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.transform='none';}}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M7.144 19.532l1.049-5.751c.11-.606.691-1.002 1.304-.948 2.155.194 6.877.1 8.818-4.002 2.554-5.397-.59-7.769-6.295-7.831H5.382a1.31 1.31 0 0 0-1.294 1.109L2.01 18.049a.738.738 0 0 0 .728.852h4.109l.297-1.369z"/><path d="M17.512 7.309c-.673 4.378-3.403 6.025-7.934 6.025H8.354l-1.061 5.82h3.285l.53-2.906h1.722c4.02 0 6.386-1.95 7.006-5.818.48-2.991-.39-5.016-2.324-5.121z" opacity=".7"/></svg>
-        Pay ${amount.toFixed(2)} with PayPal
-      </button>
-      {clicked && (
-        <div style={{ padding:'12px 14px',borderRadius:12,background:'rgba(251,191,36,.07)',border:'1px solid rgba(251,191,36,.2)' }}>
-          <div style={{ fontSize:11,fontWeight:800,color:'var(--amber)',marginBottom:6 }}>✅ PayPal opened — next steps:</div>
-          {["1. Complete payment in PayPal","2. Copy your Transaction ID","3. Paste it in the form →"].map((s,i)=>(
-            <div key={i} style={{ fontSize:11,color:'var(--muted)',display:'flex',gap:6,marginBottom:3 }}>
-              <span style={{ color:'var(--green)',fontWeight:700 }}>›</span>{s}
-            </div>
-          ))}
+    <div>
+      {!sdkReady && (
+        <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'14px',borderRadius:12,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)',marginBottom:8 }}>
+          <Loader2 size={14} className="animate-spin" style={{ color:'var(--muted)' }}/>
+          <span style={{ fontSize:12,color:'var(--muted)' }}>Loading PayPal...</span>
         </div>
       )}
+      <div ref={containerRef} style={{ minHeight: sdkReady ? 50 : 0 }}/>
+      <div style={{ marginTop:10,fontSize:11,color:'var(--dim)',textAlign:'center',display:'flex',alignItems:'center',justifyContent:'center',gap:4 }}>
+        <CheckCircle size={10} color="var(--green)"/>
+        Auto-credited instantly after payment
+      </div>
     </div>
   );
 }
@@ -417,6 +556,17 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                 <div>
                   <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:4 }}>Send exactly</div>
                   <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-.03em' }}>${selAmount.toFixed(2)}</div>
+                  {LOCAL_CURRENCY[selMethod.id] && LOCAL_CURRENCY[selMethod.id].rate !== 1 && (
+                    <div style={{ marginTop:6, display:'flex', alignItems:'center', gap:5 }}>
+                      <span style={{ fontSize:10, color:'rgba(255,255,255,.3)' }}>≈</span>
+                      <span style={{ fontSize:14, fontWeight:800, color:selMethod.color, letterSpacing:'-.01em' }}>
+                        {LOCAL_CURRENCY[selMethod.id].symbol}{(selAmount * LOCAL_CURRENCY[selMethod.id].rate).toLocaleString(undefined, { maximumFractionDigits: LOCAL_CURRENCY[selMethod.id].rate > 100 ? 0 : 2 })}
+                      </span>
+                      <span style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,.35)', padding:'2px 7px', borderRadius:8, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.08)' }}>
+                        {LOCAL_CURRENCY[selMethod.id].flag} {LOCAL_CURRENCY[selMethod.id].code}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 13px', borderRadius:20, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.08)' }}>
                   <span style={{ width:18, height:18, display:'flex', alignItems:'center', justifyContent:'center' }}>{selMethod.icon}</span>
@@ -469,7 +619,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                 ))}
               </div>
 
-              {selMethod.id==='paypal'&&<PayPalButton amount={selAmount} user={user}/>}
+              {selMethod.id==='paypal'&&<PayPalButton amount={selAmount} user={user} onSuccess={onSuccess}/>}
 
               <div style={{ padding:'12px 14px', borderRadius:12, background:'rgba(255,255,255,.02)', border:'1px solid rgba(255,255,255,.04)', display:'flex', gap:10, alignItems:'flex-start', marginTop: selMethod.id==='paypal'?10:0 }}>
                 <span style={{ fontSize:16 }}>💡</span>
@@ -479,75 +629,101 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
 
             {/* RIGHT: Form */}
             <div style={{ padding:'24px' }}>
-              <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:18 }}>Fill Payment Details</div>
-
-              {/* Email */}
-              <div style={{ marginBottom:16 }}>
-                <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Your Email</label>
-                <input type="email" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}
-                  style={{ width:'100%', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:12, padding:'13px 16px', color:'#fff', fontFamily:'inherit', fontSize:14, outline:'none', transition:'all .2s' }}
-                  onFocus={e=>{e.target.style.borderColor='rgba(139,92,246,.45)';e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,.1)';}}
-                  onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,.08)';e.target.style.boxShadow='none';}}
-                />
-              </div>
-
-              {/* TXN ID */}
-              <div style={{ marginBottom:16 }}>
-                <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Transaction ID</label>
-                <input type="text" placeholder="Paste your TXN / reference ID..." value={txnId} onChange={e=>setTxnId(e.target.value)}
-                  style={{ width:'100%', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:12, padding:'13px 16px', color:'#fff', fontFamily:'monospace', fontSize:13, outline:'none', transition:'all .2s', letterSpacing:'0.5px' }}
-                  onFocus={e=>{e.target.style.borderColor='rgba(139,92,246,.45)';e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,.1)';}}
-                  onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,.08)';e.target.style.boxShadow='none';}}
-                />
-                <p style={{ fontSize:11, color:'var(--dim)', marginTop:6 }}>From your payment receipt or confirmation</p>
-              </div>
-
-              {/* Screenshot */}
-              <div style={{ marginBottom:20 }}>
-                <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Payment Screenshot</label>
-                <input type="file" ref={fileRef} accept="image/*" style={{ display:'none' }} onChange={handleFileChange}/>
-                {screenshotPreview ? (
-                  <div style={{ position:'relative', borderRadius:14, overflow:'hidden', border:'1px solid rgba(16,232,152,.25)', cursor:'pointer' }} onClick={()=>fileRef.current?.click()}>
-                    <img src={screenshotPreview} alt="Screenshot" style={{ width:'100%', maxHeight:140, objectFit:'cover', display:'block' }}/>
-                    <div style={{ position:'absolute',top:8,right:8,background:'rgba(16,232,152,.15)',border:'1px solid rgba(16,232,152,.3)',borderRadius:20,padding:'3px 10px',fontSize:10,fontWeight:700,color:'var(--green)' }}>✓ Uploaded</div>
-                    <div style={{ position:'absolute',inset:0,background:'rgba(0,0,0,.5)',display:'flex',alignItems:'center',justifyContent:'center',opacity:0,transition:'opacity .2s',fontSize:12,color:'#fff',fontWeight:700 }} onMouseEnter={e=>(e.currentTarget.style.opacity='1')} onMouseLeave={e=>(e.currentTarget.style.opacity='0')}>Change Screenshot</div>
+              {selMethod.id === 'paypal' ? (
+                /* PayPal auto-capture — no manual form needed */
+                <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:4 }}>Auto Payment</div>
+                  <div style={{ padding:'12px 16px', borderRadius:12, background:'rgba(16,232,152,.06)', border:'1px solid rgba(16,232,152,.15)', display:'flex', alignItems:'center', gap:10 }}>
+                    <CheckCircle size={14} color="var(--green)" style={{ flexShrink:0 }}/>
+                    <span style={{ fontSize:12, color:'var(--muted)', lineHeight:1.5 }}>
+                      Balance is <strong style={{ color:'var(--green)' }}>credited instantly</strong> after PayPal payment — no manual step needed.
+                    </span>
                   </div>
-                ) : (
-                  <div onClick={()=>fileRef.current?.click()} style={{ border:'2px dashed rgba(255,255,255,.09)', borderRadius:14, padding:'24px 16px', textAlign:'center', cursor:'pointer', transition:'all .2s', background:'rgba(255,255,255,.02)' }}
-                    onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.borderColor='rgba(139,92,246,.3)';(e.currentTarget as HTMLDivElement).style.background='rgba(139,92,246,.04)';}}
-                    onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.borderColor='rgba(255,255,255,.09)';(e.currentTarget as HTMLDivElement).style.background='rgba(255,255,255,.02)';}}>
-                    <div style={{ width:40,height:40,borderRadius:11,background:'rgba(139,92,246,.1)',border:'1px solid rgba(139,92,246,.2)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 10px' }}>
-                      <Upload size={18} color="var(--purple)"/>
+                  <div style={{ background:'rgba(139,92,246,.06)', border:'1px solid rgba(139,92,246,.16)', borderRadius:14, padding:'13px 16px', display:'flex', alignItems:'center', gap:12 }}>
+                    <div style={{ width:36,height:36,borderRadius:10,background:selMethod.bgColor,border:`1px solid ${selMethod.borderColor}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>{selMethod.icon}</div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:11,color:'var(--muted)',marginBottom:1 }}>Paying via {selMethod.label}</div>
+                      <div style={{ fontSize:22,fontWeight:900,color:'#fff',letterSpacing:'-.02em' }}>${selAmount.toFixed(2)}</div>
                     </div>
-                    <div style={{ fontSize:13,fontWeight:700,color:'rgba(255,255,255,.5)',marginBottom:4 }}>Upload payment proof</div>
-                    <div style={{ fontSize:11,color:'var(--dim)' }}>JPG, PNG, WEBP · Click to browse</div>
+                    <div style={{ textAlign:'right',fontSize:10,color:'var(--green)',fontWeight:700 }}>⚡ Instant</div>
                   </div>
-                )}
-              </div>
-
-              {/* Summary */}
-              <div style={{ background:'rgba(139,92,246,.06)', border:'1px solid rgba(139,92,246,.16)', borderRadius:14, padding:'13px 16px', marginBottom:16, display:'flex', alignItems:'center', gap:12 }}>
-                <div style={{ width:36,height:36,borderRadius:10,background:selMethod.bgColor,border:`1px solid ${selMethod.borderColor}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>{selMethod.icon}</div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:11,color:'var(--muted)',marginBottom:1 }}>{selMethod.label}</div>
-                  <div style={{ fontSize:18,fontWeight:900,color:'#fff',letterSpacing:'-.02em' }}>${selAmount.toFixed(2)}</div>
+                  <PayPalButton amount={selAmount} user={user} onSuccess={onSuccess}/>
                 </div>
-                <div style={{ textAlign:'right',fontSize:10,color:'var(--muted)' }}>
-                  <div>Pending admin</div>
-                  <div style={{ color:'var(--amber)',fontWeight:700,marginTop:2 }}>~1–10 min</div>
-                </div>
-              </div>
+              ) : (
+                /* Manual form for all other methods */
+                <>
+                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:18 }}>Fill Payment Details</div>
 
-              <button onClick={()=>{
-                if(!txnId.trim()){toast.error('Enter your transaction ID');return;}
-                if(!email.trim()){toast.error('Enter your email');return;}
-                setStep(3);
-              }} className="btn btn-p btn-lg btn-full" style={{ borderRadius:14, fontSize:15, boxShadow:'0 0 30px rgba(109,40,217,.4)', padding:'15px' }}>
-                I've Sent Payment <ArrowRight size={16}/>
-              </button>
+                  {/* Email */}
+                  <div style={{ marginBottom:16 }}>
+                    <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Your Email</label>
+                    <input type="email" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}
+                      style={{ width:'100%', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:12, padding:'13px 16px', color:'#fff', fontFamily:'inherit', fontSize:14, outline:'none', transition:'all .2s' }}
+                      onFocus={e=>{e.target.style.borderColor='rgba(139,92,246,.45)';e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,.1)';}}
+                      onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,.08)';e.target.style.boxShadow='none';}}
+                    />
+                  </div>
+
+                  {/* TXN ID */}
+                  <div style={{ marginBottom:16 }}>
+                    <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Transaction ID</label>
+                    <input type="text" placeholder="Paste your TXN / reference ID..." value={txnId} onChange={e=>setTxnId(e.target.value)}
+                      style={{ width:'100%', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:12, padding:'13px 16px', color:'#fff', fontFamily:'monospace', fontSize:13, outline:'none', transition:'all .2s', letterSpacing:'0.5px' }}
+                      onFocus={e=>{e.target.style.borderColor='rgba(139,92,246,.45)';e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,.1)';}}
+                      onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,.08)';e.target.style.boxShadow='none';}}
+                    />
+                    <p style={{ fontSize:11, color:'var(--dim)', marginTop:6 }}>From your payment receipt or confirmation</p>
+                  </div>
+
+                  {/* Screenshot */}
+                  <div style={{ marginBottom:20 }}>
+                    <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Payment Screenshot</label>
+                    <input type="file" ref={fileRef} accept="image/*" style={{ display:'none' }} onChange={handleFileChange}/>
+                    {screenshotPreview ? (
+                      <div style={{ position:'relative', borderRadius:14, overflow:'hidden', border:'1px solid rgba(16,232,152,.25)', cursor:'pointer' }} onClick={()=>fileRef.current?.click()}>
+                        <img src={screenshotPreview} alt="Screenshot" style={{ width:'100%', maxHeight:140, objectFit:'cover', display:'block' }}/>
+                        <div style={{ position:'absolute',top:8,right:8,background:'rgba(16,232,152,.15)',border:'1px solid rgba(16,232,152,.3)',borderRadius:20,padding:'3px 10px',fontSize:10,fontWeight:700,color:'var(--green)' }}>✓ Uploaded</div>
+                        <div style={{ position:'absolute',inset:0,background:'rgba(0,0,0,.5)',display:'flex',alignItems:'center',justifyContent:'center',opacity:0,transition:'opacity .2s',fontSize:12,color:'#fff',fontWeight:700 }} onMouseEnter={e=>(e.currentTarget.style.opacity='1')} onMouseLeave={e=>(e.currentTarget.style.opacity='0')}>Change Screenshot</div>
+                      </div>
+                    ) : (
+                      <div onClick={()=>fileRef.current?.click()} style={{ border:'2px dashed rgba(255,255,255,.09)', borderRadius:14, padding:'24px 16px', textAlign:'center', cursor:'pointer', transition:'all .2s', background:'rgba(255,255,255,.02)' }}
+                        onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.borderColor='rgba(139,92,246,.3)';(e.currentTarget as HTMLDivElement).style.background='rgba(139,92,246,.04)';}}
+                        onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.borderColor='rgba(255,255,255,.09)';(e.currentTarget as HTMLDivElement).style.background='rgba(255,255,255,.02)';}}>
+                        <div style={{ width:40,height:40,borderRadius:11,background:'rgba(139,92,246,.1)',border:'1px solid rgba(139,92,246,.2)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 10px' }}>
+                          <Upload size={18} color="var(--purple)"/>
+                        </div>
+                        <div style={{ fontSize:13,fontWeight:700,color:'rgba(255,255,255,.5)',marginBottom:4 }}>Upload payment proof</div>
+                        <div style={{ fontSize:11,color:'var(--dim)' }}>JPG, PNG, WEBP · Click to browse</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Summary */}
+                  <div style={{ background:'rgba(139,92,246,.06)', border:'1px solid rgba(139,92,246,.16)', borderRadius:14, padding:'13px 16px', marginBottom:16, display:'flex', alignItems:'center', gap:12 }}>
+                    <div style={{ width:36,height:36,borderRadius:10,background:selMethod.bgColor,border:`1px solid ${selMethod.borderColor}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>{selMethod.icon}</div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:11,color:'var(--muted)',marginBottom:1 }}>{selMethod.label}</div>
+                      <div style={{ fontSize:18,fontWeight:900,color:'#fff',letterSpacing:'-.02em' }}>${selAmount.toFixed(2)}</div>
+                    </div>
+                    <div style={{ textAlign:'right',fontSize:10,color:'var(--muted)' }}>
+                      <div>Pending admin</div>
+                      <div style={{ color:'var(--amber)',fontWeight:700,marginTop:2 }}>~1–10 min</div>
+                    </div>
+                  </div>
+
+                  <button onClick={()=>{
+                    if(!txnId.trim()){toast.error('Enter your transaction ID');return;}
+                    if(!email.trim()){toast.error('Enter your email');return;}
+                    setStep(3);
+                  }} className="btn btn-p btn-lg btn-full" style={{ borderRadius:14, fontSize:15, boxShadow:'0 0 30px rgba(109,40,217,.4)', padding:'15px' }}>
+                    I've Sent Payment <ArrowRight size={16}/>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
+
       )}
 
       {/* ── STEP 3: Final Submit ── */}

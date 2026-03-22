@@ -285,7 +285,12 @@ export default function ChatPage() {
       setMessages(p => p.map(x => x.id === (m as Msg).id ? m as Msg : x));
     })
     .on('postgres_changes', { event:'DELETE', schema:'public', table:'chat_messages' }, ({ old: m }) => {
-      setMessages(p => p.filter(x => x.id !== (m as any).id));
+      // Only filter if we have a valid id from the DELETE event
+      // (requires Replica Identity FULL on chat_messages table, else old.id may be present)
+      const deletedId = (m as any)?.id;
+      if (deletedId) {
+        setMessages(p => p.filter(x => x.id !== deletedId));
+      }
     })
 
     // Typing broadcast
@@ -385,7 +390,11 @@ export default function ChatPage() {
     }
   }, [input, user, replyTo]);
 
-  const handleDelete   = async (id: string) => { await supabase.from('chat_messages').delete().eq('id', id); };
+  const handleDelete = async (id: string) => {
+    // Immediately remove from local state so admin sees remaining messages
+    setMessages(p => p.filter(m => m.id !== id));
+    await supabase.from('chat_messages').delete().eq('id', id);
+  };
   const handleEditSave = async () => {
     if (!editText.trim() || !editId) return;
     await supabase.from('chat_messages').update({ message: editText }).eq('id', editId);
