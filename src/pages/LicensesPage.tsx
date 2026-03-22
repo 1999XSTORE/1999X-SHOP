@@ -333,7 +333,6 @@ export default function LicensesPage() {
   const resetHwid     = rawStore?.resetHwid  ?? (() => false);
   const addLicense    = rawStore?.addLicense ?? (() => {});
   const user          = rawStore?.user       ?? null;
-  const user          = rawStore?.user       ?? null;
 
   const [keyValue,    setKeyValue]    = useState('');
   const [loading,     setLoading]     = useState(false);
