@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 // Nav order: Home > Shop > License > Chat > Bonus > Status
 const navItems = [
   { key: 'dashboard',   path: '/',            tKey: 'nav.home',    Icon: Home          },
-  { key: 'store',       path: '/store',        tKey: 'nav.shop',    Icon: ShoppingBag   },
+  { key: 'wallet',      path: '/wallet',       tKey: 'nav.shop',    Icon: ShoppingBag   },
   { key: 'licenses',    path: '/licenses',     tKey: 'nav.license', Icon: Key           },
   { key: 'chat',        path: '/chat',         tKey: 'nav.chat',    Icon: MessageCircle },
   { key: 'bonus',       path: '/bonus',        tKey: 'nav.bonus',   Icon: Gift          },

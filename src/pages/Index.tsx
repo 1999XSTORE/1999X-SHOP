@@ -10,7 +10,6 @@ import ChatPage from '@/pages/ChatPage';
 import SupportPage from '@/pages/SupportPage';
 import PanelStatusPage from '@/pages/PanelStatusPage';
 import WalletPage from '@/pages/WalletPage';
-import StorePage from '@/pages/StorePage';
 import BonusPage from '@/pages/BonusPage';
 import AnnouncementsPage from '@/pages/AnnouncementsPage';
 
@@ -21,7 +20,6 @@ const pageComponents: Record<string, React.FC> = {
   '/support':       SupportPage,
   '/panel-status':  PanelStatusPage,
   '/wallet':        WalletPage,
-  '/store':         StorePage,
   '/bonus':         BonusPage,
   '/announcements': AnnouncementsPage,
 };
