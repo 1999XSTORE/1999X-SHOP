@@ -61,30 +61,39 @@ function QRZoomModal({ src, onClose }: { src: string; onClose: () => void }) {
 function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; onSuccess: () => void }) {
   const SUPABASE_URL_PP  = 'https://wkjqrjafogufqeasfeev.supabase.co';
   const SUPABASE_ANON_PP = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
-  const PAYPAL_CLIENT_ID = 'AaXlJFH8MvhiECH7b7fXrMm3jWjJhExnlByYz73P5iC2yS3JbMpGZ1aWXF2fXNHDRaqPfP0JRvbEPbrl';
+  // Read client ID from Vite env var (set VITE_PAYPAL_CLIENT_ID in Netlify environment variables)
+  const PAYPAL_CLIENT_ID = (import.meta as any).env?.VITE_PAYPAL_CLIENT_ID ?? '';
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [sdkReady,  setSdkReady]  = useState(false);
+  const [sdkError,  setSdkError]  = useState('');
   const [capturing, setCapturing] = useState(false);
   const [done,      setDone]      = useState(false);
   const rendered = useRef(false);
 
   // Load PayPal SDK once
   useEffect(() => {
-    if ((window as any).paypal) { setSdkReady(true); return; }
+    if (!PAYPAL_CLIENT_ID) {
+      setSdkError('PAYPAL_CLIENT_ID not configured. Add VITE_PAYPAL_CLIENT_ID to Netlify environment variables.');
+      return;
+    }
+    // Remove any existing broken SDK script first
     const existing = document.getElementById('paypal-sdk');
-    if (existing) { setSdkReady(true); return; }
+    if (existing) {
+      if ((window as any).paypal) { setSdkReady(true); return; }
+      existing.remove(); // remove stale/broken script and reload
+    }
     const script = document.createElement('script');
     script.id  = 'paypal-sdk';
-    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD&intent=capture&disable-funding=credit,card`;
+    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD&intent=capture&disable-funding=credit,card,venmo`;
     script.async = true;
-    script.onload  = () => { setSdkReady(true); };
+    script.onload  = () => { setSdkReady(true); setSdkError(''); };
     script.onerror = () => {
+      setSdkError('PayPal SDK failed to load. Please check your internet connection or try again.');
       setSdkReady(false);
-      toast.error('PayPal failed to load. Check your Client ID or network.');
     };
     document.head.appendChild(script);
-  }, []);
+  }, [PAYPAL_CLIENT_ID]);
 
   // Render PayPal buttons when SDK ready
   useEffect(() => {
@@ -193,15 +202,15 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
           <span style={{ fontSize:12,color:'#009cde',fontWeight:600 }}>Processing payment...</span>
         </div>
       )}
-      {!sdkReady && !capturing && (
-        <div style={{ display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,padding:'16px',borderRadius:10,background:'rgba(255,255,255,.04)',border:'1px solid var(--border)' }}>
-          <div style={{ display:'flex',alignItems:'center',gap:8 }}>
-            <Loader2 size={14} className="animate-spin" style={{ color:'var(--muted)' }}/>
-            <span style={{ fontSize:12,color:'var(--muted)' }}>Loading PayPal...</span>
-          </div>
-          <p style={{ fontSize:10,color:'var(--dim)',margin:0,textAlign:'center',lineHeight:1.5 }}>
-            If this keeps loading, your PayPal Client ID may need to be updated in the code.
-          </p>
+      {sdkError ? (
+        <div style={{ padding:'14px 16px',borderRadius:12,background:'rgba(248,113,113,.07)',border:'1px solid rgba(248,113,113,.2)' }}>
+          <div style={{ fontSize:12,fontWeight:700,color:'#f87171',marginBottom:4 }}>⚠️ PayPal Not Available</div>
+          <p style={{ fontSize:11,color:'var(--muted)',margin:0,lineHeight:1.6 }}>{sdkError}</p>
+        </div>
+      ) : !sdkReady && !capturing && (
+        <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'16px',borderRadius:10,background:'rgba(255,255,255,.04)',border:'1px solid var(--border)' }}>
+          <Loader2 size={14} className="animate-spin" style={{ color:'var(--muted)' }}/>
+          <span style={{ fontSize:12,color:'var(--muted)' }}>Loading PayPal...</span>
         </div>
       )}
       <div ref={containerRef} style={{ minHeight:50 }}/>
@@ -710,8 +719,38 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
               </div>
             </div>
 
-            {/* RIGHT: Form */}
+            {/* RIGHT: Form — PayPal gets its own panel, others get the manual form */}
             <div style={{ padding:'24px' }}>
+              {selMethod.id === 'paypal' ? (
+                /* ── PayPal: no form needed, SDK handles everything ── */
+                <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                  <div style={{ padding:'14px 16px', borderRadius:14, background:'rgba(16,232,152,.06)', border:'1px solid rgba(16,232,152,.18)' }}>
+                    <div style={{ fontSize:13,fontWeight:700,color:'var(--green)',marginBottom:6 }}>⚡ Fully Automatic</div>
+                    <p style={{ fontSize:12,color:'var(--muted)',margin:0,lineHeight:1.65 }}>
+                      Click the PayPal button on the left. After you complete payment, your balance is credited <strong style={{color:'#fff'}}>instantly and automatically</strong>. No form needed.
+                    </p>
+                  </div>
+                  <div style={{ padding:'12px 14px', borderRadius:12, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.06)', display:'flex', flexDirection:'column', gap:8 }}>
+                    {[
+                      { step:'1', text:'Click the PayPal button on the left' },
+                      { step:'2', text:'Log in and complete payment in the PayPal popup' },
+                      { step:'3', text:'Balance is added instantly — no action needed' },
+                    ].map(s => (
+                      <div key={s.step} style={{ display:'flex', alignItems:'center', gap:10 }}>
+                        <div style={{ width:22,height:22,borderRadius:'50%',background:'linear-gradient(135deg,#003087,#009cde)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,color:'#fff',flexShrink:0 }}>{s.step}</div>
+                        <span style={{ fontSize:12,color:'rgba(255,255,255,.65)' }}>{s.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ padding:'10px 14px', borderRadius:10, background:'rgba(0,112,186,.06)', border:'1px solid rgba(0,156,222,.15)' }}>
+                    <p style={{ fontSize:11,color:'var(--dim)',margin:0,lineHeight:1.5 }}>
+                      💡 If you experience any issue, contact support with your PayPal transaction ID and we will credit you manually.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                /* ── Other methods: manual form ── */
+                <>
               <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:18 }}>Fill Payment Details</div>
 
               {/* Email */}
@@ -778,6 +817,8 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
               }} className="btn btn-p btn-lg btn-full" style={{ borderRadius:14, fontSize:15, boxShadow:'0 0 30px rgba(109,40,217,.4)', padding:'15px' }}>
                 I've Sent Payment <ArrowRight size={16}/>
               </button>
+                </>
+              )}
             </div>
           </div>
         </div>
