@@ -166,8 +166,8 @@ export default function Index() {
               </div>
             ))}
           </div>
-          <div style={{ marginTop:22, fontSize:13, letterSpacing:'.26em', textTransform:'uppercase', color:'rgba(255,255,255,.55)', textAlign:'center' }}>
-            Cinematic Boot Sequence
+          <div style={{ marginTop:22, fontSize:13, letterSpacing:'.18em', textTransform:'uppercase', color:'rgba(255,255,255,.65)', textAlign:'center', fontWeight:800 }}>
+            1999X SHOP - BUY FREE FIRE PANELS
           </div>
           <div style={{ width:220, height:3, borderRadius:999, background:'rgba(255,255,255,.08)', overflow:'hidden', marginTop:16 }}>
             <div style={{ width:'100%', height:'100%', background:'linear-gradient(90deg,#8b5cf6,#10e898)', boxShadow:'0 0 16px rgba(139,92,246,.5)', animation:'load-bar 2s linear both' }} />

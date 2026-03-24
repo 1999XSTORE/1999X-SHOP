@@ -274,7 +274,7 @@ function FreeKeyCard() {
         </div>
         <div style={{ flex:1 }}>
           <div style={{ fontSize:18, fontWeight:800, color:'#fff', marginBottom:5 }}>Free 1 Day Trial Key</div>
-          <div style={{ fontSize:12, color:'rgba(255,255,255,.72)', marginBottom:14 }}>Glassmorphism trial card with 48-hour cooldown persisted in Supabase.</div>
+          <div style={{ fontSize:12, color:'rgba(255,255,255,.72)', marginBottom:14 }}>Glassmorphism trial card with a 48-hour cooldown that stays saved on your account.</div>
 
           {isActive && row && (
             <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:12, flexWrap:'wrap' }}>
@@ -459,7 +459,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:3 }}>{t('dashboard.dailyBonus')}</div>
-              <div style={{ fontSize:12, color:'var(--muted)' }}>Loaded from Supabase every page visit and persisted across refreshes.</div>
+              <div style={{ fontSize:12, color:'var(--muted)' }}>Always synced when you open the page and kept after refresh.</div>
             </div>
           </div>
           <div style={{ textAlign:'right', flexShrink:0, marginLeft:12 }}>

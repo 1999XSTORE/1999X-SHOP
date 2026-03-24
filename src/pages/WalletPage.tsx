@@ -731,35 +731,36 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
 
             {/* LEFT */}
             <div style={{ padding:'26px', borderRight:'1px solid rgba(255,255,255,.05)', background:'linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01))' }}>
-              {/* Amount + local currency */}
+              {/* Payment summary */}
               {(() => { const lc = localAmt(selAmount, methodId); return lc ? (
-                <div style={{ padding:'10px 14px', borderRadius:16, background:'linear-gradient(135deg,rgba(251,191,36,.12),rgba(236,72,153,.06))', border:'1px solid rgba(251,191,36,.18)', marginBottom:12, display:'flex', alignItems:'center', gap:9, boxShadow:'0 10px 22px rgba(251,191,36,.08)' }}>
-                  <span style={{ fontSize:18 }}>{LOCAL[methodId as keyof typeof LOCAL]?.flag ?? '🌐'}</span>
-                  <div>
-                    <div style={{ fontSize:10, color:'var(--muted)', marginBottom:1 }}>Local equivalent</div>
-                    <div style={{ fontSize:16, fontWeight:800, color:'var(--amber)' }}>{lc}</div>
-                    {LOCAL[methodId as keyof typeof LOCAL]?.info && (
-                      <div style={{ fontSize:10, color:'var(--dim)', marginTop:2 }}>{LOCAL[methodId as keyof typeof LOCAL].info}</div>
-                    )}
+                <div style={{ padding:'12px 14px', borderRadius:18, background:'linear-gradient(135deg,rgba(34,211,238,.1),rgba(168,85,247,.12))', border:'1px solid rgba(255,255,255,.08)', marginBottom:14, display:'flex', alignItems:'center', gap:10, boxShadow:'0 14px 28px rgba(34,211,238,.08)' }}>
+                  <span style={{ fontSize:20 }}>{LOCAL[methodId as keyof typeof LOCAL]?.flag ?? '🌐'}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:10, color:'rgba(255,255,255,.34)', marginBottom:2, textTransform:'uppercase', letterSpacing:'.12em', fontWeight:700 }}>Local Equivalent</div>
+                    <div style={{ fontSize:17, fontWeight:900, color:'#f8fafc' }}>{lc}</div>
                   </div>
-                  <div style={{ marginLeft:'auto', fontSize:9, color:'var(--dim)', maxWidth:90, textAlign:'right', lineHeight:1.4 }}>Approximate. Rate may vary.</div>
+                  <div style={{ marginLeft:'auto', fontSize:10, color:'var(--dim)', maxWidth:110, textAlign:'right', lineHeight:1.45 }}>Estimate for this payment method.</div>
                 </div>
               ) : null; })()}
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', background:`linear-gradient(135deg, ${selMethod.bgColor}, rgba(255,255,255,.03))`, border:`1px solid ${selMethod.borderColor}`, borderRadius:20, padding:'18px 20px', marginBottom:24, boxShadow:'0 18px 36px rgba(0,0,0,.16)' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', background:`linear-gradient(135deg, ${selMethod.bgColor}, rgba(255,255,255,.03))`, border:`1px solid ${selMethod.borderColor}`, borderRadius:24, padding:'20px 20px', marginBottom:18, boxShadow:'0 20px 42px rgba(0,0,0,.16)' }}>
                 <div>
-                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:4 }}>Send exactly</div>
-                  <div style={{ fontSize:36, fontWeight:900, color:'#fff', letterSpacing:'-.04em' }}>${selAmount.toFixed(2)}</div>
+                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:4 }}>Order Summary</div>
+                  <div style={{ fontSize:16, color:'rgba(255,255,255,.72)', fontWeight:700, marginBottom:4 }}>{selMethod.label}</div>
+                  <div style={{ fontSize:38, fontWeight:900, color:'#fff', letterSpacing:'-.05em' }}>${selAmount.toFixed(2)}</div>
                 </div>
-                <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px', borderRadius:999, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.08)', backdropFilter:'blur(14px)' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 14px', borderRadius:999, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.08)', backdropFilter:'blur(14px)' }}>
                   <span style={{ width:18, height:18, display:'flex', alignItems:'center', justifyContent:'center' }}>{selMethod.icon}</span>
-                  <span style={{ fontSize:12, fontWeight:700, color:'#fff' }}>{selMethod.label}</span>
+                  <span style={{ fontSize:12, fontWeight:800, color:'#fff' }}>Ready to pay</span>
                 </div>
               </div>
 
               {/* QR Code */}
               {selMethod.hasQr && (
-                <div style={{ textAlign:'center', marginBottom:24 }}>
-                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:12 }}>Scan QR Code</div>
+                <div style={{ textAlign:'center', marginBottom:24, padding:'18px', borderRadius:22, background:'linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015))', border:'1px solid rgba(255,255,255,.07)' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+                    <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.34)' }}>Scan Code</div>
+                    <div style={{ fontSize:11, color:'var(--muted)' }}>Tap to zoom</div>
+                  </div>
                   {selMethod.qr && !selMethod.qr.startsWith('YOUR_') ? (
                     <>
                       <div onClick={()=>setQrZoom(true)} style={{ display:'inline-block', cursor:'zoom-in', position:'relative', padding:12, borderRadius:28, background:'linear-gradient(180deg,#ffffff,#f3f4f6)', boxShadow:`0 0 56px ${selMethod.glow}, 0 22px 44px rgba(0,0,0,.34)`, transition:'transform .2s,box-shadow .2s' }}
@@ -770,7 +771,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                           <ZoomIn size={12} color="white"/>
                         </div>
                       </div>
-                      <p style={{ fontSize:11, color:'rgba(255,255,255,.28)', marginTop:10 }}>🔍 Click to zoom in</p>
+                      <p style={{ fontSize:11, color:'rgba(255,255,255,.28)', marginTop:10 }}>Fast checkout via QR</p>
                     </>
                   ) : (
                     <div style={{ width:170, height:170, borderRadius:20, border:`2px dashed ${selMethod.borderColor}`, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, margin:'0 auto', background:selMethod.bgColor }}>
@@ -782,7 +783,9 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
               )}
 
               {/* Fields */}
-              <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:14 }}>
+              <div style={{ padding:'18px', borderRadius:22, background:'linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015))', border:'1px solid rgba(255,255,255,.07)', marginBottom:14 }}>
+                <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.34)', marginBottom:12 }}>Payment Details</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                 {selMethod.fields.map((f,i)=>(
                   <div key={i} style={{ background:'linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.025))', border:`1px solid ${selMethod.borderColor}`, borderRadius:16, padding:'13px 15px', boxShadow:'inset 0 1px 0 rgba(255,255,255,.03)' }}>
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:5 }}>
@@ -799,6 +802,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                     </div>
                   </div>
                 ))}
+                </div>
               </div>
 
               {selMethod.id==='paypal'&&<PayPalButton amount={selAmount} user={user} onSuccess={onSuccess}/>}
@@ -844,14 +848,26 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                   <div style={{ padding:'16px 18px', borderRadius:18, background:'linear-gradient(135deg,rgba(249,115,22,.14),rgba(236,72,153,.06))', border:'1px solid rgba(249,115,22,.18)' }}>
                     <div style={{ fontSize:13,fontWeight:700,color:'#fb923c',marginBottom:6 }}>Automatic Voucher Flow</div>
                     <p style={{ fontSize:12,color:'var(--muted)',margin:0,lineHeight:1.65 }}>
-                      Paste a TrueWallet gift link on the left. We redeem it automatically, save the order in Supabase, block voucher reuse by hash, and credit the redeemed amount to your wallet balance.
+                      Paste a TrueWallet gift link on the left. We redeem it automatically, block voucher reuse, and credit the redeemed amount to your wallet balance.
                     </p>
+                  </div>
+                  <div style={{ padding:'16px 18px', borderRadius:18, background:'linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02))', border:'1px solid rgba(255,255,255,.06)' }}>
+                    <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.34)', marginBottom:12 }}>How It Works</div>
+                    <div style={{ display:'grid', gap:10 }}>
+                      {['Paste a valid TrueMoney gift link', 'System checks invalid or reused vouchers', 'Successful redeem adds balance automatically'].map((text, index) => (
+                        <div key={text} style={{ display:'flex', alignItems:'center', gap:10 }}>
+                          <div style={{ width:24, height:24, borderRadius:'50%', background:'linear-gradient(135deg,#f97316,#ec4899)', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:11, fontWeight:900, flexShrink:0 }}>{index + 1}</div>
+                          <div style={{ fontSize:12, color:'rgba(255,255,255,.7)' }}>{text}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ) : (
                 /* ── Other methods: manual form ── */
                 <>
-              <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.32)', marginBottom:18 }}>Fill Payment Details</div>
+              <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.32)', marginBottom:8 }}>Checkout</div>
+              <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-.04em', marginBottom:18 }}>Complete Your Payment</div>
 
               {/* Email */}
               <div style={{ marginBottom:16 }}>
