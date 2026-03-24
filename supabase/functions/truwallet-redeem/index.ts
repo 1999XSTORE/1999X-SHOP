@@ -21,6 +21,10 @@ function normalizePhone(input: string) {
   return input.replace(/[^\d]/g, '');
 }
 
+function isTrueWalletVoucherLink(input: string) {
+  return /^https?:\/\/gift\.truemoney\.com\/campaign\/\?v=[A-Za-z0-9]+$/i.test(input.trim());
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
@@ -33,6 +37,9 @@ Deno.serve(async (req) => {
     const voucher = String(body.voucher ?? '').trim();
 
     if (!voucher) return json({ success: false, message: 'Voucher link is required' }, 400);
+    if (!isTrueWalletVoucherLink(voucher)) {
+      return json({ success: false, message: 'Invalid TrueMoney gift link format' }, 400);
+    }
 
     const client = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
     const { data: authData } = await client.auth.getUser();
@@ -82,6 +89,17 @@ Deno.serve(async (req) => {
     }
 
     const amount = Number(providerResponse?.amount ?? providerResponse?.data?.amount ?? 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return json(
+        {
+          success: false,
+          message: providerResponse?.message ?? providerResponse?.error ?? 'Invalid, empty, or already-used voucher',
+          providerResponse,
+        },
+        400,
+      );
+    }
+
     const transactionId = String(
       providerResponse?.transaction_id ??
       providerResponse?.txn_id ??

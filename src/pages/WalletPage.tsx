@@ -245,6 +245,10 @@ function TrueWalletRedeem({ user, onSuccess }: { user: any; onSuccess: () => voi
   const handleRedeem = async () => {
     if (!user) { toast.error('Please login first'); return; }
     if (!voucher.trim()) { toast.error('Paste a gift link first'); return; }
+    if (!/^https?:\/\/gift\.truemoney\.com\/campaign\/\?v=[A-Za-z0-9]+$/i.test(voucher.trim())) {
+      toast.error('Enter a valid TrueMoney gift link');
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase.functions.invoke('truwallet-redeem', { body: { voucher: voucher.trim() } });
     setLoading(false);
@@ -610,17 +614,42 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
         <QRZoomModal src={selMethod.qr} onClose={()=>setQrZoom(false)}/>
       )}
       <style>{`
-        .pm-pill { transition: all 0.2s cubic-bezier(.22,1,.36,1); }
-        .pm-pill:hover { transform: translateY(-2px); }
-        .amt-btn { transition: all 0.18s ease; }
+        .pm-pill { transition: all 0.22s cubic-bezier(.22,1,.36,1); backdrop-filter: blur(16px); }
+        .pm-pill:hover { transform: translateY(-2px) scale(1.01); }
+        .amt-btn { transition: all 0.22s ease; backdrop-filter: blur(14px); }
         .amt-btn:hover { transform: scale(1.04); }
         @keyframes slideIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+        @keyframes panelGlow { 0%,100%{opacity:.55} 50%{opacity:1} }
         .pay-panel { animation: slideIn 0.32s cubic-bezier(.22,1,.36,1) both; }
+        .pay-shell { position: relative; overflow: hidden; }
+        .pay-shell::before {
+          content: "";
+          position: absolute;
+          inset: -1px;
+          border-radius: inherit;
+          background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(139,92,246,.22), rgba(34,211,238,.14));
+          opacity: .85;
+          pointer-events: none;
+        }
+        .pay-shell::after {
+          content: "";
+          position: absolute;
+          width: 320px;
+          height: 320px;
+          top: -110px;
+          right: -90px;
+          border-radius: 999px;
+          background: radial-gradient(circle, rgba(139,92,246,.22) 0%, rgba(139,92,246,0) 72%);
+          filter: blur(8px);
+          pointer-events: none;
+          animation: panelGlow 5s ease-in-out infinite;
+        }
+        .pay-inner { position: relative; z-index: 1; }
         @media(max-width:700px){ .pay-cols{ grid-template-columns: 1fr !important; } }
       `}</style>
 
       {/* Step indicator bar */}
-      <div style={{ display:'flex', alignItems:'center', gap:0, marginBottom:24, background:'rgba(255,255,255,.03)', borderRadius:16, padding:'6px 16px', border:'1px solid rgba(255,255,255,.06)', width:'fit-content' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:0, marginBottom:26, background:'linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.03))', borderRadius:18, padding:'8px 18px', border:'1px solid rgba(255,255,255,.08)', width:'fit-content', boxShadow:'0 18px 40px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.04)', backdropFilter:'blur(18px)' }}>
         {['Amount','Payment','Submit'].map((l,i)=>{
           const n=i+1, done=n<step, active=n===step;
           return (
@@ -637,54 +666,58 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
 
       {/* ── STEP 1: Amount ── */}
       {step===1&&(
-        <div className="pay-panel g" style={{ padding:'28px 28px 32px', borderRadius:20 }}>
-          <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.35)', marginBottom:18 }}>Choose Amount to Deposit</div>
+        <div className="pay-panel pay-shell g" style={{ padding:1, borderRadius:28, background:'linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.015))', boxShadow:'0 28px 60px rgba(0,0,0,.24)' }}>
+          <div className="pay-inner" style={{ padding:'30px 30px 34px', borderRadius:27, background:'linear-gradient(180deg,rgba(16,18,30,.95),rgba(10,10,18,.92))' }}>
+          <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.38)', marginBottom:8 }}>Deposit Wallet Balance</div>
+          <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-.04em', marginBottom:18 }}>Choose Your Amount</div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:16 }}>
             {AMOUNTS.map(a=>(
               <button key={a} className="amt-btn" onClick={()=>{setAmount(a);setCustom('');}}
-                style={{ padding:'20px 8px', borderRadius:16, fontSize:22, fontWeight:900, cursor:'pointer', border:`2px solid ${amount===a&&!custom?'rgba(139,92,246,.6)':'rgba(255,255,255,.06)'}`, background:amount===a&&!custom?'rgba(139,92,246,.12)':'rgba(255,255,255,.025)', color:amount===a&&!custom?'#c4b5fd':'rgba(255,255,255,.45)', fontFamily:'inherit', position:'relative', boxShadow:amount===a&&!custom?'0 0 30px rgba(109,40,217,.3), inset 0 0 20px rgba(139,92,246,.05)':'none' }}>
+                style={{ padding:'22px 8px', borderRadius:20, fontSize:22, fontWeight:900, cursor:'pointer', border:`1px solid ${amount===a&&!custom?'rgba(168,85,247,.65)':'rgba(255,255,255,.08)'}`, background:amount===a&&!custom?'linear-gradient(135deg,rgba(139,92,246,.24),rgba(34,211,238,.08))':'linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.025))', color:amount===a&&!custom?'#f5f3ff':'rgba(255,255,255,.62)', fontFamily:'inherit', position:'relative', boxShadow:amount===a&&!custom?'0 18px 34px rgba(109,40,217,.22), inset 0 1px 0 rgba(255,255,255,.08)':'inset 0 1px 0 rgba(255,255,255,.03)' }}>
                 <span style={{ display:'block', fontSize:9, fontWeight:700, color:'rgba(255,255,255,.28)', marginBottom:3, letterSpacing:'.1em' }}>USD</span>
                 ${a}
                 {amount===a&&!custom&&<div style={{ position:'absolute', top:8, right:10, width:7, height:7, borderRadius:'50%', background:'#8b5cf6', boxShadow:'0 0 8px #8b5cf6', animation:'blink 1.5s infinite' }}/>}
               </button>
             ))}
           </div>
-          <div style={{ position:'relative', marginBottom:20 }}>
+          <div style={{ position:'relative', marginBottom:22 }}>
             <span style={{ position:'absolute', left:16, top:'50%', transform:'translateY(-50%)', color:'var(--muted)', fontWeight:700, fontSize:18, pointerEvents:'none' }}>$</span>
             <input type="number" placeholder="Or enter custom amount..." value={custom} onChange={e=>setCustom(e.target.value)}
-              style={{ width:'100%', background:'rgba(255,255,255,.04)', border:`1px solid ${custom?'rgba(139,92,246,.4)':'rgba(255,255,255,.08)'}`, borderRadius:14, padding:'15px 18px 15px 36px', color:'#fff', fontFamily:'inherit', fontSize:16, fontWeight:700, outline:'none', transition:'all .2s' }}
+              style={{ width:'100%', background:'linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03))', border:`1px solid ${custom?'rgba(139,92,246,.45)':'rgba(255,255,255,.08)'}`, borderRadius:16, padding:'16px 18px 16px 36px', color:'#fff', fontFamily:'inherit', fontSize:16, fontWeight:700, outline:'none', transition:'all .2s', boxShadow:'inset 0 1px 0 rgba(255,255,255,.04)' }}
               onFocus={e=>{e.target.style.borderColor='rgba(139,92,246,.5)';e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,.1)';}}
               onBlur={e=>{e.target.style.borderColor=custom?'rgba(139,92,246,.35)':'rgba(255,255,255,.08)';e.target.style.boxShadow='none';}}
             />
           </div>
           {selAmount>0&&(
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 20px', borderRadius:14, background:'rgba(139,92,246,.08)', border:'1px solid rgba(139,92,246,.22)', marginBottom:20 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderRadius:18, background:'linear-gradient(135deg,rgba(139,92,246,.18),rgba(236,72,153,.1),rgba(34,211,238,.08))', border:'1px solid rgba(139,92,246,.24)', marginBottom:22, boxShadow:'0 18px 38px rgba(15,10,30,.22)' }}>
               <span style={{ fontSize:13, color:'var(--muted)' }}>You will deposit</span>
-              <span style={{ fontSize:28, fontWeight:900, color:'var(--purple)', letterSpacing:'-.03em' }}>${selAmount.toFixed(2)}</span>
+              <span style={{ fontSize:30, fontWeight:900, color:'#fff', letterSpacing:'-.03em', textShadow:'0 0 24px rgba(139,92,246,.4)' }}>${selAmount.toFixed(2)}</span>
             </div>
           )}
-          <button onClick={()=>selAmount>0?setStep(2):toast.error('Please select an amount')} className="btn btn-p btn-lg btn-full" style={{ fontSize:15, borderRadius:14, padding:'16px' }}>
+          <button onClick={()=>selAmount>0?setStep(2):toast.error('Please select an amount')} className="btn btn-p btn-lg btn-full" style={{ fontSize:15, borderRadius:18, padding:'17px', background:'linear-gradient(90deg,#8b5cf6,#7c3aed,#c026d3)', boxShadow:'0 18px 34px rgba(124,58,237,.32)' }}>
             Continue to Payment Method <ArrowRight size={17}/>
           </button>
+          </div>
         </div>
       )}
 
       {/* ── STEP 2: Payment Method + Split Panel ── */}
       {step===2&&(
-        <div className="pay-panel g" style={{ borderRadius:20, overflow:'hidden', padding:0 }}>
+        <div className="pay-panel pay-shell g" style={{ borderRadius:28, overflow:'hidden', padding:1, background:'linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.015))', boxShadow:'0 30px 70px rgba(0,0,0,.28)' }}>
+          <div className="pay-inner" style={{ borderRadius:27, overflow:'hidden', background:'linear-gradient(180deg,rgba(15,16,28,.96),rgba(9,10,18,.94))' }}>
           {/* Method selector */}
-          <div style={{ padding:'22px 24px 18px', borderBottom:'1px solid rgba(255,255,255,.05)' }}>
+          <div style={{ padding:'24px 26px 18px', borderBottom:'1px solid rgba(255,255,255,.06)', background:'linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015))' }}>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
-              <button onClick={()=>setStep(1)} style={{ display:'flex', alignItems:'center', gap:5, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.07)', borderRadius:10, cursor:'pointer', color:'var(--muted)', fontSize:12, fontFamily:'inherit', padding:'6px 12px' }}>
+              <button onClick={()=>setStep(1)} style={{ display:'flex', alignItems:'center', gap:5, background:'linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03))', border:'1px solid rgba(255,255,255,.08)', borderRadius:12, cursor:'pointer', color:'var(--muted)', fontSize:12, fontFamily:'inherit', padding:'8px 12px', backdropFilter:'blur(10px)' }}>
                 <ArrowLeft size={13}/> Back
               </button>
-              <span style={{ fontSize:11, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:'rgba(255,255,255,.3)' }}>Select Payment Method</span>
-              <div style={{ marginLeft:'auto', padding:'5px 14px', borderRadius:20, background:'rgba(139,92,246,.1)', border:'1px solid rgba(139,92,246,.2)', fontSize:13, fontWeight:900, color:'var(--purple)' }}>${selAmount.toFixed(2)}</div>
+              <span style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.34)' }}>Select Payment Method</span>
+              <div style={{ marginLeft:'auto', padding:'7px 15px', borderRadius:999, background:'linear-gradient(135deg,rgba(124,58,237,.22),rgba(192,38,211,.14))', border:'1px solid rgba(139,92,246,.24)', fontSize:13, fontWeight:900, color:'#d8b4fe', boxShadow:'0 12px 24px rgba(109,40,217,.18)' }}>${selAmount.toFixed(2)}</div>
             </div>
             <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
               {PAYMENT_METHODS.map(m=>(
                 <button key={m.id} className="pm-pill" onClick={()=>setMethodId(m.id)}
-                  style={{ display:'flex', alignItems:'center', gap:7, padding:'8px 14px', borderRadius:24, fontSize:12, fontWeight:700, cursor:'pointer', border:`1.5px solid ${methodId===m.id?m.color:'rgba(255,255,255,.07)'}`, background:methodId===m.id?m.bgColor:'rgba(255,255,255,.025)', color:methodId===m.id?m.color:'rgba(255,255,255,.45)', fontFamily:'inherit', boxShadow:methodId===m.id?`0 0 18px ${m.glow}`:'none', whiteSpace:'nowrap', transition:'all .2s' }}>
+                  style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 15px', borderRadius:999, fontSize:12, fontWeight:700, cursor:'pointer', border:`1px solid ${methodId===m.id?m.color:'rgba(255,255,255,.08)'}`, background:methodId===m.id?`linear-gradient(135deg, ${m.bgColor}, rgba(255,255,255,.05))`:'linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02))', color:methodId===m.id?m.color:'rgba(255,255,255,.58)', fontFamily:'inherit', boxShadow:methodId===m.id?`0 18px 30px ${m.glow}`:'inset 0 1px 0 rgba(255,255,255,.03)', whiteSpace:'nowrap', transition:'all .2s' }}>
                   <span style={{ width:20, height:20, borderRadius:'50%', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{m.icon}</span>
                   {m.label}
                   {methodId===m.id&&<div style={{ width:5, height:5, borderRadius:'50%', background:m.color, marginLeft:2, boxShadow:`0 0 5px ${m.color}` }}/>}
@@ -697,10 +730,10 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
           <div className="pay-cols" style={{ display:'grid', gridTemplateColumns:'1fr 1fr' }}>
 
             {/* LEFT */}
-            <div style={{ padding:'24px', borderRight:'1px solid rgba(255,255,255,.04)', background:'rgba(0,0,0,.15)' }}>
+            <div style={{ padding:'26px', borderRight:'1px solid rgba(255,255,255,.05)', background:'linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01))' }}>
               {/* Amount + local currency */}
               {(() => { const lc = localAmt(selAmount, methodId); return lc ? (
-                <div style={{ padding:'9px 13px', borderRadius:12, background:'rgba(251,191,36,.06)', border:'1px solid rgba(251,191,36,.18)', marginBottom:10, display:'flex', alignItems:'center', gap:9 }}>
+                <div style={{ padding:'10px 14px', borderRadius:16, background:'linear-gradient(135deg,rgba(251,191,36,.12),rgba(236,72,153,.06))', border:'1px solid rgba(251,191,36,.18)', marginBottom:12, display:'flex', alignItems:'center', gap:9, boxShadow:'0 10px 22px rgba(251,191,36,.08)' }}>
                   <span style={{ fontSize:18 }}>{LOCAL[methodId as keyof typeof LOCAL]?.flag ?? '🌐'}</span>
                   <div>
                     <div style={{ fontSize:10, color:'var(--muted)', marginBottom:1 }}>Local equivalent</div>
@@ -712,12 +745,12 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                   <div style={{ marginLeft:'auto', fontSize:9, color:'var(--dim)', maxWidth:90, textAlign:'right', lineHeight:1.4 }}>Approximate. Rate may vary.</div>
                 </div>
               ) : null; })()}
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', background:selMethod.bgColor, border:`1px solid ${selMethod.borderColor}`, borderRadius:14, padding:'14px 18px', marginBottom:20 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', background:`linear-gradient(135deg, ${selMethod.bgColor}, rgba(255,255,255,.03))`, border:`1px solid ${selMethod.borderColor}`, borderRadius:20, padding:'18px 20px', marginBottom:24, boxShadow:'0 18px 36px rgba(0,0,0,.16)' }}>
                 <div>
                   <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:4 }}>Send exactly</div>
-                  <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-.03em' }}>${selAmount.toFixed(2)}</div>
+                  <div style={{ fontSize:36, fontWeight:900, color:'#fff', letterSpacing:'-.04em' }}>${selAmount.toFixed(2)}</div>
                 </div>
-                <div style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 13px', borderRadius:20, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.08)' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px', borderRadius:999, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.08)', backdropFilter:'blur(14px)' }}>
                   <span style={{ width:18, height:18, display:'flex', alignItems:'center', justifyContent:'center' }}>{selMethod.icon}</span>
                   <span style={{ fontSize:12, fontWeight:700, color:'#fff' }}>{selMethod.label}</span>
                 </div>
@@ -725,14 +758,14 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
 
               {/* QR Code */}
               {selMethod.hasQr && (
-                <div style={{ textAlign:'center', marginBottom:20 }}>
+                <div style={{ textAlign:'center', marginBottom:24 }}>
                   <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:12 }}>Scan QR Code</div>
                   {selMethod.qr && !selMethod.qr.startsWith('YOUR_') ? (
                     <>
-                      <div onClick={()=>setQrZoom(true)} style={{ display:'inline-block', cursor:'zoom-in', position:'relative', padding:10, borderRadius:20, background:'white', boxShadow:`0 0 40px ${selMethod.glow}, 0 8px 32px rgba(0,0,0,.5)`, transition:'transform .2s,box-shadow .2s' }}
+                      <div onClick={()=>setQrZoom(true)} style={{ display:'inline-block', cursor:'zoom-in', position:'relative', padding:12, borderRadius:28, background:'linear-gradient(180deg,#ffffff,#f3f4f6)', boxShadow:`0 0 56px ${selMethod.glow}, 0 22px 44px rgba(0,0,0,.34)`, transition:'transform .2s,box-shadow .2s' }}
                         onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform='scale(1.04)';}}
                         onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform='scale(1)';}}>
-                        <img src={selMethod.qr} alt="QR Code" style={{ width:170, height:170, objectFit:'contain', borderRadius:12, display:'block' }} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
+                        <img src={selMethod.qr} alt="QR Code" style={{ width:178, height:178, objectFit:'contain', borderRadius:18, display:'block' }} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
                         <div style={{ position:'absolute', bottom:12, right:12, width:26, height:26, borderRadius:'50%', background:'rgba(0,0,0,.55)', display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(6px)' }}>
                           <ZoomIn size={12} color="white"/>
                         </div>
@@ -751,7 +784,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
               {/* Fields */}
               <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:14 }}>
                 {selMethod.fields.map((f,i)=>(
-                  <div key={i} style={{ background:'rgba(255,255,255,.03)', border:`1px solid ${selMethod.borderColor}`, borderRadius:12, padding:'12px 14px' }}>
+                  <div key={i} style={{ background:'linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.025))', border:`1px solid ${selMethod.borderColor}`, borderRadius:16, padding:'13px 15px', boxShadow:'inset 0 1px 0 rgba(255,255,255,.03)' }}>
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:5 }}>
                       <span style={{ fontSize:10, color:'rgba(255,255,255,.32)', textTransform:'uppercase', letterSpacing:'.1em', fontWeight:700 }}>{f.label}</span>
                       {f.note&&<span style={{ fontSize:10, color:selMethod.color, fontWeight:600 }}>{f.note}</span>}
@@ -771,24 +804,24 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
               {selMethod.id==='paypal'&&<PayPalButton amount={selAmount} user={user} onSuccess={onSuccess}/>}
               {selMethod.id==='truewallet'&&<TrueWalletRedeem user={user} onSuccess={onSuccess}/>}
 
-              <div style={{ padding:'12px 14px', borderRadius:12, background:'rgba(255,255,255,.02)', border:'1px solid rgba(255,255,255,.04)', display:'flex', gap:10, alignItems:'flex-start', marginTop: selMethod.id==='paypal'?10:0 }}>
+              <div style={{ padding:'13px 15px', borderRadius:16, background:'linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.02))', border:'1px solid rgba(255,255,255,.05)', display:'flex', gap:10, alignItems:'flex-start', marginTop: selMethod.id==='paypal'?12:0 }}>
                 <span style={{ fontSize:16 }}>💡</span>
                 <p style={{ fontSize:11, color:'var(--muted)', lineHeight:1.65, margin:0 }}>{selMethod.instruction}</p>
               </div>
             </div>
 
             {/* RIGHT: Form — PayPal gets its own panel, others get the manual form */}
-            <div style={{ padding:'24px' }}>
+            <div style={{ padding:'26px', background:'linear-gradient(180deg,rgba(255,255,255,.015),rgba(255,255,255,.005))' }}>
               {selMethod.id === 'paypal' ? (
                 /* ── PayPal: no form needed, SDK handles everything ── */
                 <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-                  <div style={{ padding:'14px 16px', borderRadius:14, background:'rgba(16,232,152,.06)', border:'1px solid rgba(16,232,152,.18)' }}>
+                  <div style={{ padding:'16px 18px', borderRadius:18, background:'linear-gradient(135deg,rgba(16,232,152,.1),rgba(34,211,238,.06))', border:'1px solid rgba(16,232,152,.18)' }}>
                     <div style={{ fontSize:13,fontWeight:700,color:'var(--green)',marginBottom:6 }}>⚡ Fully Automatic</div>
                     <p style={{ fontSize:12,color:'var(--muted)',margin:0,lineHeight:1.65 }}>
                       Click the PayPal button on the left. After you complete payment, your balance is credited <strong style={{color:'#fff'}}>instantly and automatically</strong>. No form needed.
                     </p>
                   </div>
-                  <div style={{ padding:'12px 14px', borderRadius:12, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.06)', display:'flex', flexDirection:'column', gap:8 }}>
+                  <div style={{ padding:'14px 16px', borderRadius:18, background:'linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02))', border:'1px solid rgba(255,255,255,.06)', display:'flex', flexDirection:'column', gap:9 }}>
                     {[
                       { step:'1', text:'Click the PayPal button on the left' },
                       { step:'2', text:'Log in and complete payment in the PayPal popup' },
@@ -800,7 +833,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                       </div>
                     ))}
                   </div>
-                  <div style={{ padding:'10px 14px', borderRadius:10, background:'rgba(0,112,186,.06)', border:'1px solid rgba(0,156,222,.15)' }}>
+                  <div style={{ padding:'12px 14px', borderRadius:16, background:'linear-gradient(135deg,rgba(0,112,186,.1),rgba(0,156,222,.05))', border:'1px solid rgba(0,156,222,.15)' }}>
                     <p style={{ fontSize:11,color:'var(--dim)',margin:0,lineHeight:1.5 }}>
                       💡 If you experience any issue, contact support with your PayPal transaction ID and we will credit you manually.
                     </p>
@@ -808,7 +841,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                 </div>
               ) : selMethod.id === 'truewallet' ? (
                 <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-                  <div style={{ padding:'14px 16px', borderRadius:14, background:'rgba(249,115,22,.08)', border:'1px solid rgba(249,115,22,.18)' }}>
+                  <div style={{ padding:'16px 18px', borderRadius:18, background:'linear-gradient(135deg,rgba(249,115,22,.14),rgba(236,72,153,.06))', border:'1px solid rgba(249,115,22,.18)' }}>
                     <div style={{ fontSize:13,fontWeight:700,color:'#fb923c',marginBottom:6 }}>Automatic Voucher Flow</div>
                     <p style={{ fontSize:12,color:'var(--muted)',margin:0,lineHeight:1.65 }}>
                       Paste a TrueWallet gift link on the left. We redeem it automatically, save the order in Supabase, block voucher reuse by hash, and credit the redeemed amount to your wallet balance.
@@ -818,13 +851,13 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
               ) : (
                 /* ── Other methods: manual form ── */
                 <>
-              <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:18 }}>Fill Payment Details</div>
+              <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.32)', marginBottom:18 }}>Fill Payment Details</div>
 
               {/* Email */}
               <div style={{ marginBottom:16 }}>
                 <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Your Email</label>
                 <input type="email" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}
-                  style={{ width:'100%', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:12, padding:'13px 16px', color:'#fff', fontFamily:'inherit', fontSize:14, outline:'none', transition:'all .2s' }}
+                  style={{ width:'100%', background:'linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.03))', border:'1px solid rgba(255,255,255,.08)', borderRadius:16, padding:'14px 16px', color:'#fff', fontFamily:'inherit', fontSize:14, outline:'none', transition:'all .2s', boxShadow:'inset 0 1px 0 rgba(255,255,255,.03)' }}
                   onFocus={e=>{e.target.style.borderColor='rgba(139,92,246,.45)';e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,.1)';}}
                   onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,.08)';e.target.style.boxShadow='none';}}
                 />
@@ -834,7 +867,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
               <div style={{ marginBottom:16 }}>
                 <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Transaction ID</label>
                 <input type="text" placeholder="Paste your TXN / reference ID..." value={txnId} onChange={e=>setTxnId(e.target.value)}
-                  style={{ width:'100%', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:12, padding:'13px 16px', color:'#fff', fontFamily:'monospace', fontSize:13, outline:'none', transition:'all .2s', letterSpacing:'0.5px' }}
+                  style={{ width:'100%', background:'linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.03))', border:'1px solid rgba(255,255,255,.08)', borderRadius:16, padding:'14px 16px', color:'#fff', fontFamily:'monospace', fontSize:13, outline:'none', transition:'all .2s', letterSpacing:'0.5px', boxShadow:'inset 0 1px 0 rgba(255,255,255,.03)' }}
                   onFocus={e=>{e.target.style.borderColor='rgba(139,92,246,.45)';e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,.1)';}}
                   onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,.08)';e.target.style.boxShadow='none';}}
                 />
@@ -846,13 +879,13 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                 <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Payment Screenshot</label>
                 <input type="file" ref={fileRef} accept="image/*" style={{ display:'none' }} onChange={handleFileChange}/>
                 {screenshotPreview ? (
-                  <div style={{ position:'relative', borderRadius:14, overflow:'hidden', border:'1px solid rgba(16,232,152,.25)', cursor:'pointer' }} onClick={()=>fileRef.current?.click()}>
+                  <div style={{ position:'relative', borderRadius:18, overflow:'hidden', border:'1px solid rgba(16,232,152,.25)', cursor:'pointer', boxShadow:'0 16px 36px rgba(0,0,0,.18)' }} onClick={()=>fileRef.current?.click()}>
                     <img src={screenshotPreview} alt="Screenshot" style={{ width:'100%', maxHeight:140, objectFit:'cover', display:'block' }}/>
                     <div style={{ position:'absolute',top:8,right:8,background:'rgba(16,232,152,.15)',border:'1px solid rgba(16,232,152,.3)',borderRadius:20,padding:'3px 10px',fontSize:10,fontWeight:700,color:'var(--green)' }}>✓ Uploaded</div>
                     <div style={{ position:'absolute',inset:0,background:'rgba(0,0,0,.5)',display:'flex',alignItems:'center',justifyContent:'center',opacity:0,transition:'opacity .2s',fontSize:12,color:'#fff',fontWeight:700 }} onMouseEnter={e=>(e.currentTarget.style.opacity='1')} onMouseLeave={e=>(e.currentTarget.style.opacity='0')}>Change Screenshot</div>
                   </div>
                 ) : (
-                  <div onClick={()=>fileRef.current?.click()} style={{ border:'2px dashed rgba(255,255,255,.09)', borderRadius:14, padding:'24px 16px', textAlign:'center', cursor:'pointer', transition:'all .2s', background:'rgba(255,255,255,.02)' }}
+                  <div onClick={()=>fileRef.current?.click()} style={{ border:'1px dashed rgba(255,255,255,.14)', borderRadius:20, padding:'30px 16px', textAlign:'center', cursor:'pointer', transition:'all .2s', background:'linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015))', boxShadow:'inset 0 1px 0 rgba(255,255,255,.02)' }}
                     onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.borderColor='rgba(139,92,246,.3)';(e.currentTarget as HTMLDivElement).style.background='rgba(139,92,246,.04)';}}
                     onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.borderColor='rgba(255,255,255,.09)';(e.currentTarget as HTMLDivElement).style.background='rgba(255,255,255,.02)';}}>
                     <div style={{ width:40,height:40,borderRadius:11,background:'rgba(139,92,246,.1)',border:'1px solid rgba(139,92,246,.2)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 10px' }}>
@@ -865,7 +898,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
               </div>
 
               {/* Summary */}
-              <div style={{ background:'rgba(139,92,246,.06)', border:'1px solid rgba(139,92,246,.16)', borderRadius:14, padding:'13px 16px', marginBottom:16, display:'flex', alignItems:'center', gap:12 }}>
+              <div style={{ background:'linear-gradient(135deg,rgba(139,92,246,.14),rgba(79,70,229,.08))', border:'1px solid rgba(139,92,246,.18)', borderRadius:18, padding:'15px 16px', marginBottom:18, display:'flex', alignItems:'center', gap:12, boxShadow:'0 16px 32px rgba(76,29,149,.14)' }}>
                 <div style={{ width:36,height:36,borderRadius:10,background:selMethod.bgColor,border:`1px solid ${selMethod.borderColor}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>{selMethod.icon}</div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:11,color:'var(--muted)',marginBottom:1 }}>{selMethod.label}</div>
@@ -881,12 +914,13 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                 if(!txnId.trim()){toast.error('Enter your transaction ID');return;}
                 if(!email.trim()){toast.error('Enter your email');return;}
                 setStep(3);
-              }} className="btn btn-p btn-lg btn-full" style={{ borderRadius:14, fontSize:15, boxShadow:'0 0 30px rgba(109,40,217,.4)', padding:'15px' }}>
+              }} className="btn btn-p btn-lg btn-full" style={{ borderRadius:18, fontSize:15, boxShadow:'0 20px 40px rgba(109,40,217,.35)', padding:'17px', background:'linear-gradient(90deg,#8b5cf6,#7c3aed,#c026d3)' }}>
                 I've Sent Payment <ArrowRight size={16}/>
               </button>
                 </>
               )}
             </div>
+          </div>
           </div>
         </div>
       )}
