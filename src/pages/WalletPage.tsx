@@ -769,7 +769,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
               </div>
 
               {selMethod.id==='paypal'&&<PayPalButton amount={selAmount} user={user} onSuccess={onSuccess}/>}
-              {selMethod.id==='truewallet'&&<TrueWalletRedeem user={user} onSuccess={loadTxns}/>}
+              {selMethod.id==='truewallet'&&<TrueWalletRedeem user={user} onSuccess={onSuccess}/>}
 
               <div style={{ padding:'12px 14px', borderRadius:12, background:'rgba(255,255,255,.02)', border:'1px solid rgba(255,255,255,.04)', display:'flex', gap:10, alignItems:'flex-start', marginTop: selMethod.id==='paypal'?10:0 }}>
                 <span style={{ fontSize:16 }}>💡</span>
