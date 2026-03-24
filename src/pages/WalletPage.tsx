@@ -229,6 +229,19 @@ function TrueWalletRedeem({ user }: { user: any }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ licenseKey: string; productName: string; amount: number } | null>(null);
 
+  const getFunctionErrorMessage = async (error: any) => {
+    if (!error) return '';
+    const fallback = error.message ?? '';
+    try {
+      const response = error.context;
+      if (!response || typeof response.json !== 'function') return fallback;
+      const body = await response.json();
+      return body?.message ?? fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
   const handleRedeem = async () => {
     if (!user) { toast.error('Please login first'); return; }
     if (!voucher.trim()) { toast.error('Paste a gift link first'); return; }
@@ -236,7 +249,8 @@ function TrueWalletRedeem({ user }: { user: any }) {
     const { data, error } = await supabase.functions.invoke('truwallet-redeem', { body: { voucher: voucher.trim() } });
     setLoading(false);
     if (error || !data?.success) {
-      toast.error(data?.message ?? error?.message ?? 'Redeem failed');
+      const errorMessage = data?.message ?? await getFunctionErrorMessage(error) ?? 'Redeem failed';
+      toast.error(errorMessage);
       return;
     }
     setResult({ licenseKey: data.licenseKey, productName: data.productName, amount: Number(data.amount ?? 0) });
