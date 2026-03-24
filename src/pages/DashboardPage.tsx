@@ -224,11 +224,11 @@ function FreeKeyCard() {
   ];
 
   return (
-    <div className="g g-hover fu" style={{ padding:'20px 22px', background:'rgba(99,102,241,.06)', borderColor:'rgba(99,102,241,.22)', boxShadow:'0 0 40px rgba(99,102,241,.08)', animationDelay:'150ms' }}>
+    <div className="g g-hover fu" style={{ padding:'28px 28px', background:'linear-gradient(135deg,rgba(99,102,241,.1),rgba(139,92,246,.06),rgba(56,189,248,.04))', borderColor:'rgba(99,102,241,.3)', boxShadow:'0 0 60px rgba(99,102,241,.15), 0 0 120px rgba(139,92,246,.05)', animationDelay:'150ms', backdropFilter:'blur(16px)', WebkitBackdropFilter:'blur(16px)', borderRadius:22 }}>
       {/* Header */}
       <div style={{ display:'flex', alignItems:'flex-start', gap:14, marginBottom: isActive && keyList.length > 0 ? 14 : 0 }}>
-        <div style={{ width:44, height:44, borderRadius:12, background:'rgba(99,102,241,.12)', border:'1px solid rgba(99,102,241,.28)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:'0 0 20px rgba(99,102,241,.2)' }}>
-          <Zap size={20} color="#818cf8" />
+        <div style={{ width:56, height:56, borderRadius:16, background:'linear-gradient(135deg,rgba(99,102,241,.2),rgba(139,92,246,.15))', border:'1px solid rgba(99,102,241,.35)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:'0 0 30px rgba(99,102,241,.3)' }}>
+          <Zap size={26} color="#818cf8" />
         </div>
         <div style={{ flex:1 }}>
           <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:3 }}>{t('dashboard.freeKey')}</div>
@@ -388,30 +388,7 @@ export default function DashboardPage() {
       {/* ── FREE 1-HOUR KEY CARD (after license section) ── */}
       {user && <FreeKeyCard />}
 
-      {/* Daily bonus */}
-      <div className="g g-hover fu" style={{ padding:'18px 20px', background:'rgba(251,191,36,.06)', borderColor:'rgba(251,191,36,.16)', animationDelay:'200ms' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-            <div style={{ width:42, height:42, borderRadius:11, background:'rgba(251,191,36,.1)', border:'1px solid rgba(251,191,36,.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-              <Gift size={20} color="var(--amber)" />
-            </div>
-            <div>
-              <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:3 }}>{t('dashboard.dailyBonus')}</div>
-              <div style={{ fontSize:12, color:'var(--muted)' }}>{t('dashboard.dailyBonusDesc')}</div>
-            </div>
-          </div>
-          <div style={{ textAlign:'right', flexShrink:0, marginLeft:12 }}>
-            <div style={{ fontSize:20, fontWeight:800, color:'var(--amber)', marginBottom:6 }}>{bonusPoints}<span style={{ fontSize:11, color:'var(--dim)', fontWeight:400, marginLeft:3 }}>pts</span></div>
-            {canClaim
-              ? <button className="btn btn-sm" style={{ background:'linear-gradient(135deg,#fbbf24,#f59e0b)', color:'#3a1a00', fontWeight:700, boxShadow:'0 0 14px rgba(245,158,11,.3)', border:'none' }} onClick={() => { if (claimBonus()) { toast.success('🎉 +10 Bonus Points!'); if (user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'bonus_claim', status:'success', meta:{ points:10 } }); } }}>{t('dashboard.claimNow')}</button>
-              : <div style={{ fontSize:11, color:'var(--dim)', display:'flex', alignItems:'center', gap:4 }}><Clock size={11} />{cooldown}</div>
-            }
-          </div>
-        </div>
-        <div className="prog" style={{ marginTop:14 }}>
-          <div className="prog-bar prog-a" style={{ width:`${bonusPoints % 100}%` }} />
-        </div>
-      </div>
+      {/* Daily bonus card removed — bonus total still shown in stats above */}
     </div>
   );
 }

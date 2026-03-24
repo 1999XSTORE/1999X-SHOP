@@ -37,17 +37,18 @@ Deno.serve(async (req) => {
     if (!sellerKey) return json({ success: false, message: `Seller key not set for ${pt}` }, 400);
     if (!appName)   return json({ success: false, message: `App name not set for ${pt}` }, 400);
 
-    // KeyAuth expiry: for < 1 day, use expiry in minutes
-    // KeyAuth seller API: expiry param is in DAYS for add, but we can use "expiry" in minutes via type=addtime
-    // We use type=add with expiry in days; for hours we use fractional or pass as minutes via a custom approach.
-    // KeyAuth v1 seller API accepts "expiry" as number of days (float supported).
-    // 1 hour = 1/24 days ≈ 0.041667 — use this for sub-day keys.
+    // KeyAuth seller API: expiry param works with a unit parameter
+    // unit=1 means days (default), unit=2 means hours, unit=3 means minutes
+    // For sub-day keys we use unit=2 (hours) to avoid fractional day rounding to 0
     let expiryParam: string;
+    let unitParam = '1'; // default: days
     if (hours > 0 && days === 0) {
-      // Sub-day key: express as fraction of a day
-      expiryParam = (hours / 24).toFixed(6);
+      // Sub-day key: use hours unit
+      expiryParam = String(hours);
+      unitParam = '2'; // hours
     } else {
       expiryParam = String(days);
+      unitParam = '1'; // days
     }
 
     const url = [
@@ -59,6 +60,7 @@ Deno.serve(async (req) => {
       `&level=1`,
       `&amount=1`,
       `&format=text`,
+      `&character=2`,
       `&appname=${encodeURIComponent(appName)}`,
     ].join('');
 
