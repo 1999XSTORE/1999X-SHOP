@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { safeFetch } from '@/lib/safeFetch';
 import { supabase } from '@/lib/supabase';
-import { logActivity, notifyAll } from '@/lib/activity';
+import { logActivity, notifyAll, sendNotificationEmail } from '@/lib/activity';
 import { useAppStore } from '@/lib/store';
 import { CheckCircle, Sparkles, Wrench, RefreshCw, Users, Zap, Globe, Plus, Trash2, Send, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -90,6 +90,7 @@ export default function PanelStatusPage() {
       toast.success(t('status.published'));
       // Notify all users of new announcement in real-time
       notifyAll({ type:'announcement', title:`📢 ${fTitle.trim()}`, body:fContent.trim().slice(0,80), linkPath:'/panel-status' });
+      sendNotificationEmail({ mode:'broadcast', subject:fTitle.trim(), html:`<h2>${fTitle.trim()}</h2><p>${fContent.trim()}</p>` });
       if (user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'announcement_posted', product:fTitle.trim(), status:'success', meta:{ type:fType } });
       setFTitle(''); setFContent(''); setFType('update'); setShowForm(false);
     }

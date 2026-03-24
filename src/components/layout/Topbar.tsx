@@ -3,7 +3,7 @@ import { useAppStore } from '@/lib/store';
 import { Menu, X, LogOut, Globe, Wallet, Crown, Shield, Home, ShoppingBag, Key, MessageCircle, Gift, Activity } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import NotificationBell from './NotificationBell';
+import { supabase } from '@/lib/supabase';
 
 // Nav order: Home > Shop > License > Chat > Bonus > Status
 const navItems = [
@@ -45,6 +45,8 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
   const [mobileOpen,  setMobileOpen]  = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [langOpen,    setLangOpen]    = useState(false);
+  const [chatUnread,  setChatUnread]  = useState(0);
+  const [annUnread,   setAnnUnread]   = useState(0);
   const profileRef = useRef<HTMLDivElement>(null);
   const langRef    = useRef<HTMLDivElement>(null);
 
@@ -57,7 +59,62 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  const handleNav = (path: string) => { onNavigate(path); setMobileOpen(false); };
+  useEffect(() => {
+    if (!user) return;
+
+    const loadCounts = async () => {
+      const { data } = await supabase
+        .from('notifications')
+        .select('id,type,is_read')
+        .or(`user_id.eq.${user.id},user_id.eq.all`)
+        .eq('is_read', false)
+        .in('type', ['chat', 'announcement']);
+
+      const rows = data ?? [];
+      setChatUnread(rows.filter((row: any) => row.type === 'chat').length);
+      setAnnUnread(rows.filter((row: any) => row.type === 'announcement').length);
+    };
+
+    loadCounts();
+
+    const ch = supabase.channel(`topbar-notifs-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+        loadCounts();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(ch); };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const markByTypeRead = async (type: 'chat' | 'announcement') => {
+      const { data } = await supabase
+        .from('notifications')
+        .select('id')
+        .or(`user_id.eq.${user.id},user_id.eq.all`)
+        .eq('type', type)
+        .eq('is_read', false);
+
+      const ids = (data ?? []).map((row: any) => row.id);
+      if (ids.length) {
+        await supabase.from('notifications').update({ is_read: true }).in('id', ids);
+      }
+      if (type === 'chat') setChatUnread(0);
+      if (type === 'announcement') setAnnUnread(0);
+    };
+
+    if (currentPath === '/chat' && chatUnread > 0) markByTypeRead('chat');
+    if (currentPath === '/panel-status' && annUnread > 0) markByTypeRead('announcement');
+  }, [currentPath, user?.id, chatUnread, annUnread]);
+
+  const handleNav = (path: string) => {
+    onNavigate(path);
+    setMobileOpen(false);
+    if (path === '/chat') setChatUnread(0);
+    if (path === '/panel-status') setAnnUnread(0);
+  };
 
   return (
     <>
@@ -92,6 +149,25 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
         }
         .nav-link .nav-ic { opacity: 0.55; transition: opacity 0.18s; }
         .nav-link:hover .nav-ic, .nav-link.active .nav-ic { opacity: 1; }
+        .nav-badge {
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          min-width: 15px;
+          height: 15px;
+          padding: 0 4px;
+          border-radius: 999px;
+          background: linear-gradient(135deg,#8b5cf6,#6d28d9);
+          border: 2px solid rgba(8,8,18,0.95);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 8px;
+          font-weight: 900;
+          color: #fff;
+          line-height: 1;
+          box-shadow: 0 0 10px rgba(109,40,217,.5);
+        }
         .nav-btn {
           padding: 7px 9px; border-radius: 13px; border: none; cursor: pointer;
           background: transparent; color: rgba(255,255,255,0.45); display: flex;
@@ -160,6 +236,12 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                 className={cn('nav-link', currentPath === item.path && 'active')}>
                 <item.Icon size={13} className="nav-ic" />
                 {t(item.tKey)}
+                {item.path === '/chat' && chatUnread > 0 && (
+                  <span className="nav-badge">{chatUnread > 9 ? '9+' : chatUnread}</span>
+                )}
+                {item.path === '/panel-status' && annUnread > 0 && (
+                  <span className="nav-badge">{annUnread > 9 ? '9+' : annUnread}</span>
+                )}
               </button>
             ))}
           </div>
@@ -170,9 +252,6 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             <button onClick={() => handleNav('/wallet')} className="balance-pill hidden sm:flex">
               <Wallet size={12} />${balance.toFixed(2)}
             </button>
-
-            {/* Notification bell */}
-            <NotificationBell onNavigate={handleNav} />
 
             {/* Language */}
             <div style={{ position:'relative' }} ref={langRef}>
@@ -274,6 +353,12 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                   className={cn('mob-nav-item', currentPath===item.path && 'active')}>
                   <item.Icon size={18} style={{ opacity: currentPath===item.path?1:0.5 }} />
                   <span>{t(item.tKey)}</span>
+                  {item.path === '/chat' && chatUnread > 0 && (
+                    <span style={{ fontSize:10, fontWeight:800, color:'#c4b5fd' }}>+{chatUnread > 9 ? '9' : chatUnread}</span>
+                  )}
+                  {item.path === '/panel-status' && annUnread > 0 && (
+                    <span style={{ fontSize:10, fontWeight:800, color:'#c4b5fd' }}>+{annUnread > 9 ? '9' : annUnread}</span>
+                  )}
                 </button>
               ))}
             </div>

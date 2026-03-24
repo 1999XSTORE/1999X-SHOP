@@ -137,57 +137,40 @@ export default function Index() {
   // If Zustand has isAuthenticated=true, skip straight to app
   if (!authReady) {
     return (
-      <div style={{ minHeight:'100svh', background:'#07080f', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
+      <div style={{ minHeight:'100svh', background:'radial-gradient(circle at 20% 20%, rgba(109,40,217,.18), transparent 28%), radial-gradient(circle at 80% 75%, rgba(16,232,152,.12), transparent 24%), #05060b', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
         <style>{`
-          @keyframes splash-pulse { 0%,100%{transform:scale(1);filter:drop-shadow(0 0 20px rgba(139,92,246,.6));} 50%{transform:scale(1.08);filter:drop-shadow(0 0 40px rgba(139,92,246,.9)) drop-shadow(0 0 80px rgba(109,40,217,.4));} }
-          @keyframes splash-ring { 0%{transform:scale(0.6);opacity:.8;} 100%{transform:scale(2.2);opacity:0;} }
-          @keyframes splash-bar { 0%{width:0%;} 100%{width:100%;} }
-          @keyframes splash-float { 0%,100%{transform:translateY(0px);} 50%{transform:translateY(-8px);} }
-          @keyframes splash-orb { 0%,100%{opacity:.4;transform:scale(1);} 50%{opacity:.7;transform:scale(1.1);} }
-          @keyframes splash-text { 0%{opacity:0;letter-spacing:8px;} 100%{opacity:1;letter-spacing:2px;} }
-          @keyframes splash-fade-up { from{opacity:0;transform:translateY(16px);} to{opacity:1;transform:translateY(0);} }
+          @keyframes bullet-travel { 0%{transform:translateX(-180px) translateY(-10px) scale(.7);} 45%{transform:translateX(0) translateY(0) scale(1);} 100%{transform:translateX(30px) translateY(2px) scale(.92);} }
+          @keyframes flash-hit { 0%,42%{opacity:0;} 48%{opacity:1;} 100%{opacity:0;} }
+          @keyframes skull-shatter { 0%,42%{transform:scale(1) rotate(0deg); filter:drop-shadow(0 0 20px rgba(139,92,246,.35));} 55%{transform:scale(1.12) rotate(-3deg);} 100%{transform:scale(.92) rotate(4deg); filter:drop-shadow(0 0 34px rgba(16,232,152,.28));} }
+          @keyframes shard-burst { 0%,42%{opacity:0; transform:translate(0,0) scale(.4);} 55%{opacity:1;} 100%{opacity:0; transform:translate(var(--tx), var(--ty)) scale(1);} }
+          @keyframes load-bar { from{width:0;} to{width:100%;} }
         `}</style>
 
-        {/* Background ambient orbs */}
-        <div style={{ position:'absolute', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle, rgba(109,40,217,.18) 0%, transparent 70%)', top:'50%', left:'50%', transform:'translate(-50%,-50%)', animation:'splash-orb 4s ease-in-out infinite', pointerEvents:'none' }}/>
-        <div style={{ position:'absolute', width:300, height:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(16,232,152,.08) 0%, transparent 70%)', top:'20%', right:'15%', animation:'splash-orb 5s ease-in-out 1s infinite', pointerEvents:'none' }}/>
-        <div style={{ position:'absolute', width:250, height:250, borderRadius:'50%', background:'radial-gradient(circle, rgba(56,189,248,.08) 0%, transparent 70%)', bottom:'20%', left:'10%', animation:'splash-orb 6s ease-in-out 0.5s infinite', pointerEvents:'none' }}/>
-
-        {/* Expanding rings */}
-        {[0,1,2].map(i => (
-          <div key={i} style={{ position:'absolute', width:120, height:120, borderRadius:'50%', border:'1px solid rgba(139,92,246,.3)', animation:`splash-ring 2.4s ease-out ${i*0.6}s infinite`, pointerEvents:'none' }}/>
-        ))}
-
-        {/* Main content */}
-        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:0, position:'relative', zIndex:2 }}>
-
-          {/* Logo with float animation */}
-          <div style={{ animation:'splash-float 3s ease-in-out infinite', marginBottom:28 }}>
-            <img
-              src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1"
-              alt="1999X"
-              style={{ height:72, width:'auto', objectFit:'contain', animation:'splash-pulse 2s ease-in-out infinite' }}
-            />
-          </div>
-
-          {/* Brand name */}
-          <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'2px', textTransform:'uppercase', animation:'splash-text .8s cubic-bezier(.22,1,.36,1) .3s both', marginBottom:6, fontFamily:'inherit' }}>
-            1999X
-          </div>
-          <div style={{ fontSize:11, fontWeight:500, color:'rgba(255,255,255,.3)', letterSpacing:'4px', textTransform:'uppercase', animation:'splash-fade-up .8s ease .5s both', marginBottom:32 }}>
-            Premium Panel
-          </div>
-
-          {/* Loading bar */}
-          <div style={{ width:180, height:2, borderRadius:2, background:'rgba(255,255,255,.06)', overflow:'hidden', animation:'splash-fade-up .5s ease .4s both' }}>
-            <div style={{ height:'100%', borderRadius:2, background:'linear-gradient(90deg, #8b5cf6, #10e898)', animation:'splash-bar 2s cubic-bezier(.4,0,.2,1) .6s both', boxShadow:'0 0 8px rgba(139,92,246,.6)' }}/>
-          </div>
-
-          {/* Loading dots */}
-          <div style={{ display:'flex', gap:6, marginTop:20, animation:'splash-fade-up .5s ease .7s both' }}>
-            {[0,1,2,3,4].map(i => (
-              <div key={i} style={{ width:4, height:4, borderRadius:'50%', background:i%2===0?'rgba(139,92,246,.7)':'rgba(16,232,152,.5)', animation:`blink 1.4s ease-in-out ${i*0.15}s infinite` }}/>
+        <div style={{ position:'relative', zIndex:2, width:'min(92vw, 760px)', display:'flex', flexDirection:'column', alignItems:'center' }}>
+          <div style={{ position:'relative', width:'100%', aspectRatio:'16 / 9', borderRadius:30, border:'1px solid rgba(255,255,255,.08)', background:'linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01))', boxShadow:'0 30px 90px rgba(0,0,0,.6)', overflow:'hidden' }}>
+            <div style={{ position:'absolute', inset:0, background:'radial-gradient(circle at center, rgba(139,92,246,.1), transparent 45%)' }} />
+            <div style={{ position:'absolute', left:'18%', top:'44%', width:110, height:20, borderRadius:999, background:'linear-gradient(90deg,#e5f6ff,#9be7ff)', boxShadow:'0 0 32px rgba(155,231,255,.8)', animation:'bullet-travel 2s cubic-bezier(.2,.8,.2,1) both' }} />
+            <div style={{ position:'absolute', left:'50%', top:'50%', width:24, height:24, borderRadius:'50%', background:'radial-gradient(circle, rgba(255,255,255,.95), rgba(139,92,246,.5), transparent 70%)', transform:'translate(-50%,-50%)', animation:'flash-hit 2s ease-out both' }} />
+            <div style={{ position:'absolute', left:'50%', top:'49%', transform:'translate(-50%,-50%)', width:220, height:240, animation:'skull-shatter 2s ease-out both' }}>
+              <div style={{ position:'absolute', inset:0, clipPath:'polygon(50% 0%, 78% 12%, 92% 38%, 88% 66%, 68% 90%, 50% 100%, 32% 90%, 12% 66%, 8% 38%, 22% 12%)', background:'linear-gradient(135deg, rgba(16,232,152,.28), rgba(139,92,246,.35) 55%, rgba(255,255,255,.08))', border:'1px solid rgba(255,255,255,.12)' }} />
+              <div style={{ position:'absolute', left:48, top:76, width:42, height:42, borderRadius:'50%', background:'rgba(5,6,11,.88)', boxShadow:'0 0 18px rgba(16,232,152,.28)' }} />
+              <div style={{ position:'absolute', right:48, top:76, width:42, height:42, borderRadius:'50%', background:'rgba(5,6,11,.88)', boxShadow:'0 0 18px rgba(139,92,246,.35)' }} />
+              <div style={{ position:'absolute', left:'50%', top:126, transform:'translateX(-50%)', width:28, height:34, clipPath:'polygon(50% 0%, 100% 100%, 0% 100%)', background:'rgba(5,6,11,.9)' }} />
+              <div style={{ position:'absolute', left:46, right:46, bottom:44, height:24, borderTop:'1px solid rgba(255,255,255,.12)' }} />
+            </div>
+            {[
+              ['-90px','-70px'], ['110px','-58px'], ['-120px','58px'], ['90px','82px'], ['24px','-110px'], ['-14px','124px'],
+            ].map(([tx, ty], i) => (
+              <div key={i} style={{ '--tx': tx, '--ty': ty } as any}>
+                <div style={{ position:'absolute', left:'50%', top:'50%', width:18, height:18, background:i % 2 === 0 ? 'rgba(139,92,246,.75)' : 'rgba(16,232,152,.72)', clipPath:'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)', animation:'shard-burst 2s ease-out both', animationDelay:`${0.02 * i}s` }} />
+              </div>
             ))}
+          </div>
+          <div style={{ marginTop:22, fontSize:13, letterSpacing:'.26em', textTransform:'uppercase', color:'rgba(255,255,255,.55)', textAlign:'center' }}>
+            Cinematic Boot Sequence
+          </div>
+          <div style={{ width:220, height:3, borderRadius:999, background:'rgba(255,255,255,.08)', overflow:'hidden', marginTop:16 }}>
+            <div style={{ width:'100%', height:'100%', background:'linear-gradient(90deg,#8b5cf6,#10e898)', boxShadow:'0 0 16px rgba(139,92,246,.5)', animation:'load-bar 2s linear both' }} />
           </div>
         </div>
       </div>

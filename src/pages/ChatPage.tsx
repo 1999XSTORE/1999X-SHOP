@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Send, Trash2, Edit2, Reply, X, Crown, Shield, Copy, Smile, Hash, Lock, Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { logActivity, notifyAll } from '@/lib/activity';
+import { logActivity, notifyAll, notifyUser, sendNotificationEmail } from '@/lib/activity';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 interface Msg {
   id: string;
   user_id: string;
+  user_email?: string;
   user_name: string;
   user_avatar: string;
   user_role: string;
@@ -17,6 +18,7 @@ interface Msg {
   created_at: string;
   reply_to?: string | null;
   is_private?: boolean;
+  private_target_user_id?: string | null;
 }
 
 interface OnlineUser {
@@ -84,8 +86,8 @@ function Message({ msg, isOwn, isMod, currentUserId, onReply, onDelete, onEdit, 
   const [reactions, setReactions] = useState<Record<string, string[]>>({});
   const replyMsg = msg.reply_to ? allMsgs.find(m => m.id === msg.reply_to) : null;
 
-  const isPrivate    = msg.is_private || msg.message.includes('@admin') || msg.message.includes('@support');
-  const canSeePrivate = isMod || msg.user_id === currentUserId;
+  const isPrivate = !!msg.is_private;
+  const canSeePrivate = !isPrivate || msg.user_id === currentUserId || msg.private_target_user_id === currentUserId;
   if (isPrivate && !canSeePrivate) return null;
 
   const isAdminMsg   = msg.user_role === 'admin';
@@ -214,6 +216,16 @@ export default function ChatPage() {
   const channelRef  = useRef<any>(null);
 
   const isMod = user?.role==='admin' || user?.role==='support';
+  const isMentionMessage = useCallback((txt: string) => /(^|\s)@(admin|support)\b/i.test(txt), []);
+  const shouldCreatePrivateReply = useCallback((parent: Msg | null) => {
+    if (!user || !parent) return false;
+    if (parent.is_private) return true;
+    return (user.role === 'admin' || user.role === 'support') && parent.user_role === 'user' && isMentionMessage(parent.message);
+  }, [isMentionMessage, user]);
+  const getPrivateTargetId = useCallback((parent: Msg | null) => {
+    if (!parent) return null;
+    return parent.private_target_user_id ?? parent.user_id ?? null;
+  }, []);
 
   // Responsive detection
   useEffect(() => {
@@ -286,23 +298,28 @@ export default function ChatPage() {
     if(!txt||!user) return;
     if(Date.now()-lastSent.current<1000){toast.error('Slow down!');return;}
     lastSent.current=Date.now();
-    const isPrivate=txt.includes('@admin')||txt.includes('@support');
+    const isPrivate = shouldCreatePrivateReply(replyTo);
+    const privateTargetId = isPrivate ? getPrivateTargetId(replyTo) : null;
     setInput('');setReplyTo(null);
-    // Reset textarea height
     if (inputRef.current) { inputRef.current.style.height='auto'; }
     const tempId=`temp_${Date.now()}`;
-    const optimistic:Msg={id:tempId,user_id:user.id,user_name:user.name,user_avatar:user.avatar||'',user_role:user.role||'user',message:txt,created_at:new Date().toISOString(),reply_to:replyTo?.id||null,is_private:isPrivate};
+    const optimistic:Msg={id:tempId,user_id:user.id,user_email:user.email,user_name:user.name,user_avatar:user.avatar||'',user_role:user.role||'user',message:txt,created_at:new Date().toISOString(),reply_to:replyTo?.id||null,is_private:isPrivate,private_target_user_id:privateTargetId};
     setMessages(p=>[...p,optimistic]);
-    const {data,error}=await supabase.from('chat_messages').insert({user_id:user.id,user_name:user.name,user_avatar:user.avatar||'',user_role:user.role||'user',message:txt,reply_to:replyTo?.id||null,is_private:isPrivate}).select().single();
+    const {data,error}=await supabase.from('chat_messages').insert({user_id:user.id,user_email:user.email,user_name:user.name,user_avatar:user.avatar||'',user_role:user.role||'user',message:txt,reply_to:replyTo?.id||null,is_private:isPrivate,private_target_user_id:privateTargetId}).select().single();
     if(error){toast.error('Failed to send');setMessages(p=>p.filter(m=>m.id!==tempId));setInput(txt);}
     else if(data){
       setMessages(p=>p.map(m=>m.id===tempId?data:m));
+      if(isPrivate && replyTo && privateTargetId && replyTo.user_email){
+        notifyUser(privateTargetId, { type:'chat', title:`Private reply from ${user.name}`, body:txt.slice(0,80), linkPath:'/chat' });
+        sendNotificationEmail({ to:[replyTo.user_email], subject:`Private reply from ${user.name}`, html:`<p>${user.name} replied to your support thread.</p><p><strong>Message:</strong> ${txt}</p>` });
+        logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'private_reply', status:'success', meta:{ preview:txt.slice(0,60), target_user_id:privateTargetId } });
+      }
       // Log activity (skip private messages to avoid spamming logs)
       if(!isPrivate && user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'message_sent', status:'success', meta:{ preview:txt.slice(0,40) } });
       // Notify all users of new chat message (small badge increment)
       if(!isPrivate) notifyAll({ type:'chat', title:`💬 ${user?.name?.split(' ')[0]}: ${txt.slice(0,50)}`, body:'', linkPath:'/chat' });
     }
-  },[input,user,replyTo]);
+  },[input,user,replyTo,shouldCreatePrivateReply,getPrivateTargetId]);
 
   const handleDelete = async (id: string) => {
     // Optimistic: remove immediately from local state, realtime confirms for other users
@@ -397,7 +414,7 @@ export default function ChatPage() {
                 ) : (
                   <Message
                     msg={msg} isOwn={msg.user_id===user?.id} isMod={isMod}
-                    currentUserId={user?.id??''} currentUserRole={user?.role??'user'}
+                    currentUserId={user?.id??''}
                     onReply={setReplyTo} onDelete={handleDelete}
                     onEdit={m=>{setEditId(m.id);setEditText(m.message);}}
                     allMsgs={messages} compact={isMobile}
@@ -453,10 +470,15 @@ export default function ChatPage() {
             <div style={{ display:'flex', gap:8, alignItems:'flex-end', background:isPrivateInput?'rgba(139,92,246,.06)':'rgba(255,255,255,.04)', border:isPrivateInput?'1px solid rgba(139,92,246,.22)':'1px solid rgba(255,255,255,.07)', borderRadius:12, padding:'8px 10px', transition:'all .2s', boxShadow:isPrivateInput?'0 0 16px rgba(139,92,246,.08)':'none' }}>
               <Avatar src={user?.avatar} name={user?.name||'?'} role={user?.role} size={26}/>
               <div style={{ flex:1, minWidth:0 }}>
-                {isPrivateInput && (
+                {replyTo && shouldCreatePrivateReply(replyTo) && (
                   <div style={{ display:'flex',alignItems:'center',gap:4,marginBottom:4 }}>
                     <Lock size={9} color="var(--purple)"/>
                     <span style={{ fontSize:9,fontWeight:700,color:'var(--purple)' }}>Private — Support Team only</span>
+                  </div>
+                )}
+                {!replyTo && isPrivateInput && (
+                  <div style={{ display:'flex',alignItems:'center',gap:4,marginBottom:4 }}>
+                    <span style={{ fontSize:9,fontWeight:700,color:'var(--muted)' }}>Mentions stay public. Staff replies become private only in reply threads.</span>
                   </div>
                 )}
                 <textarea

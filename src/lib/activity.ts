@@ -6,11 +6,13 @@ import { supabase } from './supabase';
 
 export type ActionType =
   | 'login'
+  | 'login_failed'
   | 'register'
   | 'logout'
   | 'bonus_claim'
   | 'key_generated'
   | 'purchase'
+  | 'purchase_failed'
   | 'payment_submit'
   | 'payment_approved'
   | 'payment_rejected'
@@ -19,7 +21,11 @@ export type ActionType =
   | 'hwid_reset'
   | 'free_key_claim'
   | 'announcement_posted'
-  | 'message_sent';
+  | 'message_sent'
+  | 'private_reply'
+  | 'account_banned'
+  | 'account_unbanned'
+  | 'key_expired';
 
 interface LogParams {
   userId:    string;
@@ -46,6 +52,26 @@ export async function logActivity(p: LogParams): Promise<void> {
     });
   } catch {
     // Never let logging crash the app
+  }
+}
+
+export async function sendNotificationEmail(opts: {
+  mode?: 'single' | 'broadcast';
+  to?: string[];
+  subject: string;
+  html: string;
+}): Promise<void> {
+  try {
+    await supabase.functions.invoke('send-email', {
+      body: {
+        mode: opts.mode ?? 'single',
+        to: opts.to ?? [],
+        subject: opts.subject,
+        html: opts.html,
+      },
+    });
+  } catch {
+    // Email delivery should never break the UI flow
   }
 }
 
