@@ -288,7 +288,7 @@ function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount }: { user: any; o
         <div style={{ padding:'14px 16px', borderRadius:14, background:'rgba(16,232,152,.06)', border:'1px solid rgba(16,232,152,.18)' }}>
           <div style={{ fontSize:12, color:'var(--muted)', marginBottom:4 }}>Balance added successfully</div>
           <code style={{ display:'block', fontSize:13, color:'#fff', fontFamily:'monospace', wordBreak:'break-all', marginBottom:8 }}>{result.transactionId}</code>
-          <div style={{ fontSize:11, color:'var(--green)', fontWeight:700 }}>Redeemed: ฿{result.amountThb.toFixed(2)} -> ${result.amountUsd.toFixed(2)}</div>
+          <div style={{ fontSize:11, color:'var(--green)', fontWeight:700 }}>Redeemed: ฿{result.amountThb.toFixed(2)} {'->'} ${result.amountUsd.toFixed(2)}</div>
           {result.shortfallUsd > 0 && (
             <div style={{ fontSize:11, color:'#fbbf24', fontWeight:700, marginTop:6 }}>This voucher was below your selected amount, so only the actual redeemed value was credited.</div>
           )}
