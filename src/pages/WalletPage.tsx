@@ -33,6 +33,7 @@ const LOCAL = {
   paypal:    { code:'USD', symbol:'$',  name:'USD',     rate:1,     flag:'🇺🇸', info:'' },
   usdt_trc20:{ code:'USD', symbol:'$',  name:'USDT',    rate:1,     flag:'🌐', info:'' },
   usdt_bep20:{ code:'USD', symbol:'$',  name:'USDT',    rate:1,     flag:'🌐', info:'' },
+  truewallet:{ code:'THB', symbol:'฿',  name:'Thai Baht', rate:35,   flag:'🇹🇭', info:'TrueWallet redeems the actual voucher amount in THB and converts it to USD balance automatically.' },
   litecoin:  { code:'LTC', symbol:'Ł',  name:'Litecoin',rate:0.013, flag:'🔵', info:'Amount shown is approximate LTC equivalent. Check live rate before sending.' },
 } as const;
 
@@ -224,10 +225,10 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
 }
 
 // ── Admin/Support Payment Panel ───────────────────────────────
-function TrueWalletRedeem({ user, onSuccess }: { user: any; onSuccess: () => void }) {
+function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount }: { user: any; onSuccess: () => void; expectedUsdAmount: number }) {
   const [voucher, setVoucher] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ amount: number; transactionId: string } | null>(null);
+  const [result, setResult] = useState<{ amountUsd: number; amountThb: number; exchangeRate: number; transactionId: string; shortfallUsd: number } | null>(null);
 
   const getFunctionErrorMessage = async (error: any) => {
     if (!error) return '';
@@ -250,14 +251,20 @@ function TrueWalletRedeem({ user, onSuccess }: { user: any; onSuccess: () => voi
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke('truwallet-redeem', { body: { voucher: voucher.trim() } });
+    const { data, error } = await supabase.functions.invoke('truwallet-redeem', { body: { voucher: voucher.trim(), expectedUsdAmount } });
     setLoading(false);
     if (error || !data?.success) {
       const errorMessage = data?.message ?? await getFunctionErrorMessage(error) ?? 'Redeem failed';
       toast.error(errorMessage);
       return;
     }
-    setResult({ amount: Number(data.amount ?? 0), transactionId: String(data.transactionId ?? '') });
+    setResult({
+      amountUsd: Number(data.amount ?? 0),
+      amountThb: Number(data.amountThb ?? 0),
+      exchangeRate: Number(data.exchangeRate ?? 35),
+      transactionId: String(data.transactionId ?? ''),
+      shortfallUsd: Number(data.shortfallUsd ?? 0),
+    });
     setVoucher('');
     onSuccess();
     toast.success(`Voucher redeemed. $${Number(data.amount ?? 0).toFixed(2)} added to your wallet.`);
@@ -267,7 +274,11 @@ function TrueWalletRedeem({ user, onSuccess }: { user: any; onSuccess: () => voi
     <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
       <div style={{ padding:'14px 16px', borderRadius:14, background:'rgba(249,115,22,.08)', border:'1px solid rgba(249,115,22,.2)' }}>
         <div style={{ fontSize:13, fontWeight:800, color:'#fb923c', marginBottom:4 }}>TrueWallet AngPao</div>
-        <p style={{ margin:0, fontSize:12, color:'var(--muted)', lineHeight:1.6 }}>Paste a gift link to auto-redeem it and instantly add the redeemed amount to your wallet balance.</p>
+        <p style={{ margin:0, fontSize:12, color:'var(--muted)', lineHeight:1.6 }}>Paste a gift link to auto-redeem it and instantly add the USD equivalent to your wallet balance.</p>
+        <div style={{ marginTop:10, display:'flex', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+          <span style={{ fontSize:11, color:'#f8fafc', fontWeight:700 }}>1 USD = {LOCAL.truewallet.rate} THB</span>
+          <span style={{ fontSize:11, color:'var(--muted)' }}>Target: ฿{Math.ceil(expectedUsdAmount * LOCAL.truewallet.rate).toLocaleString()}</span>
+        </div>
       </div>
       <textarea value={voucher} onChange={e=>setVoucher(e.target.value)} rows={3} placeholder="https://gift.truemoney.com/..." style={{ width:'100%', background:'rgba(255,255,255,.04)', border:'1px solid rgba(249,115,22,.2)', borderRadius:12, padding:'13px 16px', color:'#fff', fontFamily:'inherit', fontSize:13, outline:'none', resize:'vertical' }} />
       <button onClick={handleRedeem} disabled={loading} className="btn btn-p btn-lg btn-full" style={{ borderRadius:14 }}>
@@ -277,7 +288,10 @@ function TrueWalletRedeem({ user, onSuccess }: { user: any; onSuccess: () => voi
         <div style={{ padding:'14px 16px', borderRadius:14, background:'rgba(16,232,152,.06)', border:'1px solid rgba(16,232,152,.18)' }}>
           <div style={{ fontSize:12, color:'var(--muted)', marginBottom:4 }}>Balance added successfully</div>
           <code style={{ display:'block', fontSize:13, color:'#fff', fontFamily:'monospace', wordBreak:'break-all', marginBottom:8 }}>{result.transactionId}</code>
-          <div style={{ fontSize:11, color:'var(--green)', fontWeight:700 }}>Redeemed amount: ${result.amount.toFixed(2)}</div>
+          <div style={{ fontSize:11, color:'var(--green)', fontWeight:700 }}>Redeemed: ฿{result.amountThb.toFixed(2)} -> ${result.amountUsd.toFixed(2)}</div>
+          {result.shortfallUsd > 0 && (
+            <div style={{ fontSize:11, color:'#fbbf24', fontWeight:700, marginTop:6 }}>This voucher was below your selected amount, so only the actual redeemed value was credited.</div>
+          )}
         </div>
       )}
     </div>
@@ -806,7 +820,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
               </div>
 
               {selMethod.id==='paypal'&&<PayPalButton amount={selAmount} user={user} onSuccess={onSuccess}/>}
-              {selMethod.id==='truewallet'&&<TrueWalletRedeem user={user} onSuccess={onSuccess}/>}
+              {selMethod.id==='truewallet'&&<TrueWalletRedeem user={user} onSuccess={onSuccess} expectedUsdAmount={selAmount}/>}
 
               <div style={{ padding:'13px 15px', borderRadius:16, background:'linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.02))', border:'1px solid rgba(255,255,255,.05)', display:'flex', gap:10, alignItems:'flex-start', marginTop: selMethod.id==='paypal'?12:0 }}>
                 <span style={{ fontSize:16 }}>💡</span>
@@ -848,13 +862,13 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                   <div style={{ padding:'16px 18px', borderRadius:18, background:'linear-gradient(135deg,rgba(249,115,22,.14),rgba(236,72,153,.06))', border:'1px solid rgba(249,115,22,.18)' }}>
                     <div style={{ fontSize:13,fontWeight:700,color:'#fb923c',marginBottom:6 }}>Automatic Voucher Flow</div>
                     <p style={{ fontSize:12,color:'var(--muted)',margin:0,lineHeight:1.65 }}>
-                      Paste a TrueWallet gift link on the left. We redeem it automatically, block voucher reuse, and credit the redeemed amount to your wallet balance.
+                      Paste a TrueWallet gift link on the left. We redeem the actual THB amount, convert it to USD balance, and credit exactly what the voucher contained.
                     </p>
                   </div>
                   <div style={{ padding:'16px 18px', borderRadius:18, background:'linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02))', border:'1px solid rgba(255,255,255,.06)' }}>
                     <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.34)', marginBottom:12 }}>How It Works</div>
                     <div style={{ display:'grid', gap:10 }}>
-                      {['Paste a valid TrueMoney gift link', 'System checks invalid or reused vouchers', 'Successful redeem adds balance automatically'].map((text, index) => (
+                      {['Paste a valid TrueMoney gift link', 'System reads the real THB value from the voucher', 'Less than selected amount only credits the lower converted value'].map((text, index) => (
                         <div key={text} style={{ display:'flex', alignItems:'center', gap:10 }}>
                           <div style={{ width:24, height:24, borderRadius:'50%', background:'linear-gradient(135deg,#f97316,#ec4899)', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:11, fontWeight:900, flexShrink:0 }}>{index + 1}</div>
                           <div style={{ fontSize:12, color:'rgba(255,255,255,.7)' }}>{text}</div>

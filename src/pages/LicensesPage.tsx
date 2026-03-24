@@ -187,7 +187,7 @@ function DownloadSection() {
 }
 
 function LicenseCard({ lic, onCopy, onReset, accentColor }: {
-  lic: any; onCopy: (k: string) => void; onReset: (id: string) => void; accentColor: 'purple' | 'blue';
+  lic: any; onCopy: (k: string) => void; onReset: (lic: any) => void; accentColor: 'purple' | 'blue';
 }) {
   const { t } = useTranslation();
   // Safe defaults — never crash on undefined
@@ -253,7 +253,7 @@ function LicenseCard({ lic, onCopy, onReset, accentColor }: {
       </div>
 
       <div style={{ padding:'12px 18px' }}>
-        <button onClick={() => onReset(lic?.id || '')} className="btn btn-ghost btn-sm" style={{ gap:6 }}>
+        <button onClick={() => onReset(lic)} className="btn btn-ghost btn-sm" style={{ gap:6 }}>
           <RefreshCw size={13} /> Reset HWID ({2 - (lic?.hwidResetsUsed ?? 0)} left this month)
         </button>
       </div>
@@ -336,7 +336,7 @@ export default function LicensesPage() {
 
   const [keyValue,    setKeyValue]    = useState('');
   const [loading,     setLoading]     = useState(false);
-  const [hwidTarget,  setHwidTarget]  = useState<string | null>(null);
+  const [hwidTarget,  setHwidTarget]  = useState<any | null>(null);
   const [errorMsg,    setErrorMsg]    = useState('');
   const [successKey,  setSuccessKey]  = useState<{ productName: string; key: string } | null>(null);
 
@@ -347,12 +347,45 @@ export default function LicensesPage() {
     try { navigator.clipboard.writeText(k); toast.success('Copied!'); } catch {}
   };
 
-  const confirmResetHwid = () => {
+  const confirmResetHwid = async () => {
     if (!hwidTarget) return;
     try {
-      if (resetHwid(hwidTarget)) { toast.success('HWID reset successfully'); if(user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'hwid_reset', product:hwidTarget, status:'success' }); }
-      else toast.error('Reset limit reached (2/month)');
-    } catch { toast.error('Reset failed'); }
+      const currentMonth = new Date().getMonth();
+      const resetsUsed = hwidTarget.hwidResetMonth === currentMonth ? Number(hwidTarget.hwidResetsUsed ?? 0) : 0;
+      if (resetsUsed >= 2) {
+        toast.error('Reset limit reached (2/month)');
+        setHwidTarget(null);
+        return;
+      }
+
+      const panelType = hwidTarget.productId === 'keyauth-lag' ? 'lag' : 'internal';
+      const username = String(hwidTarget.keyauthUsername ?? '').trim() || String(hwidTarget.key ?? '').replace('_INTERNAL', '');
+
+      if (!username) {
+        toast.error('Missing KeyAuth username for this license');
+        setHwidTarget(null);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('reset-hwid', {
+        body: { username, panel_type: panelType },
+      });
+
+      if (error || !data?.success) {
+        toast.error(data?.message ?? error?.message ?? 'HWID reset failed');
+        setHwidTarget(null);
+        return;
+      }
+
+      if (resetHwid(hwidTarget.id)) {
+        toast.success(data.message ?? 'HWID reset successfully');
+        if(user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'hwid_reset', product:hwidTarget.productName, status:'success' });
+      } else {
+        toast.error('HWID reset was accepted but local state could not update');
+      }
+    } catch {
+      toast.error('Reset failed');
+    }
     setHwidTarget(null);
   };
 
@@ -414,6 +447,7 @@ export default function LicensesPage() {
         const lic = {
           id: `lag_${Math.random().toString(36).slice(2, 10)}`,
           productId: 'keyauth-lag', productName: 'Fake Lag', key: trimmedKey,
+          keyauthUsername: lagResult.info?.username ?? trimmedKey,
           hwid: lagResult.info?.hwid ?? '', lastLogin: toISO(lagResult.info?.lastlogin),
           expiresAt: getExpiry(lagResult.info), status: 'active' as const,
           ip: lagResult.info?.ip ?? '', device: '', hwidResetsUsed: 0, hwidResetMonth: new Date().getMonth(),
@@ -426,6 +460,7 @@ export default function LicensesPage() {
         const lic = {
           id: `int_${Math.random().toString(36).slice(2, 10)}`,
           productId: 'keyauth-internal', productName: 'Internal', key: trimmedKey + '_INTERNAL',
+          keyauthUsername: intResult.info?.username ?? trimmedKey,
           hwid: intResult.info?.hwid ?? '', lastLogin: toISO(intResult.info?.lastlogin),
           expiresAt: getExpiry(intResult.info), status: 'active' as const,
           ip: intResult.info?.ip ?? '', device: '', hwidResetsUsed: 0, hwidResetMonth: new Date().getMonth(),

@@ -23,6 +23,7 @@ export interface License {
   productId: string;
   productName: string;
   key: string;
+  keyauthUsername?: string;
   hwid: string;
   lastLogin: string;
   expiresAt: string;
@@ -422,7 +423,7 @@ export const useAppStore = create<AppState>()(
         if (resetsUsed >= 2) return false;
         const newLicenses = state.licenses.map((l) =>
           l.id === licenseId
-            ? { ...l, hwid: 'HW-' + generateId().toUpperCase(), hwidResetsUsed: resetsUsed + 1, hwidResetMonth: currentMonth }
+            ? { ...l, hwid: '', hwidResetsUsed: resetsUsed + 1, hwidResetMonth: currentMonth }
             : l
         );
         set({ licenses: newLicenses });

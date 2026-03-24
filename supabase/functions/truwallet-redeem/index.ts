@@ -25,6 +25,10 @@ function isTrueWalletVoucherLink(input: string) {
   return /^https?:\/\/gift\.truemoney\.com\/campaign\/\?v=[A-Za-z0-9]+$/i.test(input.trim());
 }
 
+function roundCurrency(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
@@ -35,6 +39,7 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization') ?? '';
     const body = await req.json();
     const voucher = String(body.voucher ?? '').trim();
+    const expectedUsdAmount = Number(body.expectedUsdAmount ?? 0);
 
     if (!voucher) return json({ success: false, message: 'Voucher link is required' }, 400);
     if (!isTrueWalletVoucherLink(voucher)) {
@@ -57,21 +62,28 @@ Deno.serve(async (req) => {
 
     if (existingOrder) return json({ success: false, message: 'Voucher already used' }, 409);
 
-    const { data: settingsRow, error: settingsError } = await admin
+    const { data: settingsRows, error: settingsError } = await admin
       .from('settings')
-      .select('value')
-      .eq('key', 'MY_WALLET')
-      .maybeSingle();
+      .select('key,value')
+      .in('key', ['MY_WALLET', 'TRUEWALLET_THB_PER_USD']);
 
-    if (settingsError || !settingsRow?.value) return json({ success: false, message: 'MY_WALLET is not configured' }, 500);
+    if (settingsError || !settingsRows?.length) return json({ success: false, message: 'Payment settings are not configured' }, 500);
 
-    const walletNumber = normalizePhone(settingsRow.value);
+    const walletSetting = settingsRows.find((row) => row.key === 'MY_WALLET');
+    if (!walletSetting?.value) return json({ success: false, message: 'MY_WALLET is not configured' }, 500);
+
+    const exchangeRate = Number(settingsRows.find((row) => row.key === 'TRUEWALLET_THB_PER_USD')?.value ?? 35);
+    if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) {
+      return json({ success: false, message: 'TRUEWALLET_THB_PER_USD must be a valid number' }, 500);
+    }
+
+    const walletNumber = normalizePhone(walletSetting.value);
     if (walletNumber.length < 10 || walletNumber.length > 15) {
       return json(
         {
           success: false,
           message: 'MY_WALLET must be a valid phone number for the topup API',
-          currentValuePreview: settingsRow.value.slice(0, 24),
+          currentValuePreview: walletSetting.value.slice(0, 24),
         },
         500,
       );
@@ -88,8 +100,8 @@ Deno.serve(async (req) => {
       return json({ success: false, message: providerResponse?.message ?? 'Voucher redeem failed', providerResponse }, 400);
     }
 
-    const amount = Number(providerResponse?.amount ?? providerResponse?.data?.amount ?? 0);
-    if (!Number.isFinite(amount) || amount <= 0) {
+    const amountThb = Number(providerResponse?.amount ?? providerResponse?.data?.amount ?? 0);
+    if (!Number.isFinite(amountThb) || amountThb <= 0) {
       return json(
         {
           success: false,
@@ -98,6 +110,11 @@ Deno.serve(async (req) => {
         },
         400,
       );
+    }
+
+    const amountUsd = roundCurrency(amountThb / exchangeRate);
+    if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
+      return json({ success: false, message: 'Redeemed amount is too small to convert' }, 400);
     }
 
     const transactionId = String(
@@ -113,11 +130,11 @@ Deno.serve(async (req) => {
         user_id: user.id,
         user_email: user.email ?? '',
         user_name: user.user_metadata?.name ?? user.email ?? 'User',
-        amount,
+        amount: amountUsd,
         method: 'truewallet',
         transaction_id: transactionId,
         status: 'approved',
-        note: 'Auto-approved via TrueWallet gift link redeem',
+        note: `Auto-approved via TrueWallet gift link redeem (${amountThb.toFixed(2)} THB @ ${exchangeRate} THB/USD)`,
       });
 
     if (transactionError) {
@@ -132,7 +149,7 @@ Deno.serve(async (req) => {
         voucher_hash: voucherHash,
         voucher_preview: voucher.slice(0, 24),
         wallet_number: walletNumber,
-        amount,
+        amount: amountUsd,
         status: 'completed',
         provider_response: providerResponse,
       })
@@ -145,7 +162,11 @@ Deno.serve(async (req) => {
       success: true,
       orderId: orderRow.id,
       transactionId,
-      amount,
+      amount: amountUsd,
+      amountThb,
+      exchangeRate,
+      expectedUsdAmount: Number.isFinite(expectedUsdAmount) ? expectedUsdAmount : 0,
+      shortfallUsd: Number.isFinite(expectedUsdAmount) && expectedUsdAmount > 0 ? roundCurrency(Math.max(0, expectedUsdAmount - amountUsd)) : 0,
       message: 'Voucher redeemed and balance added successfully',
     });
   } catch (error) {
