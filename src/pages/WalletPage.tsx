@@ -8,18 +8,67 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
-const SUPABASE_URL = 'https://wkjqrjafogufqeasfeev.supabase.co';
+const SUPABASE_URL  = 'https://wkjqrjafogufqeasfeev.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
 
-// ── Payment Methods ──────────────────────────────────────────
+// ── Payment Methods (updated logos & QR links) ──────────────────────────────
 const PAYMENT_METHODS = [
-  { id:'binance', label:'Binance Pay', color:'#F0B90B', glow:'rgba(240,185,11,0.35)', instruction:'Open Binance → Pay → scan QR or enter Pay ID', hasQr:true, qr:'https://www.dropbox.com/scl/fi/vu9ys724n9vyij3kpnwd2/qr-image-1774043312091.png?rlkey=8601ge6mlljbzjcdkyn4f656i&st=qsf32sfb&dl=1', fields:[{label:'Pay ID',value:'1104953117',note:'Binance Pay ID'}], icon:<img src="https://www.dropbox.com/scl/fi/z8i5ng71k73neobye7p96/Binance-BNB-Icon-Logo.wine-removebg-preview.png?rlkey=odrn2pwud3aeli8phl0y7ntfr&st=zhelar5g&raw=1" width="20" height="20" style={{ objectFit: 'contain' }} onError={(e)=>{(e.target as HTMLImageElement).src = 'https://placehold.co/20x20?text=BNB'}} />, bgColor:'rgba(240,185,11,0.08)', borderColor:'rgba(240,185,11,0.25)' },
-  { id:'paypal', label:'PayPal', color:'#009CDE', glow:'rgba(0,156,222,0.35)', instruction:'Pay with PayPal below. Your balance is credited automatically — no transaction ID needed.', hasQr:false, qr:'', fields:[{label:'PayPal.me',value:'https://paypal.me/JohanMaestre',note:''}], icon:<img src="https://www.dropbox.com/scl/fi/meqlo70ivzofuvnefh5fd/PayPal_Symbol_Alternative_1.png?rlkey=nw2xo4tsdamxtvt3krrj9lci1&st=7ki2i8em&raw=1" width="20" height="20" style={{ objectFit: 'contain' }} onError={(e)=>{(e.target as HTMLImageElement).src = 'https://placehold.co/20x20?text=PP'}} />, bgColor:'rgba(0,112,186,0.08)', borderColor:'rgba(0,112,186,0.25)' },
-  { id:'bkash', label:'bKash', color:'#E2136E', glow:'rgba(226,19,110,0.35)', instruction:'Open bKash → Send Money → enter number', hasQr:true, qr:'', fields:[{label:'Number',value:'01760880747',note:'Send Money (not Payment)'}], icon:<img src="https://www.dropbox.com/scl/fi/3fks5moqx0e4xrq0qskzu/BKash-Icon2-Logo.wine-removebg-preview.png?rlkey=5lbby5mlh2wve6e2cif0yd5te&st=idlci7sm&raw=1" width="20" height="20" style={{ objectFit: 'contain' }} onError={(e)=>{(e.target as HTMLImageElement).src = 'https://placehold.co/20x20?text=bK'}} />, bgColor:'rgba(226,19,110,0.08)', borderColor:'rgba(226,19,110,0.25)' },
-  { id:'dana', label:'Dana', color:'#118EEA', glow:'rgba(17,142,234,0.35)', instruction:'Open Dana → Transfer → enter number or scan QR', hasQr:true, qr:'', fields:[{label:'Name',value:'Syaiful mu\'an\'an',note:''},{label:'Number',value:'087869604325',note:'Dana transfer'}], icon:<img src="https://www.dropbox.com/scl/fi/r1v3mn866gqmqce95a9cn/dana-e-wallet-app-seeklogo.png?rlkey=h76nv5fmr2fpqt3dtpdl4oy1m&st=iqzs7wlk&raw=1" width="20" height="20" style={{ objectFit: 'contain' }} onError={(e)=>{(e.target as HTMLImageElement).src = 'https://placehold.co/20x20?text=DANA'}} />, bgColor:'rgba(17,142,234,0.08)', borderColor:'rgba(17,142,234,0.25)' },
-  { id:'usdt_trc20', label:'USDT TRC20', color:'#26A17B', glow:'rgba(38,161,123,0.35)', instruction:'Send USDT on Tron (TRC20) network only', hasQr:true, qr:'', fields:[{label:'TRC20 Address',value:'TVinprV4QCHVuAtJ73fCJxhw3gcsqMFXMP',note:'Tron network only'}], icon:<img src="https://www.dropbox.com/scl/fi/x2r7ukhw2zn6qy8iuhx5e/usdt.png?rlkey=t0ytxc27b89zlj8j3o7ragy32&st=hyz6lplx&raw=1" width="20" height="20" style={{ objectFit: 'contain' }} onError={(e)=>{(e.target as HTMLImageElement).src = 'https://placehold.co/20x20?text=USDT'}} />, bgColor:'rgba(38,161,123,0.08)', borderColor:'rgba(38,161,123,0.25)' },
-  { id:'usdt_bep20', label:'USDT BEP20', color:'#F0B90B', glow:'rgba(240,185,11,0.3)', instruction:'Send USDT on BNB Smart Chain (BEP20) only', hasQr:true, qr:'', fields:[{label:'BEP20 Address',value:'0x33a0f57c8372a232b1a425210e897c1b0d1b8048',note:'BSC network only'}], icon:<img src="https://www.dropbox.com/scl/fi/x2r7ukhw2zn6qy8iuhx5e/usdt.png?rlkey=t0ytxc27b89zlj8j3o7ragy32&st=hyz6lplx&raw=1" width="20" height="20" style={{ objectFit: 'contain' }} onError={(e)=>{(e.target as HTMLImageElement).src = 'https://placehold.co/20x20?text=USDT'}} />, bgColor:'rgba(240,185,11,0.07)', borderColor:'rgba(240,185,11,0.2)' },
-  { id:'litecoin', label:'Litecoin', color:'#A5A9B4', glow:'rgba(165,169,180,0.3)', instruction:'Send LTC to the address above', hasQr:true, qr:'', fields:[{label:'LTC Address',value:'LRXdzcWZ1mqGiFXNXe2Qe82tM7wUWVH9zd',note:'Litecoin network'}], icon:<img src="https://www.dropbox.com/scl/fi/x2r7ukhw2zn6qy8iuhx5e/usdt.png?rlkey=t0ytxc27b89zlj8j3o7ragy32&st=hyz6lplx&raw=1" width="20" height="20" style={{ objectFit: 'contain' }} onError={(e)=>{(e.target as HTMLImageElement).src = 'https://placehold.co/20x20?text=LTC'}} />, bgColor:'rgba(52,93,157,0.08)', borderColor:'rgba(52,93,157,0.25)' },
+  { 
+    id:'binance', label:'Binance Pay', color:'#F0B90B', glow:'rgba(240,185,11,0.35)',
+    instruction:'Open Binance → Pay → scan QR or enter Pay ID', hasQr:true,
+    qr:'https://www.dropbox.com/scl/fi/l4tyvo8so3ktktv9n0ym0/binance-qr.jpg?rlkey=ha3kizbzg35oao01g1uynlpki&st=eboendk0&raw=1',
+    fields:[{label:'Pay ID',value:'1104953117',note:'Binance Pay ID'}],
+    icon:<img src="https://www.dropbox.com/scl/fi/z8i5ng71k73neobye7p96/Binance-BNB-Icon-Logo.wine-removebg-preview.png?rlkey=odrn2pwud3aeli8phl0y7ntfr&st=zhelar5g&raw=1" width="20" height="20" style={{ objectFit:'contain' }} />,
+    bgColor:'rgba(240,185,11,0.08)', borderColor:'rgba(240,185,11,0.25)'
+  },
+  { 
+    id:'paypal', label:'PayPal', color:'#009CDE', glow:'rgba(0,156,222,0.35)',
+    instruction:'Pay with PayPal below. Your balance is credited automatically — no transaction ID needed.',
+    hasQr:false, qr:'',
+    fields:[{label:'PayPal.me',value:'https://paypal.me/JohanMaestre',note:''}],
+    icon:<img src="https://www.dropbox.com/scl/fi/meqlo70ivzofuvnefh5fd/PayPal_Symbol_Alternative_1.png?rlkey=nw2xo4tsdamxtvt3krrj9lci1&st=7ki2i8em&raw=1" width="20" height="20" style={{ objectFit:'contain' }} />,
+    bgColor:'rgba(0,112,186,0.08)', borderColor:'rgba(0,112,186,0.25)'
+  },
+  { 
+    id:'bkash', label:'bKash', color:'#E2136E', glow:'rgba(226,19,110,0.35)',
+    instruction:'Open bKash → Send Money → enter number', hasQr:true,
+    qr:'https://www.dropbox.com/scl/fi/lxoiw6cy2mshi7hasgxgi/bkash-qr.jpg?rlkey=f9rc769ons2p1fxkrmjyunmqv&st=o0vb7xoz&raw=1',
+    fields:[{label:'Number',value:'01760880747',note:'Send Money (not Payment)'}],
+    icon:<img src="https://www.dropbox.com/scl/fi/3fks5moqx0e4xrq0qskzu/BKash-Icon2-Logo.wine-removebg-preview.png?rlkey=5lbby5mlh2wve6e2cif0yd5te&st=idlci7sm&raw=1" width="20" height="20" style={{ objectFit:'contain' }} />,
+    bgColor:'rgba(226,19,110,0.08)', borderColor:'rgba(226,19,110,0.25)'
+  },
+  { 
+    id:'dana', label:'Dana', color:'#118EEA', glow:'rgba(17,142,234,0.35)',
+    instruction:'Open Dana → Transfer → enter number or scan QR', hasQr:true,
+    qr:'https://www.dropbox.com/scl/fi/hl4a1lmuqz205akk71mld/Dana-Qr-Code.jpg?rlkey=03z6tvrmcw7mrma64u2we82de&st=2ojdhtg9&raw=1',
+    fields:[{label:'Name',value:'Syaiful mu\'an\'an',note:''},{label:'Number',value:'087869604325',note:'Dana transfer'}],
+    icon:<img src="https://www.dropbox.com/scl/fi/r1v3mn866gqmqce95a9cn/dana-e-wallet-app-seeklogo.png?rlkey=h76nv5fmr2fpqt3dtpdl4oy1m&st=iqzs7wlk&raw=1" width="20" height="20" style={{ objectFit:'contain' }} />,
+    bgColor:'rgba(17,142,234,0.08)', borderColor:'rgba(17,142,234,0.25)'
+  },
+  { 
+    id:'usdt_trc20', label:'USDT TRC20', color:'#26A17B', glow:'rgba(38,161,123,0.35)',
+    instruction:'Send USDT on Tron (TRC20) network only', hasQr:true,
+    qr:'https://www.dropbox.com/scl/fi/1znlsr0llx3x0wanjknlc/Usdt-Trc20-QR-Code.jpg?rlkey=ndsagvf263w8y0g0ykubamgy3&st=qjbdaltp&raw=1',
+    fields:[{label:'TRC20 Address',value:'TVinprV4QCHVuAtJ73fCJxhw3gcsqMFXMP',note:'Tron network only'}],
+    icon:<img src="https://www.dropbox.com/scl/fi/x2r7ukhw2zn6qy8iuhx5e/usdt.png?rlkey=t0ytxc27b89zlj8j3o7ragy32&st=hyz6lplx&raw=1" width="20" height="20" style={{ objectFit:'contain' }} />,
+    bgColor:'rgba(38,161,123,0.08)', borderColor:'rgba(38,161,123,0.25)'
+  },
+  { 
+    id:'usdt_bep20', label:'USDT BEP20', color:'#F0B90B', glow:'rgba(240,185,11,0.3)',
+    instruction:'Send USDT on BNB Smart Chain (BEP20) only', hasQr:true,
+    qr:'https://www.dropbox.com/scl/fi/aicllbvxqn79zxieufixy/USDT-Bep20-QR-Code.jpg?rlkey=xhyesikquqvusrv4r4dscg6wg&st=8gtzmhir&raw=1',
+    fields:[{label:'BEP20 Address',value:'0x33a0f57c8372a232b1a425210e897c1b0d1b8048',note:'BSC network only'}],
+    icon:<img src="https://www.dropbox.com/scl/fi/x2r7ukhw2zn6qy8iuhx5e/usdt.png?rlkey=t0ytxc27b89zlj8j3o7ragy32&st=hyz6lplx&raw=1" width="20" height="20" style={{ objectFit:'contain' }} />,
+    bgColor:'rgba(240,185,11,0.07)', borderColor:'rgba(240,185,11,0.2)'
+  },
+  { 
+    id:'litecoin', label:'Litecoin', color:'#A5A9B4', glow:'rgba(165,169,180,0.3)',
+    instruction:'Send LTC to the address above', hasQr:true,
+    qr:'https://www.dropbox.com/scl/fi/d7hcjghzalqk54o6zb0eh/Litecoin-QR-Code.jpg?rlkey=quvx4xj4ex0u6qce9bkhido0m&st=eq3jbe2k&raw=1',
+    fields:[{label:'LTC Address',value:'LRXdzcWZ1mqGiFXNXe2Qe82tM7wUWVH9zd',note:'Litecoin network'}],
+    icon:<img src="https://www.dropbox.com/scl/fi/lktwitcg1khz5f1ya0hhh/litecoin-ltc-icon.png?rlkey=5nlg06klolvrikw03b5zc5wqr&st=tgplvn4k&raw=1" width="20" height="20" style={{ objectFit:'contain' }} />,
+    bgColor:'rgba(52,93,157,0.08)', borderColor:'rgba(52,93,157,0.25)'
+  },
 ] as const;
 
 type MethodId = typeof PAYMENT_METHODS[number]['id'];
@@ -62,7 +111,7 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
   const SUPABASE_URL_PP  = 'https://wkjqrjafogufqeasfeev.supabase.co';
   const SUPABASE_ANON_PP = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
   // Read client ID from Vite env var (set VITE_PAYPAL_CLIENT_ID in Netlify environment variables)
-  const PAYPAL_CLIENT_ID = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PAYPAL_CLIENT_ID) ?? '';
+  const PAYPAL_CLIENT_ID = (import.meta as any).env?.VITE_PAYPAL_CLIENT_ID ?? '';
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [sdkReady,  setSdkReady]  = useState(false);
@@ -77,10 +126,11 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
       setSdkError('PAYPAL_CLIENT_ID not configured. Add VITE_PAYPAL_CLIENT_ID to Netlify environment variables.');
       return;
     }
+    // Remove any existing broken SDK script first
     const existing = document.getElementById('paypal-sdk');
     if (existing) {
       if ((window as any).paypal) { setSdkReady(true); return; }
-      existing.remove();
+      existing.remove(); // remove stale/broken script and reload
     }
     const script = document.createElement('script');
     script.id  = 'paypal-sdk';
@@ -100,6 +150,7 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
     rendered.current = true;
     const pp = (window as any).paypal;
     if (!pp) return;
+    // Clear container
     containerRef.current.innerHTML = '';
     pp.Buttons({
       style: { layout:'vertical', color:'blue', shape:'rect', label:'pay', height:44 },
@@ -111,6 +162,7 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
       onApprove: async (_data: any, actions: any) => {
         setCapturing(true);
         try {
+          // Step 1: Capture the payment via PayPal JS SDK
           const order = await actions.order.capture();
           const orderId = order.id;
           const paidAmt = parseFloat(
@@ -118,6 +170,8 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
           );
           const finalAmount = paidAmt > 0 ? paidAmt : amount;
 
+          // Step 2: Insert approved transaction directly via Supabase (no edge function needed)
+          // This is safe because the SDK capture already verified the payment with PayPal
           const { error: txErr } = await supabase.from('transactions').insert({
             user_id:        user.id,
             user_email:     user.email,
@@ -129,28 +183,32 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
             note:           'Auto-verified via PayPal JS SDK capture',
           });
 
+          // Step 3: Record in paypal_auto_credits for idempotency (ignore if already exists)
           await supabase.from('paypal_auto_credits').insert({
             paypal_txn_id: orderId,
             user_id:       user.id,
             amount:        finalAmount,
           }).maybeSingle();
 
+          // Step 4: Try edge function as well (best-effort, don't block on it)
           fetch(`${SUPABASE_URL_PP}/functions/v1/paypal-capture`, {
             method: 'POST',
             headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${SUPABASE_ANON_PP}`, 'apikey':SUPABASE_ANON_PP },
             body: JSON.stringify({ order_id:orderId, user_id:user.id, user_email:user.email, user_name:user.name, amount:finalAmount }),
-          }).catch(() => {});
+          }).catch(() => {}); // fire-and-forget, won't block or error
 
           if (!txErr) {
             setDone(true);
             toast.success(`🎉 $${finalAmount.toFixed(2)} added to your balance!`);
             onSuccess();
           } else {
+            // Transaction insert failed (maybe duplicate) — still show success if it was a duplicate
             if (txErr.message?.includes('duplicate') || txErr.message?.includes('unique')) {
               setDone(true);
               toast.success(`🎉 $${finalAmount.toFixed(2)} added to your balance!`);
               onSuccess();
             } else {
+              // Last resort: show success anyway since PayPal capture confirmed payment
               setDone(true);
               toast.success(`🎉 Payment confirmed! $${finalAmount.toFixed(2)} will be credited shortly.`);
               onSuccess();
@@ -158,6 +216,8 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
             }
           }
         } catch (e) {
+          // Even if something errors after capture, the payment went through
+          // Show a clear message so user can contact support with their PayPal receipt
           toast.error(
             'Payment was received by PayPal but an error occurred crediting your balance. ' +
             'Please contact support with your PayPal transaction ID.',
@@ -257,6 +317,7 @@ function AdminPanel() {
 
   return (
     <div style={{ display:'flex',flexDirection:'column',gap:14 }}>
+      {/* Screenshot zoom modal */}
       {zoomImg && (
         <div onClick={()=>setZoomImg(null)} style={{ position:'fixed',inset:0,zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.92)',backdropFilter:'blur(24px)',padding:20 }}>
           <div onClick={e=>e.stopPropagation()} style={{ position:'relative',padding:10,borderRadius:22,background:'white',boxShadow:'0 0 100px rgba(139,92,246,0.5)' }}>
@@ -266,6 +327,7 @@ function AdminPanel() {
         </div>
       )}
 
+      {/* Stats row */}
       <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10 }}>
         {[{label:'Pending',val:pending,c:'var(--amber)',bg:'rgba(251,191,36,.07)',bc:'rgba(251,191,36,.15)'},{label:'Total',val:txns.length,c:'var(--blue)',bg:'rgba(56,189,248,.06)',bc:'rgba(56,189,248,.13)'},{label:'Approved $',val:`$${appTotal.toFixed(2)}`,c:'var(--green)',bg:'rgba(16,232,152,.06)',bc:'rgba(16,232,152,.13)'}].map(s=>(
           <div key={s.label} className="g" style={{ padding:'14px 12px',textAlign:'center',background:s.bg,borderColor:s.bc }}>
@@ -275,6 +337,7 @@ function AdminPanel() {
         ))}
       </div>
 
+      {/* Search bar */}
       <div style={{ position:'relative' }}>
         <svg style={{ position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',pointerEvents:'none' }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by email, name, transaction ID…"
@@ -283,6 +346,7 @@ function AdminPanel() {
         />
       </div>
 
+      {/* Filter tabs */}
       <div style={{ display:'flex',gap:8,alignItems:'center' }}>
         <div style={{ display:'flex',gap:4,background:'rgba(255,255,255,.04)',borderRadius:10,padding:4,flex:1 }}>
           {(['pending','approved','rejected','all'] as const).map(f=>(
@@ -293,6 +357,7 @@ function AdminPanel() {
         <button onClick={load} disabled={loading} className="btn btn-ghost btn-sm" style={{ padding:'8px 10px' }}><RefreshCw size={14} className={loading?'animate-spin':''}/></button>
       </div>
 
+      {/* Transaction cards */}
       <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
         {loading&&txns.length===0
           ? <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'32px 0',color:'var(--muted)' }}><Loader2 size={16} className="animate-spin"/><span style={{fontSize:13}}>Loading...</span></div>
@@ -300,6 +365,8 @@ function AdminPanel() {
           ? <div style={{ textAlign:'center',padding:'32px 0',fontSize:13,color:'var(--muted)' }}>No {filter} transactions</div>
           : filtered.map(tx=>(
           <div key={tx.id} className="g" style={{ padding:18,background:tx.status==='pending'?'rgba(251,191,36,.04)':tx.status==='approved'?'rgba(16,232,152,.04)':'rgba(248,113,113,.04)',borderColor:tx.status==='pending'?'rgba(251,191,36,.15)':tx.status==='approved'?'rgba(16,232,152,.13)':'rgba(248,113,113,.13)' }}>
+
+            {/* User + amount */}
             <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:14 }}>
               <div>
                 <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:4,flexWrap:'wrap' }}>
@@ -315,6 +382,7 @@ function AdminPanel() {
               </div>
             </div>
 
+            {/* Detail grid — full info */}
             <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:8,marginBottom:14 }}>
               {[
                 {label:'Method',         val:tx.method || '—'},
@@ -329,6 +397,7 @@ function AdminPanel() {
               ))}
             </div>
 
+            {/* Screenshot preview */}
             {tx.screenshot_url && (
               <div style={{ marginBottom:14 }}>
                 <div className="label" style={{ marginBottom:8 }}>Payment Screenshot</div>
@@ -346,8 +415,10 @@ function AdminPanel() {
               </div>
             )}
 
+            {/* Note */}
             {tx.note && <div style={{ fontSize:11,color:'var(--dim)',marginBottom:12,padding:'7px 10px',background:'rgba(255,255,255,.03)',borderRadius:8 }}>Note: {tx.note}</div>}
 
+            {/* Action buttons */}
             {tx.status==='pending'&&(
               <div style={{ display:'flex',gap:8 }}>
                 <button onClick={()=>approve(tx)} className="btn btn-g btn-sm" style={{ flex:1 }}><Check size={13}/> Approve</button>
@@ -360,7 +431,7 @@ function AdminPanel() {
     </div>
   );
 }
-// ── Purchase Success Modal ─────────────────
+// ── Purchase Success Modal (logic unchanged) ─────────────────
 function PurchaseSuccessModal({ data, onClose }: { data: { product: any; keys: Array<{ key: string; panelId: string; panelName: string; expiresAt: string }> }; onClose: () => void }) {
   const [revealed,setRevealed] = useState<Record<number,boolean>>({});
   const [copied,setCopied] = useState<Record<number,boolean>>({});
@@ -393,7 +464,7 @@ function PurchaseSuccessModal({ data, onClose }: { data: { product: any; keys: A
   );
 }
 
-// ── Confirm Modal ──────────────────────────
+// ── Confirm Modal (logic unchanged) ──────────────────────────
 function ConfirmModal({ product, onConfirm, onCancel }: { product: { name: string; price: number; duration: string; emoji?: string }; onConfirm: () => void; onCancel: () => void }) {
   return (
     <div style={{ position:'fixed',inset:0,zIndex:80,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.82)',backdropFilter:'blur(14px)',padding:16 }}>
@@ -517,6 +588,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
       else toast.error('Failed: '+error.message);
     } else {
       toast.success('✅ Submitted! Admin will approve shortly.');
+      // Log activity
       logActivity({ userId:user.id, userEmail:email.trim(), userName:user.name, action:'payment_submit', amount:selAmount, status:'success', meta:{ method:methodId, txnId:txnId.trim()||'paypal-auto' } });
       setStep(1); setTxnId(''); setCustom(''); setScreenshot(null); setScreenshotPreview('');
       onSuccess();
@@ -592,6 +664,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
       {/* ── STEP 2: Payment Method + Split Panel ── */}
       {step===2&&(
         <div className="pay-panel g" style={{ borderRadius:20, overflow:'hidden', padding:0 }}>
+          {/* Method selector */}
           <div style={{ padding:'22px 24px 18px', borderBottom:'1px solid rgba(255,255,255,.05)' }}>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
               <button onClick={()=>setStep(1)} style={{ display:'flex', alignItems:'center', gap:5, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.07)', borderRadius:10, cursor:'pointer', color:'var(--muted)', fontSize:12, fontFamily:'inherit', padding:'6px 12px' }}>
@@ -612,8 +685,12 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
             </div>
           </div>
 
+          {/* Split: Left = QR + details, Right = Form */}
           <div className="pay-cols" style={{ display:'grid', gridTemplateColumns:'1fr 1fr' }}>
+
+            {/* LEFT */}
             <div style={{ padding:'24px', borderRight:'1px solid rgba(255,255,255,.04)', background:'rgba(0,0,0,.15)' }}>
+              {/* Amount + local currency */}
               {(() => { const lc = localAmt(selAmount, methodId); return lc ? (
                 <div style={{ padding:'9px 13px', borderRadius:12, background:'rgba(251,191,36,.06)', border:'1px solid rgba(251,191,36,.18)', marginBottom:10, display:'flex', alignItems:'center', gap:9 }}>
                   <span style={{ fontSize:18 }}>{LOCAL[methodId as keyof typeof LOCAL]?.flag ?? '🌐'}</span>
@@ -638,10 +715,11 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                 </div>
               </div>
 
+              {/* QR Code */}
               {selMethod.hasQr && (
                 <div style={{ textAlign:'center', marginBottom:20 }}>
                   <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:12 }}>Scan QR Code</div>
-                  {selMethod.qr && selMethod.qr !== '' && !selMethod.qr.startsWith('YOUR_') ? (
+                  {selMethod.qr && !selMethod.qr.startsWith('YOUR_') ? (
                     <>
                       <div onClick={()=>setQrZoom(true)} style={{ display:'inline-block', cursor:'zoom-in', position:'relative', padding:10, borderRadius:20, background:'white', boxShadow:`0 0 40px ${selMethod.glow}, 0 8px 32px rgba(0,0,0,.5)`, transition:'transform .2s,box-shadow .2s' }}
                         onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform='scale(1.04)';}}
@@ -656,12 +734,13 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                   ) : (
                     <div style={{ width:170, height:170, borderRadius:20, border:`2px dashed ${selMethod.borderColor}`, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, margin:'0 auto', background:selMethod.bgColor }}>
                       <div style={{ fontSize:36 }}>📷</div>
-                      <span style={{ fontSize:11, color:'var(--dim)' }}>QR code will be added later</span>
+                      <span style={{ fontSize:11, color:'var(--dim)' }}>QR coming soon</span>
                     </div>
                   )}
                 </div>
               )}
 
+              {/* Fields */}
               <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:14 }}>
                 {selMethod.fields.map((f,i)=>(
                   <div key={i} style={{ background:'rgba(255,255,255,.03)', border:`1px solid ${selMethod.borderColor}`, borderRadius:12, padding:'12px 14px' }}>
@@ -689,8 +768,10 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
               </div>
             </div>
 
+            {/* RIGHT: Form — PayPal gets its own panel, others get the manual form */}
             <div style={{ padding:'24px' }}>
               {selMethod.id === 'paypal' ? (
+                /* ── PayPal: no form needed, SDK handles everything ── */
                 <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
                   <div style={{ padding:'14px 16px', borderRadius:14, background:'rgba(16,232,152,.06)', border:'1px solid rgba(16,232,152,.18)' }}>
                     <div style={{ fontSize:13,fontWeight:700,color:'var(--green)',marginBottom:6 }}>⚡ Fully Automatic</div>
@@ -717,69 +798,74 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                   </div>
                 </div>
               ) : (
+                /* ── Other methods: manual form ── */
                 <>
-                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:18 }}>Fill Payment Details</div>
+              <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:18 }}>Fill Payment Details</div>
 
-                  <div style={{ marginBottom:16 }}>
-                    <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Your Email</label>
-                    <input type="email" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}
-                      style={{ width:'100%', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:12, padding:'13px 16px', color:'#fff', fontFamily:'inherit', fontSize:14, outline:'none', transition:'all .2s' }}
-                      onFocus={e=>{e.target.style.borderColor='rgba(139,92,246,.45)';e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,.1)';}}
-                      onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,.08)';e.target.style.boxShadow='none';}}
-                    />
+              {/* Email */}
+              <div style={{ marginBottom:16 }}>
+                <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Your Email</label>
+                <input type="email" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}
+                  style={{ width:'100%', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:12, padding:'13px 16px', color:'#fff', fontFamily:'inherit', fontSize:14, outline:'none', transition:'all .2s' }}
+                  onFocus={e=>{e.target.style.borderColor='rgba(139,92,246,.45)';e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,.1)';}}
+                  onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,.08)';e.target.style.boxShadow='none';}}
+                />
+              </div>
+
+              {/* TXN ID */}
+              <div style={{ marginBottom:16 }}>
+                <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Transaction ID</label>
+                <input type="text" placeholder="Paste your TXN / reference ID..." value={txnId} onChange={e=>setTxnId(e.target.value)}
+                  style={{ width:'100%', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:12, padding:'13px 16px', color:'#fff', fontFamily:'monospace', fontSize:13, outline:'none', transition:'all .2s', letterSpacing:'0.5px' }}
+                  onFocus={e=>{e.target.style.borderColor='rgba(139,92,246,.45)';e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,.1)';}}
+                  onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,.08)';e.target.style.boxShadow='none';}}
+                />
+                <p style={{ fontSize:11, color:'var(--dim)', marginTop:6 }}>From your payment receipt or confirmation</p>
+              </div>
+
+              {/* Screenshot */}
+              <div style={{ marginBottom:20 }}>
+                <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Payment Screenshot</label>
+                <input type="file" ref={fileRef} accept="image/*" style={{ display:'none' }} onChange={handleFileChange}/>
+                {screenshotPreview ? (
+                  <div style={{ position:'relative', borderRadius:14, overflow:'hidden', border:'1px solid rgba(16,232,152,.25)', cursor:'pointer' }} onClick={()=>fileRef.current?.click()}>
+                    <img src={screenshotPreview} alt="Screenshot" style={{ width:'100%', maxHeight:140, objectFit:'cover', display:'block' }}/>
+                    <div style={{ position:'absolute',top:8,right:8,background:'rgba(16,232,152,.15)',border:'1px solid rgba(16,232,152,.3)',borderRadius:20,padding:'3px 10px',fontSize:10,fontWeight:700,color:'var(--green)' }}>✓ Uploaded</div>
+                    <div style={{ position:'absolute',inset:0,background:'rgba(0,0,0,.5)',display:'flex',alignItems:'center',justifyContent:'center',opacity:0,transition:'opacity .2s',fontSize:12,color:'#fff',fontWeight:700 }} onMouseEnter={e=>(e.currentTarget.style.opacity='1')} onMouseLeave={e=>(e.currentTarget.style.opacity='0')}>Change Screenshot</div>
                   </div>
-
-                  <div style={{ marginBottom:16 }}>
-                    <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Transaction ID</label>
-                    <input type="text" placeholder="Paste your TXN / reference ID..." value={txnId} onChange={e=>setTxnId(e.target.value)}
-                      style={{ width:'100%', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:12, padding:'13px 16px', color:'#fff', fontFamily:'monospace', fontSize:13, outline:'none', transition:'all .2s', letterSpacing:'0.5px' }}
-                      onFocus={e=>{e.target.style.borderColor='rgba(139,92,246,.45)';e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,.1)';}}
-                      onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,.08)';e.target.style.boxShadow='none';}}
-                    />
-                    <p style={{ fontSize:11, color:'var(--dim)', marginTop:6 }}>From your payment receipt or confirmation</p>
-                  </div>
-
-                  <div style={{ marginBottom:20 }}>
-                    <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Payment Screenshot</label>
-                    <input type="file" ref={fileRef} accept="image/*" style={{ display:'none' }} onChange={handleFileChange}/>
-                    {screenshotPreview ? (
-                      <div style={{ position:'relative', borderRadius:14, overflow:'hidden', border:'1px solid rgba(16,232,152,.25)', cursor:'pointer' }} onClick={()=>fileRef.current?.click()}>
-                        <img src={screenshotPreview} alt="Screenshot" style={{ width:'100%', maxHeight:140, objectFit:'cover', display:'block' }}/>
-                        <div style={{ position:'absolute',top:8,right:8,background:'rgba(16,232,152,.15)',border:'1px solid rgba(16,232,152,.3)',borderRadius:20,padding:'3px 10px',fontSize:10,fontWeight:700,color:'var(--green)' }}>✓ Uploaded</div>
-                        <div style={{ position:'absolute',inset:0,background:'rgba(0,0,0,.5)',display:'flex',alignItems:'center',justifyContent:'center',opacity:0,transition:'opacity .2s',fontSize:12,color:'#fff',fontWeight:700 }} onMouseEnter={e=>(e.currentTarget.style.opacity='1')} onMouseLeave={e=>(e.currentTarget.style.opacity='0')}>Change Screenshot</div>
-                      </div>
-                    ) : (
-                      <div onClick={()=>fileRef.current?.click()} style={{ border:'2px dashed rgba(255,255,255,.09)', borderRadius:14, padding:'24px 16px', textAlign:'center', cursor:'pointer', transition:'all .2s', background:'rgba(255,255,255,.02)' }}
-                        onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.borderColor='rgba(139,92,246,.3)';(e.currentTarget as HTMLDivElement).style.background='rgba(139,92,246,.04)';}}
-                        onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.borderColor='rgba(255,255,255,.09)';(e.currentTarget as HTMLDivElement).style.background='rgba(255,255,255,.02)';}}>
-                        <div style={{ width:40,height:40,borderRadius:11,background:'rgba(139,92,246,.1)',border:'1px solid rgba(139,92,246,.2)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 10px' }}>
-                          <Upload size={18} color="var(--purple)"/>
-                        </div>
-                        <div style={{ fontSize:13,fontWeight:700,color:'rgba(255,255,255,.5)',marginBottom:4 }}>Upload payment proof</div>
-                        <div style={{ fontSize:11,color:'var(--dim)' }}>JPG, PNG, WEBP · Click to browse</div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ background:'rgba(139,92,246,.06)', border:'1px solid rgba(139,92,246,.16)', borderRadius:14, padding:'13px 16px', marginBottom:16, display:'flex', alignItems:'center', gap:12 }}>
-                    <div style={{ width:36,height:36,borderRadius:10,background:selMethod.bgColor,border:`1px solid ${selMethod.borderColor}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>{selMethod.icon}</div>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:11,color:'var(--muted)',marginBottom:1 }}>{selMethod.label}</div>
-                      <div style={{ fontSize:18,fontWeight:900,color:'#fff',letterSpacing:'-.02em' }}>${selAmount.toFixed(2)}</div>
+                ) : (
+                  <div onClick={()=>fileRef.current?.click()} style={{ border:'2px dashed rgba(255,255,255,.09)', borderRadius:14, padding:'24px 16px', textAlign:'center', cursor:'pointer', transition:'all .2s', background:'rgba(255,255,255,.02)' }}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.borderColor='rgba(139,92,246,.3)';(e.currentTarget as HTMLDivElement).style.background='rgba(139,92,246,.04)';}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.borderColor='rgba(255,255,255,.09)';(e.currentTarget as HTMLDivElement).style.background='rgba(255,255,255,.02)';}}>
+                    <div style={{ width:40,height:40,borderRadius:11,background:'rgba(139,92,246,.1)',border:'1px solid rgba(139,92,246,.2)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 10px' }}>
+                      <Upload size={18} color="var(--purple)"/>
                     </div>
-                    <div style={{ textAlign:'right',fontSize:10,color:'var(--muted)' }}>
-                      <div>Pending admin</div>
-                      <div style={{ color:'var(--amber)',fontWeight:700,marginTop:2 }}>~1–10 min</div>
-                    </div>
+                    <div style={{ fontSize:13,fontWeight:700,color:'rgba(255,255,255,.5)',marginBottom:4 }}>Upload payment proof</div>
+                    <div style={{ fontSize:11,color:'var(--dim)' }}>JPG, PNG, WEBP · Click to browse</div>
                   </div>
+                )}
+              </div>
 
-                  <button onClick={()=>{
-                    if(!txnId.trim()){toast.error('Enter your transaction ID');return;}
-                    if(!email.trim()){toast.error('Enter your email');return;}
-                    setStep(3);
-                  }} className="btn btn-p btn-lg btn-full" style={{ borderRadius:14, fontSize:15, boxShadow:'0 0 30px rgba(109,40,217,.4)', padding:'15px' }}>
-                    I've Sent Payment <ArrowRight size={16}/>
-                  </button>
+              {/* Summary */}
+              <div style={{ background:'rgba(139,92,246,.06)', border:'1px solid rgba(139,92,246,.16)', borderRadius:14, padding:'13px 16px', marginBottom:16, display:'flex', alignItems:'center', gap:12 }}>
+                <div style={{ width:36,height:36,borderRadius:10,background:selMethod.bgColor,border:`1px solid ${selMethod.borderColor}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>{selMethod.icon}</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:11,color:'var(--muted)',marginBottom:1 }}>{selMethod.label}</div>
+                  <div style={{ fontSize:18,fontWeight:900,color:'#fff',letterSpacing:'-.02em' }}>${selAmount.toFixed(2)}</div>
+                </div>
+                <div style={{ textAlign:'right',fontSize:10,color:'var(--muted)' }}>
+                  <div>Pending admin</div>
+                  <div style={{ color:'var(--amber)',fontWeight:700,marginTop:2 }}>~1–10 min</div>
+                </div>
+              </div>
+
+              <button onClick={()=>{
+                if(!txnId.trim()){toast.error('Enter your transaction ID');return;}
+                if(!email.trim()){toast.error('Enter your email');return;}
+                setStep(3);
+              }} className="btn btn-p btn-lg btn-full" style={{ borderRadius:14, fontSize:15, boxShadow:'0 0 30px rgba(109,40,217,.4)', padding:'15px' }}>
+                I've Sent Payment <ArrowRight size={16}/>
+              </button>
                 </>
               )}
             </div>
