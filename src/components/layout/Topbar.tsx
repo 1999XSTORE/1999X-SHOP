@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/lib/store';
-import { Menu, X, LogOut, Globe, Wallet, Crown, Shield, Home, ShoppingBag, Key, MessageCircle, Gift, Activity, Megaphone } from 'lucide-react';
+import { Menu, X, LogOut, Globe, Wallet, Crown, Shield, Home, ShoppingBag, Key, MessageCircle, Gift, Activity } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/lib/supabase';
+import NotificationBell from './NotificationBell';
 
 // Nav order: Home > Shop > License > Chat > Bonus > Status
 const navItems = [
@@ -48,12 +48,6 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
   const profileRef = useRef<HTMLDivElement>(null);
   const langRef    = useRef<HTMLDivElement>(null);
 
-  // Badge counts
-  const [chatBadge, setChatBadge] = useState(0);
-  const [annBadge,  setAnnBadge]  = useState(0);
-  const lastChatVisit = useRef<number>(Date.now());
-  const lastAnnVisit  = useRef<number>(Date.now());
-
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
@@ -63,45 +57,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  // Real-time chat badge
-  useEffect(() => {
-    if (!user) return;
-    const ch = supabase.channel('topbar-chat-badge')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, () => {
-        if (currentPath !== '/chat') {
-          setChatBadge(prev => prev + 1);
-        }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [user?.id, currentPath]);
-
-  // Real-time announcement badge
-  useEffect(() => {
-    if (!user) return;
-    const ch = supabase.channel('topbar-ann-badge')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'announcements' }, () => {
-        if (currentPath !== '/panel-status') {
-          setAnnBadge(prev => prev + 1);
-        }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [user?.id, currentPath]);
-
-  // Reset badge when navigating to the page
-  useEffect(() => {
-    if (currentPath === '/chat') setChatBadge(0);
-    if (currentPath === '/panel-status') setAnnBadge(0);
-  }, [currentPath]);
-
   const handleNav = (path: string) => { onNavigate(path); setMobileOpen(false); };
-
-  const getBadge = (key: string) => {
-    if (key === 'chat') return chatBadge;
-    if (key === 'panelStatus') return annBadge;
-    return 0;
-  };
 
   return (
     <>
@@ -174,31 +130,8 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
           background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.5);
           text-align: center; font-family: inherit; transition: all 0.15s;
           display: flex; flex-direction: column; align-items: center; gap: 5px;
-          position: relative;
         }
         .mob-nav-item.active { border-color: rgba(139,92,246,0.3); background: rgba(139,92,246,0.12); color: #c4b5fd; }
-        .chat-badge-dot {
-          position: absolute; top: 2px; right: 2px;
-          min-width: 15px; height: 15px; border-radius: 8px; padding: 0 3px;
-          background: #3b82f6;
-          border: 2px solid rgba(8,8,18,0.95);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 8px; font-weight: 900; color: #fff; line-height: 1;
-        }
-        .ann-badge-dot {
-          position: absolute; top: 2px; right: 2px;
-          min-width: 15px; height: 15px; border-radius: 8px; padding: 0 3px;
-          background: linear-gradient(135deg,#f59e0b,#ef4444);
-          border: 2px solid rgba(8,8,18,0.95);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 8px; font-weight: 900; color: #fff; line-height: 1;
-          box-shadow: 0 0 10px rgba(245,158,11,0.6);
-          animation: ann-glow 1.5s ease-in-out infinite;
-        }
-        @keyframes ann-glow {
-          0%, 100% { box-shadow: 0 0 6px rgba(245,158,11,0.5); }
-          50% { box-shadow: 0 0 16px rgba(239,68,68,0.8), 0 0 24px rgba(245,158,11,0.5); }
-        }
       `}</style>
 
       <div className="nav-pill">
@@ -222,24 +155,13 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
 
           {/* Desktop nav */}
           <div className="hidden lg:flex items-center gap-0.5 flex-1 justify-center">
-            {navItems.map(item => {
-              const badge = getBadge(item.key);
-              return (
-                <button key={item.key} onClick={() => handleNav(item.path)}
-                  className={cn('nav-link', currentPath === item.path && 'active')}>
-                  <span style={{ position:'relative', display:'inline-flex' }}>
-                    <item.Icon size={13} className="nav-ic" />
-                    {badge > 0 && item.key === 'chat' && (
-                      <span className="chat-badge-dot">{badge > 9 ? '9+' : badge}</span>
-                    )}
-                    {badge > 0 && item.key === 'panelStatus' && (
-                      <span className="ann-badge-dot">{badge > 9 ? '9+' : badge}</span>
-                    )}
-                  </span>
-                  {t(item.tKey)}
-                </button>
-              );
-            })}
+            {navItems.map(item => (
+              <button key={item.key} onClick={() => handleNav(item.path)}
+                className={cn('nav-link', currentPath === item.path && 'active')}>
+                <item.Icon size={13} className="nav-ic" />
+                {t(item.tKey)}
+              </button>
+            ))}
           </div>
 
           {/* Right controls */}
@@ -248,6 +170,9 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             <button onClick={() => handleNav('/wallet')} className="balance-pill hidden sm:flex">
               <Wallet size={12} />${balance.toFixed(2)}
             </button>
+
+            {/* Notification bell */}
+            <NotificationBell onNavigate={handleNav} />
 
             {/* Language */}
             <div style={{ position:'relative' }} ref={langRef}>
@@ -344,24 +269,13 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
               <span style={{ fontSize:14,fontWeight:700,color:'#c4b5fd' }}>${balance.toFixed(2)}</span>
             </div>
             <div className="mob-nav-grid">
-              {navItems.map(item => {
-                const badge = getBadge(item.key);
-                return (
-                  <button key={item.key} onClick={() => handleNav(item.path)}
-                    className={cn('mob-nav-item', currentPath===item.path && 'active')}>
-                    <span style={{ position:'relative', display:'inline-flex' }}>
-                      <item.Icon size={18} style={{ opacity: currentPath===item.path?1:0.5 }} />
-                      {badge > 0 && item.key === 'chat' && (
-                        <span className="chat-badge-dot">{badge > 9 ? '9+' : badge}</span>
-                      )}
-                      {badge > 0 && item.key === 'panelStatus' && (
-                        <span className="ann-badge-dot">{badge > 9 ? '9+' : badge}</span>
-                      )}
-                    </span>
-                    <span>{t(item.tKey)}</span>
-                  </button>
-                );
-              })}
+              {navItems.map(item => (
+                <button key={item.key} onClick={() => handleNav(item.path)}
+                  className={cn('mob-nav-item', currentPath===item.path && 'active')}>
+                  <item.Icon size={18} style={{ opacity: currentPath===item.path?1:0.5 }} />
+                  <span>{t(item.tKey)}</span>
+                </button>
+              ))}
             </div>
             <button onClick={() => { onLogout(); setMobileOpen(false); }}
               style={{ width:'100%',marginTop:10,paddingTop:10,borderTop:'1px solid rgba(255,255,255,.06)',display:'flex',alignItems:'center',gap:8,padding:'10px 14px',fontSize:13,color:'#f87171',background:'none',border:'none',cursor:'pointer',borderRadius:13,fontFamily:'inherit',transition:'all .15s' }}

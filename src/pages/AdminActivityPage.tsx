@@ -37,20 +37,7 @@ const ACTION_CFG: Record<string, { label: string; color: string; bg: string; emo
   message_sent:       { label: 'Message',         color: 'rgba(255,255,255,.35)', bg: 'rgba(255,255,255,.03)', emoji: '💬' },
 };
 
-// Only show important activities
-const IMPORTANT_ACTIONS = [
-  'hwid_reset',
-  'payment_rejected',
-  'purchase',
-  'payment_approved',
-  'payment_submit',
-  'balance_add',
-  'balance_deduct',
-  'free_key_claim',
-  'key_generated',
-];
-
-const ALL_ACTIONS = IMPORTANT_ACTIONS;
+const ALL_ACTIONS = Object.keys(ACTION_CFG);
 
 // ── Confirm reset modal ────────────────────────────────────────
 function ConfirmReset({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
@@ -110,7 +97,6 @@ export default function AdminActivityPage() {
 
     if (search.trim())    q = q.or(`user_email.ilike.%${search.trim()}%,user_name.ilike.%${search.trim()}%,product.ilike.%${search.trim()}%`);
     if (actionFilter)     q = q.eq('action_type', actionFilter);
-    else                  q = q.in('action_type', IMPORTANT_ACTIONS);
     if (statusFilter)     q = q.eq('status', statusFilter);
     if (dateFrom)         q = q.gte('created_at', dateFrom);
     if (dateTo)           q = q.lte('created_at', dateTo + 'T23:59:59');
