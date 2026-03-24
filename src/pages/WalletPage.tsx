@@ -606,7 +606,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
     setSubmitting(true);
     const { error } = await safeQuery(() => supabase.from('transactions').insert({
       user_id:user.id, user_email:email.trim(), user_name:user.name,
-      amount:selAmount, method:methodId, transaction_id:txnId.trim(), status:'pending'
+      amount:selAmount, method:methodId, transaction_id:txnId.trim(), status:'pending', screenshot_url:screenshotPreview || ''
     }));
     if (error) {
       if (error.message==='timeout') toast.error('Request timed out.');
