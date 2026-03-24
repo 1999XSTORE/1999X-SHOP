@@ -3,6 +3,7 @@ import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { safeQuery } from '@/lib/safeFetch';
 import { logActivity } from '@/lib/activity';
+import { useNavBadges } from '@/hooks/useNavBadges';
 import AppLayout from '@/components/layout/AppLayout';
 import LoginPage from '@/pages/LoginPage';
 import DashboardPage from '@/pages/DashboardPage';
@@ -57,6 +58,9 @@ export default function Index() {
   // ── Restore last page from sessionStorage ─────────────────
   const [currentPath, setCurrentPath] = useState(getSavedPath);
 
+  // ── Nav badge counts (real-time) ─────────────────────────
+  const { counts: badgeCounts, clearChat, clearAnnouncements } = useNavBadges();
+
   // ── Auth state ─────────────────────────────────────────────
   // Start as true if already authenticated (Zustand persist loaded it)
   // This prevents the flash of login screen on refresh
@@ -67,6 +71,9 @@ export default function Index() {
   const navigate = (path: string) => {
     setCurrentPath(path);
     savePath(path);
+    // Reset badge when user opens the corresponding page
+    if (path === '/chat') clearChat();
+    if (path === '/panel-status') clearAnnouncements();
   };
 
   useEffect(() => {
@@ -198,7 +205,7 @@ export default function Index() {
   const PageComponent = pageComponents[currentPath] || DashboardPage;
 
   return (
-    <AppLayout currentPath={currentPath} onNavigate={navigate} onLogout={handleLogout}>
+    <AppLayout currentPath={currentPath} onNavigate={navigate} onLogout={handleLogout} badgeCounts={badgeCounts}>
       <PageComponent />
     </AppLayout>
   );

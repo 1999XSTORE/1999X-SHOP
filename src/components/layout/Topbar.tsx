@@ -3,7 +3,6 @@ import { useAppStore } from '@/lib/store';
 import { Menu, X, LogOut, Globe, Wallet, Crown, Shield, Home, ShoppingBag, Key, MessageCircle, Gift, Activity } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import NotificationBell from './NotificationBell';
 
 // Nav order: Home > Shop > License > Chat > Bonus > Status
 const navItems = [
@@ -155,13 +154,23 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
 
           {/* Desktop nav */}
           <div className="hidden lg:flex items-center gap-0.5 flex-1 justify-center">
-            {navItems.map(item => (
-              <button key={item.key} onClick={() => handleNav(item.path)}
-                className={cn('nav-link', currentPath === item.path && 'active')}>
-                <item.Icon size={13} className="nav-ic" />
-                {t(item.tKey)}
-              </button>
-            ))}
+            {navItems.map(item => {
+              const badgeCount = item.key === 'chat' ? (badgeCounts?.chat ?? 0)
+                               : item.key === 'panelStatus' ? (badgeCounts?.announcements ?? 0)
+                               : 0;
+              return (
+                <button key={item.key} onClick={() => handleNav(item.path)}
+                  className={cn('nav-link', currentPath === item.path && 'active')}>
+                  <item.Icon size={13} className="nav-ic" />
+                  {t(item.tKey)}
+                  {badgeCount > 0 && (
+                    <span className={item.key === 'chat' ? 'nav-badge-chat' : 'nav-badge-ann'}>
+                      +{badgeCount > 9 ? '9' : badgeCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Right controls */}
@@ -170,9 +179,6 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             <button onClick={() => handleNav('/wallet')} className="balance-pill hidden sm:flex">
               <Wallet size={12} />${balance.toFixed(2)}
             </button>
-
-            {/* Notification bell */}
-            <NotificationBell onNavigate={handleNav} />
 
             {/* Language */}
             <div style={{ position:'relative' }} ref={langRef}>
@@ -269,13 +275,25 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
               <span style={{ fontSize:14,fontWeight:700,color:'#c4b5fd' }}>${balance.toFixed(2)}</span>
             </div>
             <div className="mob-nav-grid">
-              {navItems.map(item => (
-                <button key={item.key} onClick={() => handleNav(item.path)}
-                  className={cn('mob-nav-item', currentPath===item.path && 'active')}>
-                  <item.Icon size={18} style={{ opacity: currentPath===item.path?1:0.5 }} />
-                  <span>{t(item.tKey)}</span>
-                </button>
-              ))}
+              {navItems.map(item => {
+                const badgeCount = item.key === 'chat' ? (badgeCounts?.chat ?? 0)
+                                 : item.key === 'panelStatus' ? (badgeCounts?.announcements ?? 0)
+                                 : 0;
+                return (
+                  <button key={item.key} onClick={() => handleNav(item.path)}
+                    className={cn('mob-nav-item', currentPath===item.path && 'active')}
+                    style={{ position:'relative' }}>
+                    <item.Icon size={18} style={{ opacity: currentPath===item.path?1:0.5 }} />
+                    <span>{t(item.tKey)}</span>
+                    {badgeCount > 0 && (
+                      <span className={item.key === 'chat' ? 'nav-badge-chat' : 'nav-badge-ann'}
+                        style={{ top:-4, right:-4 }}>
+                        +{badgeCount > 9 ? '9' : badgeCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
             <button onClick={() => { onLogout(); setMobileOpen(false); }}
               style={{ width:'100%',marginTop:10,paddingTop:10,borderTop:'1px solid rgba(255,255,255,.06)',display:'flex',alignItems:'center',gap:8,padding:'10px 14px',fontSize:13,color:'#f87171',background:'none',border:'none',cursor:'pointer',borderRadius:13,fontFamily:'inherit',transition:'all .15s' }}

@@ -5,13 +5,14 @@ interface AppLayoutProps {
   currentPath: string;
   onNavigate: (path: string) => void;
   onLogout: () => void;
+  badgeCounts?: { chat: number; announcements: number };
 }
 
-export default function AppLayout({ children, currentPath, onNavigate, onLogout }: AppLayoutProps) {
+export default function AppLayout({ children, currentPath, onNavigate, onLogout, badgeCounts }: AppLayoutProps) {
   const isChat = currentPath === '/chat';
   return (
     <div style={{ height: '100svh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <Topbar currentPath={currentPath} onNavigate={onNavigate} onLogout={onLogout} />
+      <Topbar currentPath={currentPath} onNavigate={onNavigate} onLogout={onLogout} badgeCounts={badgeCounts} />
       <main style={{
         flex: 1,
         overflow: isChat ? 'hidden' : 'auto',
