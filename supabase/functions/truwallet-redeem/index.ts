@@ -17,6 +17,10 @@ async function sha256(input: string) {
   return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+function normalizePhone(input: string) {
+  return input.replace(/[^\d]/g, '');
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
@@ -54,7 +58,18 @@ Deno.serve(async (req) => {
 
     if (settingsError || !settingsRow?.value) return json({ success: false, message: 'MY_WALLET is not configured' }, 500);
 
-    const walletNumber = settingsRow.value;
+    const walletNumber = normalizePhone(settingsRow.value);
+    if (walletNumber.length < 10 || walletNumber.length > 15) {
+      return json(
+        {
+          success: false,
+          message: 'MY_WALLET must be a valid phone number for the topup API',
+          currentValuePreview: settingsRow.value.slice(0, 24),
+        },
+        500,
+      );
+    }
+
     const redeemRes = await fetch('https://apiparkxd.pro/api/topup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -66,16 +81,29 @@ Deno.serve(async (req) => {
       return json({ success: false, message: providerResponse?.message ?? 'Voucher redeem failed', providerResponse }, 400);
     }
 
-    const { data: licenseRow, error: licenseError } = await admin
-      .from('license_keys')
-      .select('id,product_name,license_key')
-      .eq('is_used', false)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+    const amount = Number(providerResponse?.amount ?? providerResponse?.data?.amount ?? 0);
+    const transactionId = String(
+      providerResponse?.transaction_id ??
+      providerResponse?.txn_id ??
+      providerResponse?.id ??
+      `truewallet-${voucherHash.slice(0, 16)}`
+    );
 
-    if (licenseError || !licenseRow) {
-      return json({ success: false, message: 'No unused license keys available' }, 500);
+    const { error: transactionError } = await admin
+      .from('transactions')
+      .insert({
+        user_id: user.id,
+        user_email: user.email ?? '',
+        user_name: user.user_metadata?.name ?? user.email ?? 'User',
+        amount,
+        method: 'truewallet',
+        transaction_id: transactionId,
+        status: 'approved',
+        note: 'Auto-approved via TrueWallet gift link redeem',
+      });
+
+    if (transactionError) {
+      return json({ success: false, message: transactionError.message }, 500);
     }
 
     const { data: orderRow, error: orderError } = await admin
@@ -86,10 +114,8 @@ Deno.serve(async (req) => {
         voucher_hash: voucherHash,
         voucher_preview: voucher.slice(0, 24),
         wallet_number: walletNumber,
-        amount: Number(providerResponse?.amount ?? providerResponse?.data?.amount ?? 0),
+        amount,
         status: 'completed',
-        license_key_id: licenseRow.id,
-        license_key: licenseRow.license_key,
         provider_response: providerResponse,
       })
       .select('id')
@@ -97,22 +123,12 @@ Deno.serve(async (req) => {
 
     if (orderError) return json({ success: false, message: orderError.message }, 500);
 
-    await admin
-      .from('license_keys')
-      .update({
-        is_used: true,
-        used_by: user.id,
-        order_id: orderRow.id,
-        used_at: new Date().toISOString(),
-      })
-      .eq('id', licenseRow.id);
-
     return json({
       success: true,
       orderId: orderRow.id,
-      productName: licenseRow.product_name,
-      licenseKey: licenseRow.license_key,
-      amount: Number(providerResponse?.amount ?? providerResponse?.data?.amount ?? 0),
+      transactionId,
+      amount,
+      message: 'Voucher redeemed and balance added successfully',
     });
   } catch (error) {
     return json({ success: false, message: String(error) }, 500);

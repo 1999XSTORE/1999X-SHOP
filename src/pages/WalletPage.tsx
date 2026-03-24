@@ -19,7 +19,7 @@ const PAYMENT_METHODS = [
   { id:'dana', label:'Dana', color:'#118EEA', glow:'rgba(17,142,234,0.35)', instruction:'Open Dana → Transfer → enter number or scan QR', hasQr:true, qr:'https://www.dropbox.com/scl/fi/hl4a1lmuqz205akk71mld/Dana-Qr-Code.jpg?rlkey=03z6tvrmcw7mrma64u2we82de&st=2ojdhtg9&raw=1', fields:[{label:'Name',value:'Syaiful mu\'an\'an',note:''},{label:'Number',value:'087869604325',note:'Dana transfer'}], icon:<img src="https://www.dropbox.com/scl/fi/r1v3mn866gqmqce95a9cn/dana-e-wallet-app-seeklogo.png?rlkey=h76nv5fmr2fpqt3dtpdl4oy1m&st=iqzs7wlk&raw=1" alt="logo" style={{ width:20, height:20, objectFit:'contain', borderRadius:4 }}/>, bgColor:'rgba(17,142,234,0.08)', borderColor:'rgba(17,142,234,0.25)' },
   { id:'usdt_trc20', label:'USDT TRC20', color:'#26A17B', glow:'rgba(38,161,123,0.35)', instruction:'Send USDT on Tron (TRC20) network only', hasQr:true, qr:'https://www.dropbox.com/scl/fi/1znlsr0llx3x0wanjknlc/Usdt-Trc20-QR-Code.jpg?rlkey=ndsagvf263w8y0g0ykubamgy3&st=qjbdaltp&raw=1', fields:[{label:'TRC20 Address',value:'TVinprV4QCHVuAtJ73fCJxhw3gcsqMFXMP',note:'Tron network only'}], icon:<img src="https://www.dropbox.com/scl/fi/x2r7ukhw2zn6qy8iuhx5e/usdt.png?rlkey=t0ytxc27b89zlj8j3o7ragy32&st=hyz6lplx&raw=1" alt="logo" style={{ width:20, height:20, objectFit:'contain', borderRadius:4 }}/>, bgColor:'rgba(38,161,123,0.08)', borderColor:'rgba(38,161,123,0.25)' },
   { id:'usdt_bep20', label:'USDT BEP20', color:'#F0B90B', glow:'rgba(240,185,11,0.3)', instruction:'Send USDT on BNB Smart Chain (BEP20) only', hasQr:true, qr:'https://www.dropbox.com/scl/fi/aicllbvxqn79zxieufixy/USDT-Bep20-QR-Code.jpg?rlkey=xhyesikquqvusrv4r4dscg6wg&st=8gtzmhir&raw=1', fields:[{label:'BEP20 Address',value:'0x33a0f57c8372a232b1a425210e897c1b0d1b8048',note:'BSC network only'}], icon:<img src="https://www.dropbox.com/scl/fi/x2r7ukhw2zn6qy8iuhx5e/usdt.png?rlkey=t0ytxc27b89zlj8j3o7ragy32&st=hyz6lplx&raw=1" alt="logo" style={{ width:20, height:20, objectFit:'contain', borderRadius:4 }}/>, bgColor:'rgba(240,185,11,0.07)', borderColor:'rgba(240,185,11,0.2)' },
-  { id:'truewallet', label:'TrueWallet AngPao', color:'#F97316', glow:'rgba(249,115,22,0.3)', instruction:'Paste your gift link below. The voucher redeems automatically and returns one unused license key instantly.', hasQr:false, qr:'', fields:[{label:'Flow',value:'Paste gift link',note:'Auto redeem + auto key'}], icon:<Wallet size={18} color="#f97316"/>, bgColor:'rgba(249,115,22,0.08)', borderColor:'rgba(249,115,22,0.22)' },
+  { id:'truewallet', label:'TrueWallet AngPao', color:'#F97316', glow:'rgba(249,115,22,0.3)', instruction:'Paste your gift link below. The voucher redeems automatically and credits the redeemed amount to your wallet balance.', hasQr:false, qr:'', fields:[{label:'Flow',value:'Paste gift link',note:'Auto redeem + auto balance'}], icon:<Wallet size={18} color="#f97316"/>, bgColor:'rgba(249,115,22,0.08)', borderColor:'rgba(249,115,22,0.22)' },
   { id:'litecoin', label:'Litecoin', color:'#A5A9B4', glow:'rgba(165,169,180,0.3)', instruction:'Send LTC to the address above', hasQr:true, qr:'https://www.dropbox.com/scl/fi/d7hcjghzalqk54o6zb0eh/Litecoin-QR-Code.jpg?rlkey=quvx4xj4ex0u6qce9bkhido0m&st=eq3jbe2k&raw=1', fields:[{label:'LTC Address',value:'LRXdzcWZ1mqGiFXNXe2Qe82tM7wUWVH9zd',note:'Litecoin network'}], icon:<img src="https://www.dropbox.com/scl/fi/lktwitcg1khz5f1ya0hhh/litecoin-ltc-icon.png?rlkey=5nlg06klolvrikw03b5zc5wqr&st=tgplvn4k&raw=1" alt="logo" style={{ width:20, height:20, objectFit:'contain', borderRadius:4 }}/>, bgColor:'rgba(52,93,157,0.08)', borderColor:'rgba(52,93,157,0.25)' },
 ] as const;
 
@@ -224,10 +224,10 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
 }
 
 // ── Admin/Support Payment Panel ───────────────────────────────
-function TrueWalletRedeem({ user }: { user: any }) {
+function TrueWalletRedeem({ user, onSuccess }: { user: any; onSuccess: () => void }) {
   const [voucher, setVoucher] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ licenseKey: string; productName: string; amount: number } | null>(null);
+  const [result, setResult] = useState<{ amount: number; transactionId: string } | null>(null);
 
   const getFunctionErrorMessage = async (error: any) => {
     if (!error) return '';
@@ -253,16 +253,17 @@ function TrueWalletRedeem({ user }: { user: any }) {
       toast.error(errorMessage);
       return;
     }
-    setResult({ licenseKey: data.licenseKey, productName: data.productName, amount: Number(data.amount ?? 0) });
+    setResult({ amount: Number(data.amount ?? 0), transactionId: String(data.transactionId ?? '') });
     setVoucher('');
-    toast.success('Voucher redeemed and key generated');
+    onSuccess();
+    toast.success(`Voucher redeemed. $${Number(data.amount ?? 0).toFixed(2)} added to your wallet.`);
   };
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
       <div style={{ padding:'14px 16px', borderRadius:14, background:'rgba(249,115,22,.08)', border:'1px solid rgba(249,115,22,.2)' }}>
         <div style={{ fontSize:13, fontWeight:800, color:'#fb923c', marginBottom:4 }}>TrueWallet AngPao</div>
-        <p style={{ margin:0, fontSize:12, color:'var(--muted)', lineHeight:1.6 }}>Paste a gift link to auto-redeem to the wallet number stored in Supabase and receive the next unused license key instantly.</p>
+        <p style={{ margin:0, fontSize:12, color:'var(--muted)', lineHeight:1.6 }}>Paste a gift link to auto-redeem it and instantly add the redeemed amount to your wallet balance.</p>
       </div>
       <textarea value={voucher} onChange={e=>setVoucher(e.target.value)} rows={3} placeholder="https://gift.truemoney.com/..." style={{ width:'100%', background:'rgba(255,255,255,.04)', border:'1px solid rgba(249,115,22,.2)', borderRadius:12, padding:'13px 16px', color:'#fff', fontFamily:'inherit', fontSize:13, outline:'none', resize:'vertical' }} />
       <button onClick={handleRedeem} disabled={loading} className="btn btn-p btn-lg btn-full" style={{ borderRadius:14 }}>
@@ -270,9 +271,9 @@ function TrueWalletRedeem({ user }: { user: any }) {
       </button>
       {result && (
         <div style={{ padding:'14px 16px', borderRadius:14, background:'rgba(16,232,152,.06)', border:'1px solid rgba(16,232,152,.18)' }}>
-          <div style={{ fontSize:12, color:'var(--muted)', marginBottom:4 }}>{result.productName}</div>
-          <code style={{ display:'block', fontSize:13, color:'#fff', fontFamily:'monospace', wordBreak:'break-all', marginBottom:8 }}>{result.licenseKey}</code>
-          <div style={{ fontSize:11, color:'var(--green)', fontWeight:700 }}>Redeemed amount: {result.amount.toFixed(2)}</div>
+          <div style={{ fontSize:12, color:'var(--muted)', marginBottom:4 }}>Balance added successfully</div>
+          <code style={{ display:'block', fontSize:13, color:'#fff', fontFamily:'monospace', wordBreak:'break-all', marginBottom:8 }}>{result.transactionId}</code>
+          <div style={{ fontSize:11, color:'var(--green)', fontWeight:700 }}>Redeemed amount: ${result.amount.toFixed(2)}</div>
         </div>
       )}
     </div>
@@ -768,7 +769,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
               </div>
 
               {selMethod.id==='paypal'&&<PayPalButton amount={selAmount} user={user} onSuccess={onSuccess}/>}
-              {selMethod.id==='truewallet'&&<TrueWalletRedeem user={user}/>}
+              {selMethod.id==='truewallet'&&<TrueWalletRedeem user={user} onSuccess={loadTxns}/>}
 
               <div style={{ padding:'12px 14px', borderRadius:12, background:'rgba(255,255,255,.02)', border:'1px solid rgba(255,255,255,.04)', display:'flex', gap:10, alignItems:'flex-start', marginTop: selMethod.id==='paypal'?10:0 }}>
                 <span style={{ fontSize:16 }}>💡</span>
@@ -810,7 +811,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                   <div style={{ padding:'14px 16px', borderRadius:14, background:'rgba(249,115,22,.08)', border:'1px solid rgba(249,115,22,.18)' }}>
                     <div style={{ fontSize:13,fontWeight:700,color:'#fb923c',marginBottom:6 }}>Automatic Voucher Flow</div>
                     <p style={{ fontSize:12,color:'var(--muted)',margin:0,lineHeight:1.65 }}>
-                      Paste a TrueWallet gift link on the left. We redeem it automatically, save the order in Supabase, block voucher reuse by hash, and return the next available license key instantly.
+                      Paste a TrueWallet gift link on the left. We redeem it automatically, save the order in Supabase, block voucher reuse by hash, and credit the redeemed amount to your wallet balance.
                     </p>
                   </div>
                 </div>
