@@ -8,8 +8,8 @@ import { useTranslation } from 'react-i18next';
 
 const SUPA_URL  = 'https://wkjqrjafogufqeasfeev.supabase.co';
 const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
-const COOLDOWN  = 172800000;  // 48 h between claims
-const KEY_TTL   = 86400000;   // 1 day key validity (tracked in Supabase, not KeyAuth)
+const COOLDOWN  = 86400000;   // 24 h between claims
+const KEY_TTL   = 3600000;    // 1 h key validity (tracked in Supabase, not KeyAuth)
 
 // ── Countdown ticker ──────────────────────────────────────────
 function Ticker({ expiresAt }: { expiresAt: string }) {
@@ -136,17 +136,17 @@ function FreeKeyCard() {
     toast.loading(t('dashboard.freeKeyGenerating'), { id: 'fk' });
 
     try {
-      // Call the existing generate-key edge function with days:1 for BOTH panels
+      // Call the existing generate-key edge function with hours:1 for BOTH panels
       const [lagRes, intRes] = await Promise.all([
         fetch(`${SUPA_URL}/functions/v1/generate-key`, {
           method: 'POST',
           headers: { 'Content-Type':'application/json', Authorization:`Bearer ${SUPA_ANON}`, apikey:SUPA_ANON },
-          body: JSON.stringify({ panel_type:'lag',      days:1, hours:0, mask:'1999X-FREE-****' }),
+          body: JSON.stringify({ panel_type:'lag',      hours:1, days:0, mask:'1999X-FREE-****' }),
         }).then(r => r.json()),
         fetch(`${SUPA_URL}/functions/v1/generate-key`, {
           method: 'POST',
           headers: { 'Content-Type':'application/json', Authorization:`Bearer ${SUPA_ANON}`, apikey:SUPA_ANON },
-          body: JSON.stringify({ panel_type:'internal', days:1, hours:0, mask:'1999X-FREE-****' }),
+          body: JSON.stringify({ panel_type:'internal', hours:1, days:0, mask:'1999X-FREE-****' }),
         }).then(r => r.json()),
       ]);
 
@@ -191,7 +191,7 @@ function FreeKeyCard() {
       });
 
       setRow({ lag_key:lagKey, internal_key:intKey, claimed_at:now, expires_at:expiresAt });
-      logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'free_key_claim', product:'Free 1-Day Key', status:'success', meta:{ lag:!!lagKey, internal:!!intKey, expires:expiresAt } });
+      logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'free_key_claim', product:'Free 1-Hour Key', status:'success', meta:{ lag:!!lagKey, internal:!!intKey, expires:expiresAt } });
       toast.dismiss('fk');
       toast.success('🎉 ' + t('dashboard.freeKeyClaimed'));
     } catch (e) {
