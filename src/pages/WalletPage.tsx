@@ -126,17 +126,30 @@ function PayPalButton({ amount, user, onSuccess, referralEmail }: { amount: numb
 
           // Step 2: Insert approved transaction directly via Supabase (no edge function needed)
           // This is safe because the SDK capture already verified the payment with PayPal
-          const { error: txErr } = await supabase.from('transactions').insert({
-            user_id:        user.id,
-            user_email:     user.email,
-            user_name:      user.name,
-            amount:         finalAmount,
-            method:         'paypal',
-            transaction_id: orderId,
-            status:         'approved',
-            note:           'Auto-verified via PayPal JS SDK capture',
-            referral_email: referralEmail || '',
-          });
+          const { data: txRow, error: txErr } = await supabase
+            .from('transactions')
+            .insert({
+              user_id:        user.id,
+              user_email:     user.email,
+              user_name:      user.name,
+              amount:         finalAmount,
+              method:         'paypal',
+              transaction_id: orderId,
+              status:         'approved',
+              note:           'Auto-verified via PayPal JS SDK capture',
+              referral_email: referralEmail || '',
+            })
+            .select('id')
+            .single();
+
+          if (!txErr && txRow?.id) {
+            const { error: resellerCreditError } = await supabase.rpc('apply_reseller_credit', {
+              p_transaction_id: txRow.id,
+            });
+            if (resellerCreditError) {
+              console.error('Failed to apply reseller credit for PayPal payment:', resellerCreditError);
+            }
+          }
 
           // Step 3: Record in paypal_auto_credits for idempotency (ignore if already exists)
           await supabase.from('paypal_auto_credits').insert({
@@ -331,6 +344,15 @@ function AdminPanel() {
   const approve = async (tx: any) => {
     const { error } = await safeQuery(() => supabase.from('transactions').update({ status:'approved', updated_at:new Date().toISOString() }).eq('id',tx.id));
     if (error) { toast.error('Failed: '+error.message); return; }
+
+    const { error: resellerCreditError } = await safeQuery(() =>
+      supabase.rpc('apply_reseller_credit', { p_transaction_id: tx.id })
+    );
+    if (resellerCreditError) {
+      toast.error(`Approved, but reseller payout failed: ${resellerCreditError.message}`);
+      return;
+    }
+
     toast.success(`✅ Approved $${tx.amount} for ${tx.user_name}`);
     setTxns(p => p.map(t => t.id===tx.id ? {...t,status:'approved'} : t));
     logActivity({ userId:adminUser?.id??'', userEmail:adminUser?.email??'', userName:adminUser?.name??'', action:'payment_approved', amount:Number(tx.amount), status:'success', meta:{ for_user:tx.user_email, method:tx.method } });
@@ -2029,3 +2051,6 @@ export default function WalletPage() {
     </>
   );
 }
+
+
+
