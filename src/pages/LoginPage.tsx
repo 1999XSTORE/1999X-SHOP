@@ -44,8 +44,9 @@ export default function LoginPage() {
       setLoading(false);
       toast.error('Google login is taking too long. Please try again.');
     }, 12000);
+    const redirectTo = `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`;
     const { error } = await supabase.auth.signInWithOAuth({
-      provider:'google', options:{ redirectTo: window.location.origin }
+      provider:'google', options:{ redirectTo }
     });
     if (error) {
       if (loginTimer.current) window.clearTimeout(loginTimer.current);

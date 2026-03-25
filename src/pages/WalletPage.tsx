@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppStore, PRODUCTS } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
-import { ArrowRight, ArrowLeft, RefreshCw, Users, Check, X, Copy, CheckCircle, Loader2, Eye, EyeOff, ZoomIn, Upload, Wallet, ShoppingBag, CreditCard, ExternalLink, Search } from 'lucide-react';
+import { ArrowRight, ArrowLeft, RefreshCw, Users, Check, X, Copy, CheckCircle, Loader2, Eye, EyeOff, ZoomIn, Wallet, ShoppingBag, CreditCard, ExternalLink, Search } from 'lucide-react';
 import { safeQuery } from '@/lib/safeFetch';
 import { logActivity, notifyUser } from '@/lib/activity';
 import { cn } from '@/lib/utils';
-import { buildReferralLink, captureReferralFromUrl, clearStoredReferralEmail, getStoredReferralEmail, normalizeResellerEmail, sanitizeReferralCode } from '@/lib/reseller';
+import { buildReferralLink, captureReferralFromUrl, clearStoredReferralEmail, getStoredReferralEmail, normalizeReferralValue, normalizeResellerEmail, sanitizeReferralCode } from '@/lib/reseller';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
@@ -329,7 +329,7 @@ function AdminPanel() {
     setL(true);
     let q = supabase
       .from('transactions')
-      .select('id,user_id,user_email,user_name,amount,method,transaction_id,status,screenshot_url,note,created_at,updated_at')
+      .select('id,user_id,user_email,user_name,amount,method,transaction_id,status,note,created_at,updated_at')
       .order('created_at',{ ascending:false })
       .limit(search.trim() ? 50 : filter === 'pending' ? 40 : 25);
     if (search.trim()) q = (q as any).or(`user_email.ilike.%${search.trim()}%,user_name.ilike.%${search.trim()}%,transaction_id.ilike.%${search.trim()}%`);
@@ -565,6 +565,11 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
   const plan = group.plans[sel];
   const can  = balance >= plan.price;
   const isFeatured = !!(group as any).featured;
+  const cardImage = group.id === 'internal'
+    ? 'https://www.dropbox.com/scl/fi/vmjmtlagavp3qnxy44vng/Internal.png?rlkey=wu9oxjcrvwh1tw685aqa7z8gm&st=xsnlein0&raw=1'
+    : group.id === 'lag'
+      ? 'https://www.dropbox.com/scl/fi/7gg0c6tvs1vkcyba0ofw4/Fake-Lag.png?rlkey=muslqa9erob4yq8ojoyotsgmp&st=87k0qh8e&raw=1'
+      : 'https://www.dropbox.com/scl/fi/b09vgdpumapu0qrmauzf2/Combo.png?rlkey=nph0m7pxg7klstq9n5voxs0qj&st=cnlqvvws&raw=1';
 
   // per-day price for value label
   const perDay = (plan.price / plan.days).toFixed(2);
@@ -600,6 +605,22 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
           : `0 24px 48px rgba(0,0,0,.45)`;
       }}
     >
+      <img
+        src={cardImage}
+        alt={group.name}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: 'center',
+          opacity: .18,
+          transform: 'scale(1.04)',
+          pointerEvents: 'none',
+        }}
+      />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(9,10,17,.18) 0%, rgba(9,10,17,.78) 48%, rgba(9,10,17,.95) 100%)', pointerEvents: 'none' }} />
       {/* Top accent bar */}
       <div style={{ height: 2, background: `linear-gradient(90deg, transparent 0%, ${group.color} 40%, ${isFeatured ? '#e8b84b' : group.color} 60%, transparent 100%)` }} />
 
@@ -785,22 +806,12 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
   const [methodId, setMethodId] = useState<MethodId>('binance');
   const [txnId, setTxnId] = useState('');
   const [email, setEmail] = useState(user?.email || '');
-  const [screenshotPreview, setScreenshotPreview] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [qrZoom, setQrZoom] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const selAmount = custom ? parseFloat(custom)||0 : amount;
   const selMethod = PAYMENT_METHODS.find(m=>m.id===methodId) ?? PAYMENT_METHODS[0];
   const lc = localAmt(selAmount, methodId);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = ev => setScreenshotPreview(ev.target?.result as string);
-    reader.readAsDataURL(f);
-  };
 
   const handleSubmit = async () => {
     if (!txnId.trim()) { toast.error('Enter your transaction ID'); return; }
@@ -809,9 +820,9 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
     if (!email.trim()) { toast.error('Enter your email'); return; }
     setSubmitting(true);
     const { error } = await safeQuery(() => supabase.from('transactions').insert({
-      user_id:user.id, user_email:email.trim(), user_name:user.name,
-      amount:selAmount, method:methodId, transaction_id:txnId.trim(), status:'pending', screenshot_url:screenshotPreview || '', referral_email: referralEmail || ''
-    }));
+        user_id:user.id, user_email:email.trim(), user_name:user.name,
+        amount:selAmount, method:methodId, transaction_id:txnId.trim(), status:'pending', referral_email: referralEmail || ''
+      }));
     if (error) {
       if (error.message==='timeout') toast.error('Request timed out.');
       else if (error.message.includes('relation')) toast.error('Table not found. Run SQL migrations.');
@@ -819,7 +830,7 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
     } else {
       toast.success('✅ Submitted! Admin will approve shortly.');
       logActivity({ userId:user.id, userEmail:email.trim(), userName:user.name, action:'payment_submit', amount:selAmount, status:'success', meta:{ method:methodId, txnId:txnId.trim()||'paypal-auto' } });
-      setStep(1); setTxnId(''); setCustom(''); setScreenshotPreview('');
+        setStep(1); setTxnId(''); setCustom('');
       onSuccess();
     }
     setSubmitting(false);
@@ -1172,26 +1183,6 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
                   </div>
 
                   {/* Screenshot */}
-                  <div style={{ marginBottom:24 }}>
-                    <label className="dep-label">Payment Screenshot</label>
-                    <input type="file" ref={fileRef} accept="image/*" style={{ display:'none' }} onChange={handleFileChange} />
-                    {screenshotPreview ? (
-                      <div style={{ position:'relative', borderRadius:14, overflow:'hidden', border:'1px solid rgba(16,232,152,.25)', cursor:'pointer' }}
-                        onClick={() => fileRef.current?.click()}>
-                        <img src={screenshotPreview} alt="Screenshot" style={{ width:'100%', maxHeight:130, objectFit:'cover', display:'block' }} />
-                        <div style={{ position:'absolute', top:8, right:8, padding:'3px 10px', borderRadius:20, background:'rgba(16,232,152,.15)', border:'1px solid rgba(16,232,152,.3)', fontSize:10, fontWeight:700, color:'var(--green)' }}>✓ Uploaded</div>
-                      </div>
-                    ) : (
-                      <div className="dep-upload" onClick={() => fileRef.current?.click()}>
-                        <div style={{ width:44, height:44, borderRadius:12, background:'rgba(139,92,246,.1)', border:'1px solid rgba(139,92,246,.2)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 10px' }}>
-                          <Upload size={20} color="var(--purple)" />
-                        </div>
-                        <div style={{ fontSize:13, fontWeight:700, color:'rgba(255,255,255,.45)', marginBottom:4 }}>Upload payment proof</div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.22)' }}>JPG, PNG, WEBP · Click to browse</div>
-                      </div>
-                    )}
-                  </div>
-
                   {/* Summary pill */}
                   <div style={{ display:'flex', alignItems:'center', gap:12, padding:'13px 16px', borderRadius:14, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', marginBottom:20 }}>
                     <div style={{ width:36, height:36, borderRadius:10, background:selMethod.bgColor, border:`1px solid ${selMethod.borderColor}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{selMethod.icon}</div>
@@ -1238,13 +1229,6 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
             ))}
           </div>
 
-          {screenshotPreview && (
-            <div style={{ marginBottom:20 }}>
-              <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:8, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em' }}>Payment Screenshot</div>
-              <img src={screenshotPreview} alt="Proof" style={{ width:'100%', maxHeight:110, objectFit:'cover', borderRadius:12 }} />
-            </div>
-          )}
-
           <div style={{ display:'flex', alignItems:'flex-start', gap:12, padding:'14px 18px', borderRadius:13, background:'rgba(251,191,36,.05)', border:'1px solid rgba(251,191,36,.15)', marginBottom:22 }}>
             <span style={{ fontSize:18, flexShrink:0 }}>⚡</span>
             <p style={{ fontSize:12, color:'rgba(255,255,255,.5)', lineHeight:1.65, margin:0 }}>
@@ -1266,7 +1250,7 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
 // ══════════════════════════════════════════════════════════════
 export default function WalletPage() {
   const { t } = useTranslation();
-  const { balance, deductBalance, refundBalance, addLicense, user } = useAppStore();
+  const { balance, deductBalance, refundBalance, addLicense, licenses, user } = useAppStore();
   const [myTxns, setMyTxns] = useState<any[]>([]);
   const [isReseller, setIsReseller] = useState(false);
   const [resellerWallet, setResellerWallet] = useState<any | null>(null);
@@ -1289,6 +1273,7 @@ export default function WalletPage() {
   const normalizedUserEmail = normalizeResellerEmail(user?.email ?? '');
   const referralLink = isReseller && (referralCode || user?.email) ? buildReferralLink(referralCode || user.email) : '';
   const isFriday = new Date().getDay() === 5;
+  const sortedPurchasedLicenses = [...licenses].sort((a, b) => new Date(b.expiresAt).getTime() - new Date(a.expiresAt).getTime());
 
   useEffect(() => {
     resellerAccessChecked.current = false;
@@ -1304,7 +1289,7 @@ export default function WalletPage() {
     const { data } = await safeQuery(() =>
       supabase
         .from('transactions')
-        .select('id,user_id,user_email,user_name,amount,method,transaction_id,status,screenshot_url,note,created_at,updated_at')
+        .select('id,user_id,user_email,user_name,amount,method,transaction_id,status,note,created_at,updated_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(40)
@@ -1378,9 +1363,9 @@ export default function WalletPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const resolveActiveReferral = async () => {
-      const captured = captureReferralFromUrl(user?.email);
-      const rawReferral = normalizeResellerEmail(captured || getStoredReferralEmail());
+      const resolveActiveReferral = async () => {
+        const captured = captureReferralFromUrl(user?.email);
+        const rawReferral = normalizeReferralValue(captured || getStoredReferralEmail());
       if (!rawReferral || rawReferral === normalizedUserEmail) {
         setActiveReferral('');
         return;
@@ -1467,7 +1452,26 @@ export default function WalletPage() {
           const expiry  = new Date(Date.now()+days*86400000).toISOString();
           const panelId = p==='lag'?'keyauth-lag':'keyauth-internal';
           const panelNm = p==='lag'?'Fake Lag':'Internal';
-          addLicense({ id:`purchase_${Math.random().toString(36).slice(2,10)}`, productId:panelId, productName:panelNm, key:p==='lag'?result.key:result.key+'_INTERNAL', hwid:'', lastLogin:new Date().toISOString(), expiresAt:expiry, status:'active', ip:'', device:'', hwidResetsUsed:0, hwidResetMonth:new Date().getMonth() });
+          const licenseKey = p==='lag' ? result.key : result.key+'_INTERNAL';
+          addLicense({ id:`purchase_${Math.random().toString(36).slice(2,10)}`, productId:panelId, productName:panelNm, key:licenseKey, keyauthUsername:result.key, hwid:'', lastLogin:new Date().toISOString(), expiresAt:expiry, status:'active', ip:'', device:'', hwidResetsUsed:0, hwidResetMonth:new Date().getMonth() });
+          if (user?.id && user?.email) {
+            await safeQuery(() => supabase.from('user_licenses').upsert({
+              user_id: user.id,
+              user_email: user.email,
+              product_id: panelId,
+              product_name: panelNm,
+              license_key: licenseKey,
+              keyauth_username: result.key,
+              hwid: '',
+              last_login: new Date().toISOString(),
+              expires_at: expiry,
+              status: 'active',
+              ip: '',
+              device: '',
+              hwid_resets_used: 0,
+              hwid_reset_month: new Date().getMonth(),
+            }, { onConflict: 'user_id,license_key' }));
+          }
           generatedKeys.push({ key:result.key, panelId, panelName:panelNm, expiresAt:expiry });
         } else { errors.push(`${p}: ${result?.message??'Unknown error'}`); }
       } catch(e) { errors.push(`${p}: ${String(e)}`); }
@@ -1994,10 +1998,10 @@ export default function WalletPage() {
 
               {/* History header */}
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'22px 26px', borderBottom:'1px solid rgba(255,255,255,.06)' }}>
-                <div>
-                  <div style={{ fontSize:16, fontWeight:800, color:'#fff', marginBottom:2 }}>Transaction History</div>
-                  <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>{myTxns.length} total · {myTxns.filter(t=>t.status==='approved').length} approved</div>
-                </div>
+                  <div>
+                    <div style={{ fontSize:16, fontWeight:800, color:'#fff', marginBottom:2 }}>Transaction History</div>
+                    <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>{myTxns.length} payments · {sortedPurchasedLicenses.length} purchased keys</div>
+                  </div>
                 <button onClick={loadTxns} disabled={txnsLoad}
                   style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:11, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.09)', cursor:'pointer', color:'rgba(255,255,255,.55)', fontFamily:'inherit', fontSize:12, fontWeight:600, transition:'all .18s' }}
                   onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.09)';(e.currentTarget as HTMLButtonElement).style.color='#fff';}}
@@ -2013,14 +2017,45 @@ export default function WalletPage() {
                       <Loader2 size={16} className="animate-spin"/>
                       <span style={{ fontSize:13 }}>Loading transactions…</span>
                     </div>
-                  : myTxns.length===0
-                  ? <div style={{ textAlign:'center', padding:'56px 0' }}>
-                      <div style={{ fontSize:42, marginBottom:14, opacity:.5 }}>📭</div>
-                      <p style={{ fontSize:14, color:'rgba(255,255,255,.4)', fontWeight:700, marginBottom:5 }}>No transactions yet</p>
-                      <p style={{ fontSize:12, color:'rgba(255,255,255,.2)' }}>Add balance to see your history here</p>
-                    </div>
-                  : <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                      {myTxns.map(tx=>{
+                    : myTxns.length===0 && sortedPurchasedLicenses.length===0
+                    ? <div style={{ textAlign:'center', padding:'56px 0' }}>
+                        <div style={{ fontSize:42, marginBottom:14, opacity:.5 }}>📭</div>
+                        <p style={{ fontSize:14, color:'rgba(255,255,255,.4)', fontWeight:700, marginBottom:5 }}>No history yet</p>
+                        <p style={{ fontSize:12, color:'rgba(255,255,255,.2)' }}>Payments and purchased keys will appear here</p>
+                      </div>
+                    : <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                        {sortedPurchasedLicenses.length > 0 && (
+                          <div style={{ padding:'10px 6px 18px' }}>
+                            <div style={{ fontSize:13, fontWeight:800, color:'#fff', margin:'4px 10px 12px' }}>Purchased Keys</div>
+                            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                              {sortedPurchasedLicenses.map(license => (
+                                <div key={`${license.productId}-${license.key}`} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'16px 18px', borderRadius:18, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)' }}>
+                                  <div style={{ minWidth:0, flex:1 }}>
+                                    <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8, flexWrap:'wrap' }}>
+                                      <span style={{ fontSize:14, fontWeight:800, color:'#fff' }}>{license.productName}</span>
+                                      <span style={{ padding:'4px 10px', borderRadius:999, fontSize:10, fontWeight:800, background: license.status==='expired' ? 'rgba(248,113,113,.12)' : 'rgba(16,232,152,.12)', border: `1px solid ${license.status==='expired' ? 'rgba(248,113,113,.18)' : 'rgba(16,232,152,.18)'}`, color: license.status==='expired' ? '#fca5a5' : '#86efac' }}>
+                                        {license.status === 'expired' ? 'Expired' : 'Active'}
+                                      </span>
+                                    </div>
+                                    <code style={{ display:'block', fontSize:12, color:'#fff', background:'rgba(0,0,0,.24)', padding:'10px 12px', borderRadius:12, border:'1px solid rgba(255,255,255,.06)', wordBreak:'break-all' }}>
+                                      {license.key}
+                                    </code>
+                                    <div style={{ marginTop:8, fontSize:11, color:'rgba(255,255,255,.35)' }}>
+                                      Expires {new Date(license.expiresAt).toLocaleString()}
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => { navigator.clipboard.writeText(String(license.key).replace('_INTERNAL','')); toast.success('License key copied'); }}
+                                    style={{ padding:'10px 14px', borderRadius:12, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.08)', color:'#fff', fontFamily:'inherit', fontSize:12, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6, flexShrink:0 }}
+                                  >
+                                    <Copy size={13}/> Copy
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {myTxns.map(tx=>{
                         const m   = PAYMENT_METHODS.find(p=>p.id===tx.method);
                         const sc  = tx.status==='approved'?'#10e898':tx.status==='rejected'?'#f87171':'#fbbf24';
                         const sbg = tx.status==='approved'?'rgba(16,232,152,.06)':tx.status==='rejected'?'rgba(248,113,113,.06)':'rgba(251,191,36,.06)';

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppStore } from '@/lib/store';
-import { Trash2, Edit2, Reply, X, Crown, Shield, Copy, Smile, Hash, Lock, Users, ImagePlus } from 'lucide-react';
+import { Trash2, Edit2, Reply, X, Crown, Shield, Copy, Smile, Hash, Lock, Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { logActivity, notifyAll, notifyUser, sendNotificationEmail } from '@/lib/activity';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +15,6 @@ interface Msg {
   user_avatar: string;
   user_role: string;
   message: string;
-  image_url?: string;
   created_at: string;
   reply_to?: string | null;
   is_private?: boolean;
@@ -157,17 +156,6 @@ function Message({ msg, isOwn, isMod, currentUserId, onReply, onDelete, onEdit, 
           </p>
         )}
 
-        {msg.image_url && (
-          <div style={{ marginTop:8 }}>
-            <img
-              src={msg.image_url}
-              alt="Chat upload"
-              style={{ maxWidth:'min(280px, 100%)', maxHeight:260, width:'auto', height:'auto', borderRadius:12, border:'1px solid rgba(255,255,255,.1)', display:'block', objectFit:'cover', boxShadow:'0 12px 28px rgba(0,0,0,.28)', cursor:'pointer' }}
-              onClick={() => window.open(msg.image_url, '_blank', 'noopener,noreferrer')}
-            />
-          </div>
-        )}
-
         {/* Reactions */}
         {Object.entries(reactions).filter(([,u])=>u.length>0).length>0 && (
           <div style={{ display:'flex', gap:4, marginTop:5, flexWrap:'wrap' }}>
@@ -223,8 +211,6 @@ export default function ChatPage() {
   const [editId,      setEditId]      = useState<string|null>(null);
   const [editText,    setEditText]    = useState('');
   const [replyTo,     setReplyTo]     = useState<Msg|null>(null);
-  const [imageFile,   setImageFile]   = useState<File|null>(null);
-  const [imagePreview,setImagePreview]= useState('');
   const [typingUsers, setTypingUsers] = useState<Record<string,string>>({});
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [showSidebar, setShowSidebar] = useState(false); // collapsed by default on mobile
@@ -233,7 +219,6 @@ export default function ChatPage() {
 
   const bottomRef   = useRef<HTMLDivElement>(null);
   const inputRef    = useRef<HTMLTextAreaElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
   const lastSent    = useRef(0);
   const channelRef  = useRef<any>(null);
@@ -260,26 +245,6 @@ export default function ChatPage() {
     reader.onerror = () => reject(new Error('Failed to read image'));
     reader.readAsDataURL(file);
   });
-
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
-    if (file.size > 3 * 1024 * 1024) {
-      toast.error('Image must be under 3MB');
-      return;
-    }
-    try {
-      const dataUrl = await readFileAsDataUrl(file);
-      setImageFile(file);
-      setImagePreview(dataUrl);
-    } catch {
-      toast.error('Failed to load image');
-    }
-  };
 
   // Responsive detection
   useEffect(() => {
@@ -361,34 +326,31 @@ export default function ChatPage() {
 
   const handleSend = useCallback(async()=>{
     const txt=input.trim();
-    if((!txt && !imagePreview)||!user) return;
+    if(!txt||!user) return;
     if(Date.now()-lastSent.current<1000){toast.error(t('common.tryAgain'));return;}
     lastSent.current=Date.now();
     const isPrivate = shouldCreatePrivateReply(replyTo);
     const privateTargetId = isPrivate ? getPrivateTargetId(replyTo) : null;
-    const outgoingImage = imagePreview;
-    const outgoingFile = imageFile;
-    setInput('');setReplyTo(null);setImageFile(null);setImagePreview('');
-    if (imageInputRef.current) imageInputRef.current.value = '';
+    setInput('');setReplyTo(null);
     if (inputRef.current) { inputRef.current.style.height='auto'; }
     const tempId=`temp_${Date.now()}`;
-    const optimistic:Msg={id:tempId,user_id:user.id,user_email:user.email,user_name:user.name,user_avatar:user.avatar||'',user_role:user.role||'user',message:txt || 'Image',image_url:outgoingImage,created_at:new Date().toISOString(),reply_to:replyTo?.id||null,is_private:isPrivate,private_target_user_id:privateTargetId};
+    const optimistic:Msg={id:tempId,user_id:user.id,user_email:user.email,user_name:user.name,user_avatar:user.avatar||'',user_role:user.role||'user',message:txt,created_at:new Date().toISOString(),reply_to:replyTo?.id||null,is_private:isPrivate,private_target_user_id:privateTargetId};
     setMessages(p=>[...p,optimistic]);
-    const {data,error}=await supabase.from('chat_messages').insert({user_id:user.id,user_email:user.email,user_name:user.name,user_avatar:user.avatar||'',user_role:user.role||'user',message:txt || 'Image',image_url:outgoingImage,reply_to:replyTo?.id||null,is_private:isPrivate,private_target_user_id:privateTargetId}).select().single();
-    if(error){toast.error(t('common.error'));setMessages(p=>p.filter(m=>m.id!==tempId));setInput(txt);setImageFile(outgoingFile);setImagePreview(outgoingImage);}
+    const {data,error}=await supabase.from('chat_messages').insert({user_id:user.id,user_email:user.email,user_name:user.name,user_avatar:user.avatar||'',user_role:user.role||'user',message:txt,reply_to:replyTo?.id||null,is_private:isPrivate,private_target_user_id:privateTargetId}).select().single();
+    if(error){toast.error(error.message || t('common.error'));setMessages(p=>p.filter(m=>m.id!==tempId));setInput(txt);}
     else if(data){
       setMessages(p=>p.map(m=>m.id===tempId?data:m));
       if(isPrivate && replyTo && privateTargetId && replyTo.user_email){
-        notifyUser(privateTargetId, { type:'chat', title:`Private reply from ${user.name}`, body:(txt || 'Image reply').slice(0,80), linkPath:'/chat' });
-        sendNotificationEmail({ to:[replyTo.user_email], subject:`Private reply from ${user.name}`, html:`<p>${user.name} replied to your support thread.</p><p><strong>Message:</strong> ${txt || 'Image reply'}</p>` });
-        logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'private_reply', status:'success', meta:{ preview:(txt || 'image').slice(0,60), target_user_id:privateTargetId } });
+        notifyUser(privateTargetId, { type:'chat', title:`Private reply from ${user.name}`, body:txt.slice(0,80), linkPath:'/chat' });
+        sendNotificationEmail({ to:[replyTo.user_email], subject:`Private reply from ${user.name}`, html:`<p>${user.name} replied to your support thread.</p><p><strong>Message:</strong> ${txt}</p>` });
+        logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'private_reply', status:'success', meta:{ preview:txt.slice(0,60), target_user_id:privateTargetId } });
       }
       // Log activity (skip private messages to avoid spamming logs)
-      if(!isPrivate && user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'message_sent', status:'success', meta:{ preview:(txt || 'image').slice(0,40) } });
+      if(!isPrivate && user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'message_sent', status:'success', meta:{ preview:txt.slice(0,40) } });
       // Notify all users of new chat message (small badge increment)
-      if(!isPrivate) notifyAll({ type:'chat', title:`New chat from ${user?.name?.split(' ')[0]}: ${(txt || 'Image').slice(0,50)}`, body:'', linkPath:'/chat' });
+      if(!isPrivate) notifyAll({ type:'chat', title:`New chat from ${user?.name?.split(' ')[0]}: ${txt.slice(0,50)}`, body:'', linkPath:'/chat' });
     }
-  },[input,user,replyTo,shouldCreatePrivateReply,getPrivateTargetId,imagePreview,imageFile,t]);
+  },[input,user,replyTo,shouldCreatePrivateReply,getPrivateTargetId,t]);
 
   const handleDelete = async (id: string) => {
     // Optimistic: remove immediately from local state, realtime confirms for other users
@@ -598,19 +560,7 @@ export default function ChatPage() {
             {/* Input row */}
             <div style={{ display:'flex', gap:8, alignItems:'flex-end', background:isPrivateInput?'rgba(139,92,246,.06)':'rgba(255,255,255,.04)', border:isPrivateInput?'1px solid rgba(139,92,246,.22)':'1px solid rgba(255,255,255,.07)', borderRadius:12, padding:'8px 10px', transition:'all .2s', boxShadow:isPrivateInput?'0 0 16px rgba(139,92,246,.08)':'none' }}>
               <Avatar src={user?.avatar} name={user?.name||'?'} role={user?.role} size={26}/>
-              <div style={{ flex:1, minWidth:0 }}>
-                {imagePreview && (
-                  <div style={{ display:'inline-flex', alignItems:'center', gap:8, marginBottom:8, padding:'6px 8px', borderRadius:12, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)' }}>
-                    <img src={imagePreview} alt="Preview" style={{ width:52, height:52, objectFit:'cover', borderRadius:10, border:'1px solid rgba(255,255,255,.08)' }} />
-                    <div style={{ minWidth:0 }}>
-                      <div style={{ fontSize:11, fontWeight:700, color:'#fff' }}>{imageFile?.name || 'Image selected'}</div>
-                      <div style={{ fontSize:10, color:'var(--muted)' }}>Ready to send</div>
-                    </div>
-                    <button onClick={() => { setImageFile(null); setImagePreview(''); if (imageInputRef.current) imageInputRef.current.value = ''; }} style={{ padding:'4px 6px', borderRadius:8, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.08)', cursor:'pointer', color:'var(--muted)', display:'flex' }}>
-                      <X size={12}/>
-                    </button>
-                  </div>
-                )}
+                <div style={{ flex:1, minWidth:0 }}>
                 {replyTo && shouldCreatePrivateReply(replyTo) && (
                   <div style={{ display:'flex',alignItems:'center',gap:4,marginBottom:4 }}>
                     <Lock size={9} color="var(--purple)"/>
@@ -640,18 +590,9 @@ export default function ChatPage() {
                   disabled={!user}
                 />
               </div>
-              <input ref={imageInputRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleImageChange} />
-              <button
-                onClick={() => imageInputRef.current?.click()}
-                disabled={!user}
-                style={{ padding:'8px 9px', borderRadius:11, border:'1px solid rgba(255,255,255,.08)', cursor:user?'pointer':'not-allowed', background:imagePreview?'rgba(139,92,246,.16)':'rgba(255,255,255,.04)', color:imagePreview?'#c4b5fd':'rgba(255,255,255,.62)', display:'flex', alignItems:'center', flexShrink:0, opacity:user?1:0.35 }}
-                title="Upload image"
-              >
-                <ImagePlus size={15}/>
-              </button>
               <button
                 onClick={handleSend}
-                disabled={(!input.trim() && !imagePreview)||!user}
+                disabled={!input.trim()||!user}
                 className="chat-send-btn"
                 style={isPrivateInput ? { background:'linear-gradient(135deg,#7c3aed,#6d28d9)' } : undefined}
               >
