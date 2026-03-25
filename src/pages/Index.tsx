@@ -19,13 +19,6 @@ const BonusPage = lazy(() => import('@/pages/BonusPage'));
 const AnnouncementsPage = lazy(() => import('@/pages/AnnouncementsPage'));
 const AdminActivityPage = lazy(() => import('@/pages/AdminActivityPage'));
 
-const preloadCommonPages = () => {
-  void import('@/pages/WalletPage');
-  void import('@/pages/LicensesPage');
-  void import('@/pages/ChatPage');
-  void import('@/pages/DashboardPage');
-};
-
 const pageComponents: Record<string, React.LazyExoticComponent<React.ComponentType<any>>> = {
   '/':                DashboardPage,
   '/licenses':        LicensesPage,
@@ -153,23 +146,6 @@ export default function Index() {
     if (!user?.id || !user.email) return;
     captureReferralFromUrl(user.email);
   }, [user?.id, user?.email]);
-
-  useEffect(() => {
-    if (!authReady || !isAuthenticated) return;
-    const schedule = (cb: () => void) => {
-      const win = window as Window & { requestIdleCallback?: (callback: () => void) => number };
-      if (typeof win.requestIdleCallback === 'function') return win.requestIdleCallback(cb);
-      return window.setTimeout(cb, 600);
-    };
-    const cancel = (id: number) => {
-      const win = window as Window & { cancelIdleCallback?: (handle: number) => void };
-      if (typeof win.cancelIdleCallback === 'function') win.cancelIdleCallback(id);
-      else window.clearTimeout(id);
-    };
-
-    const id = schedule(preloadCommonPages);
-    return () => cancel(id);
-  }, [authReady, isAuthenticated]);
 
   const handleLogout = async () => {
     intentionalLogout.current = true;
