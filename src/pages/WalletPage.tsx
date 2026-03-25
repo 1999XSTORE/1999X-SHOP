@@ -5,7 +5,7 @@ import { ArrowRight, ArrowLeft, RefreshCw, Users, Check, X, Copy, CheckCircle, L
 import { safeQuery } from '@/lib/safeFetch';
 import { logActivity, notifyUser } from '@/lib/activity';
 import { cn } from '@/lib/utils';
-import { buildReferralLink, captureReferralFromUrl, getStoredReferralEmail, normalizeResellerEmail } from '@/lib/reseller';
+import { buildReferralLink, captureReferralFromUrl, clearStoredReferralEmail, getStoredReferralEmail, normalizeResellerEmail, sanitizeReferralCode } from '@/lib/reseller';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
@@ -1249,6 +1249,9 @@ export default function WalletPage() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawing, setWithdrawing] = useState(false);
   const [activeReferral, setActiveReferral] = useState('');
+  const [referralCode, setReferralCode] = useState('');
+  const [referralInput, setReferralInput] = useState('');
+  const [savingReferralCode, setSavingReferralCode] = useState(false);
   const [txnsLoad, setTxnsLoad] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState<{ product: any; keys: Array<{ key: string; panelId: string; panelName: string; expiresAt: string }> } | null>(null);
   const [confirmPending, setConfirmPending] = useState<any | null>(null);
@@ -1257,7 +1260,7 @@ export default function WalletPage() {
   const isAdmin   = user?.role === 'admin';
   const isSupport = user?.role === 'support';
   const normalizedUserEmail = normalizeResellerEmail(user?.email ?? '');
-  const referralLink = isReseller && user?.email ? buildReferralLink(user.email) : '';
+  const referralLink = isReseller && (referralCode || user?.email) ? buildReferralLink(referralCode || user.email) : '';
   const isFriday = new Date().getDay() === 5;
 
   const loadTxns = async () => {
@@ -1271,7 +1274,7 @@ export default function WalletPage() {
   const loadResellerData = async () => {
     if (!user?.id || !user.email || isAdmin || isSupport) return;
     const { data: accessRow } = await safeQuery(() =>
-      supabase.from('reseller_accounts').select('email,is_active').eq('email', user.email.toLowerCase()).eq('is_active', true).maybeSingle()
+      supabase.from('reseller_accounts').select('email,is_active,referral_code').eq('email', user.email.toLowerCase()).eq('is_active', true).maybeSingle()
     );
     const allowed = !!accessRow;
     setIsReseller(allowed);
@@ -1279,8 +1282,14 @@ export default function WalletPage() {
       setResellerWallet(null);
       setResellerTransactions([]);
       setWithdrawRequests([]);
+      setReferralCode('');
+      setReferralInput('');
       return;
     }
+
+    const defaultCode = sanitizeReferralCode(accessRow?.referral_code || user.email.split('@')[0] || '');
+    setReferralCode(defaultCode);
+    setReferralInput(defaultCode);
 
     await safeQuery(() => supabase.rpc('ensure_reseller_wallet', { p_user_id: user.id, p_email: user.email }));
 
@@ -1316,10 +1325,50 @@ export default function WalletPage() {
   };
 
   useEffect(() => {
-    const captured = captureReferralFromUrl(user?.email);
-    const cleanReferral = normalizeResellerEmail(captured || getStoredReferralEmail());
-    setActiveReferral(cleanReferral && cleanReferral !== normalizedUserEmail ? cleanReferral : '');
+    let cancelled = false;
+    const resolveActiveReferral = async () => {
+      const captured = captureReferralFromUrl(user?.email);
+      const rawReferral = normalizeResellerEmail(captured || getStoredReferralEmail());
+      if (!rawReferral || rawReferral === normalizedUserEmail) {
+        setActiveReferral('');
+        return;
+      }
+      const { data } = await safeQuery(() => supabase.rpc('resolve_referral', { p_ref: rawReferral }));
+      const resolvedEmail = normalizeResellerEmail(String(data ?? ''));
+      if (cancelled) return;
+      if (!resolvedEmail || resolvedEmail === normalizedUserEmail) {
+        clearStoredReferralEmail();
+        setActiveReferral('');
+        return;
+      }
+      setActiveReferral(resolvedEmail);
+    };
+    void resolveActiveReferral();
+    return () => { cancelled = true; };
   }, [normalizedUserEmail]);
+
+  const saveReferralCode = async () => {
+    if (!isReseller) {
+      toast.error('Reseller access required');
+      return;
+    }
+    const cleanCode = sanitizeReferralCode(referralInput);
+    if (cleanCode.length < 3) {
+      toast.error('Referral code must be at least 3 characters');
+      return;
+    }
+    setSavingReferralCode(true);
+    const { data, error } = await safeQuery(() => supabase.rpc('set_reseller_referral_code', { p_code: cleanCode }));
+    setSavingReferralCode(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    const nextCode = sanitizeReferralCode((data as any)?.referral_code || cleanCode);
+    setReferralCode(nextCode);
+    setReferralInput(nextCode);
+    toast.success('Referral link updated');
+  };
 
   useEffect(() => {
     if (!user||isAdmin||isSupport) return;
@@ -1759,13 +1808,32 @@ export default function WalletPage() {
                 </div>
                 <div style={{ display:'flex',gap:10,flexWrap:'wrap',marginTop:12 }}>
                   <div style={{ flex:'1 1 180px',padding:'12px 14px',borderRadius:14,background:'rgba(139,92,246,.08)',border:'1px solid rgba(139,92,246,.16)' }}>
-                    <div style={{ fontSize:10,fontWeight:700,color:'rgba(255,255,255,.34)',textTransform:'uppercase',letterSpacing:'.14em',marginBottom:4 }}>Referral Email</div>
-                    <div style={{ fontSize:13,fontWeight:700,color:'#fff',wordBreak:'break-all' }}>{normalizedUserEmail || 'No email'}</div>
+                    <div style={{ fontSize:10,fontWeight:700,color:'rgba(255,255,255,.34)',textTransform:'uppercase',letterSpacing:'.14em',marginBottom:4 }}>Referral Code</div>
+                    <div style={{ fontSize:13,fontWeight:700,color:'#fff',wordBreak:'break-all' }}>{referralCode || 'Not set'}</div>
                   </div>
                   <div style={{ flex:'1 1 180px',padding:'12px 14px',borderRadius:14,background:isFriday?'rgba(16,232,152,.08)':'rgba(251,191,36,.08)',border:`1px solid ${isFriday?'rgba(16,232,152,.16)':'rgba(251,191,36,.16)'}` }}>
                     <div style={{ fontSize:10,fontWeight:700,color:'rgba(255,255,255,.34)',textTransform:'uppercase',letterSpacing:'.14em',marginBottom:4 }}>Withdraw Window</div>
                     <div style={{ fontSize:13,fontWeight:700,color:isFriday?'var(--green)':'var(--amber)' }}>{isFriday ? 'Open today' : 'Friday only'}</div>
                   </div>
+                </div>
+                <div style={{ display:'flex',gap:10,alignItems:'stretch',flexWrap:'wrap',marginTop:12 }}>
+                  <input
+                    value={referralInput}
+                    onChange={(e) => setReferralInput(sanitizeReferralCode(e.target.value))}
+                    placeholder="Custom referral code"
+                    style={{ flex:1,minWidth:220,padding:'14px 16px',borderRadius:14,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)',fontSize:13,color:'#fff',fontFamily:'inherit',outline:'none' }}
+                  />
+                  <button
+                    className="w-btn-secondary"
+                    onClick={saveReferralCode}
+                    disabled={savingReferralCode || sanitizeReferralCode(referralInput).length < 3}
+                    style={{ minWidth:160, opacity: savingReferralCode || sanitizeReferralCode(referralInput).length < 3 ? 0.6 : 1 }}
+                  >
+                    {savingReferralCode ? <><Loader2 size={15} className="animate-spin"/> Saving...</> : <>Save Code</>}
+                  </button>
+                </div>
+                <div style={{ fontSize:11,color:'rgba(255,255,255,.34)',marginTop:8 }}>
+                  Use 3-32 characters with letters, numbers, `_` or `-`.
                 </div>
                 {activeReferral && (
                   <div style={{ marginTop:12,padding:'12px 14px',borderRadius:14,background:'rgba(56,189,248,.08)',border:'1px solid rgba(56,189,248,.16)',fontSize:12,color:'#dbeafe' }}>

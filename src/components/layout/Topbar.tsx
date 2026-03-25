@@ -150,7 +150,6 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
         .nav-btn:hover { background:rgba(255,255,255,.07); color:rgba(255,255,255,.75); }
         .balance-pill { display:flex; align-items:center; gap:5px; padding:6px 13px; border-radius:12px; border:1px solid rgba(251,191,36,.22); background:rgba(251,191,36,.07); color:#fde68a; font-size:12px; font-weight:700; cursor:pointer; transition:all .2s; font-family:inherit; white-space:nowrap; }
         .balance-pill:hover { background:rgba(251,191,36,.13); border-color:rgba(251,191,36,.4); box-shadow:0 0 22px rgba(251,191,36,.22); }
-        .logo-img { height:28px; width:auto; object-fit:contain; filter:drop-shadow(0 0 10px rgba(251,191,36,.4)); }
         .avatar-ring { border-radius:50%; border:2px solid rgba(251,191,36,.35); }
 
         /* dropdown */
@@ -183,20 +182,13 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
 
       {/* ══ TOP PILL ══ */}
       <div className="nav-pill">
-        <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'6px 8px', borderRadius:22, background:'rgba(6,6,16,0.92)', backdropFilter:'blur(32px)', WebkitBackdropFilter:'blur(32px)', border:'1px solid rgba(255,255,255,0.07)', boxShadow:'0 8px 48px rgba(0,0,0,.65)', minHeight:52 }}>
+        <div style={{ position:'relative', display:'grid', gridTemplateColumns:'1fr auto 1fr', alignItems:'center', padding:'6px 8px', borderRadius:22, background:'rgba(6,6,16,0.92)', backdropFilter:'blur(32px)', WebkitBackdropFilter:'blur(32px)', border:'1px solid rgba(255,255,255,0.07)', boxShadow:'0 8px 48px rgba(0,0,0,.65)', minHeight:52 }}>
 
-          {/* Left: Logo */}
-          <div style={{ display:'flex', alignItems:'center', gap:6, justifySelf:'start', flex:'0 0 220px', minWidth:220 }}>
-            <button onClick={() => handleNav('/')} style={{ display:'flex', alignItems:'center', background:'none', border:'none', cursor:'pointer', padding:'4px 6px', borderRadius:12 }}>
-              <img src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1" alt="1999X" className="logo-img"
-                onError={e => { const t2=e.target as HTMLImageElement; t2.style.display='none'; const s=document.createElement('span'); s.textContent='1999X'; s.style.cssText='font-size:15px;font-weight:900;color:#fff;letter-spacing:-.02em'; t2.parentNode?.appendChild(s); }} />
-            </button>
-            <div style={{ width:1, height:20, background:'rgba(255,255,255,0.07)', flexShrink:0 }} />
-          </div>
+          <div />
 
           {/* Center: Nav — auto column = always exactly centered */}
-          <div className="desk-nav" style={{ position:'absolute', left:'50%', top:'50%', transform:'translate(-50%, -50%)', display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
-            <div className="glass-radio-group" style={{ pointerEvents:'auto' }}>
+          <div className="desk-nav" style={{ display:'flex', alignItems:'center', justifyContent:'center', minWidth:0 }}>
+            <div className="glass-radio-group">
               <div className="glass-glider" style={{ transform:`translateX(${activeNavIndex * 100}%)` }} />
               {navItems.map(item => (
                 <button key={item.key} onClick={() => handleNav(item.path)} className={cn('nav-link', currentPath===item.path && 'active')}>
@@ -210,7 +202,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
           </div>
 
           {/* Right: Controls — always end-aligned */}
-          <div style={{ display:'flex', alignItems:'center', gap:3, justifyContent:'flex-end', justifySelf:'end', flex:'0 0 220px', minWidth:220 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:3, justifyContent:'flex-end', justifySelf:'end', minWidth:0 }}>
             <button onClick={() => handleNav('/wallet')} className="balance-pill"><Wallet size={12}/>${balance.toFixed(2)}</button>
 
             {/* Language */}

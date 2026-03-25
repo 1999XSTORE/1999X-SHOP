@@ -4,6 +4,10 @@ export function normalizeResellerEmail(input: string) {
   return input.trim().toLowerCase();
 }
 
+export function sanitizeReferralCode(input: string) {
+  return input.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
+}
+
 export function storeReferralEmail(email: string) {
   const clean = normalizeResellerEmail(email);
   if (!clean) return '';
