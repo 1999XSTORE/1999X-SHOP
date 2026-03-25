@@ -186,7 +186,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
         <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'6px 8px', borderRadius:22, background:'rgba(6,6,16,0.92)', backdropFilter:'blur(32px)', WebkitBackdropFilter:'blur(32px)', border:'1px solid rgba(255,255,255,0.07)', boxShadow:'0 8px 48px rgba(0,0,0,.65)', minHeight:52 }}>
 
           {/* Left: Logo */}
-          <div style={{ display:'flex', alignItems:'center', gap:6, justifySelf:'start' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:6, justifySelf:'start', flex:'0 0 220px', minWidth:220 }}>
             <button onClick={() => handleNav('/')} style={{ display:'flex', alignItems:'center', background:'none', border:'none', cursor:'pointer', padding:'4px 6px', borderRadius:12 }}>
               <img src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1" alt="1999X" className="logo-img"
                 onError={e => { const t2=e.target as HTMLImageElement; t2.style.display='none'; const s=document.createElement('span'); s.textContent='1999X'; s.style.cssText='font-size:15px;font-weight:900;color:#fff;letter-spacing:-.02em'; t2.parentNode?.appendChild(s); }} />
@@ -210,7 +210,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
           </div>
 
           {/* Right: Controls — always end-aligned */}
-          <div style={{ display:'flex', alignItems:'center', gap:3, justifySelf:'end' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:3, justifyContent:'flex-end', justifySelf:'end', flex:'0 0 220px', minWidth:220 }}>
             <button onClick={() => handleNav('/wallet')} className="balance-pill"><Wallet size={12}/>${balance.toFixed(2)}</button>
 
             {/* Language */}

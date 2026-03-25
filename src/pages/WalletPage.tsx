@@ -5,6 +5,7 @@ import { ArrowRight, ArrowLeft, RefreshCw, Users, Check, X, Copy, CheckCircle, L
 import { safeQuery } from '@/lib/safeFetch';
 import { logActivity, notifyUser } from '@/lib/activity';
 import { cn } from '@/lib/utils';
+import { buildReferralLink, captureReferralFromUrl, getStoredReferralEmail, normalizeResellerEmail } from '@/lib/reseller';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
@@ -60,7 +61,7 @@ function QRZoomModal({ src, onClose }: { src: string; onClose: () => void }) {
 }
 
 // ── PayPal Smart Button (auto-capture → auto-credit balance) ─
-function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; onSuccess: () => void }) {
+function PayPalButton({ amount, user, onSuccess, referralEmail }: { amount: number; user: any; onSuccess: () => void; referralEmail?: string }) {
   const SUPABASE_URL_PP  = 'https://wkjqrjafogufqeasfeev.supabase.co';
   const SUPABASE_ANON_PP = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
   // Read client ID from Vite env var (set VITE_PAYPAL_CLIENT_ID in Netlify environment variables)
@@ -134,6 +135,7 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
             transaction_id: orderId,
             status:         'approved',
             note:           'Auto-verified via PayPal JS SDK capture',
+            referral_email: referralEmail || '',
           });
 
           // Step 3: Record in paypal_auto_credits for idempotency (ignore if already exists)
@@ -225,7 +227,7 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
 }
 
 // ── Admin/Support Payment Panel ───────────────────────────────
-function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount }: { user: any; onSuccess: () => void; expectedUsdAmount: number }) {
+function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount, referralEmail }: { user: any; onSuccess: () => void; expectedUsdAmount: number; referralEmail?: string }) {
   const [voucher, setVoucher] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ amountUsd: number; grossAmountUsd: number; feeUsd: number; feeRate: number; amountThb: number; exchangeRate: number; transactionId: string; shortfallUsd: number } | null>(null);
@@ -251,7 +253,7 @@ function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount }: { user: any; o
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke('truwallet-redeem', { body: { voucher: voucher.trim(), expectedUsdAmount } });
+    const { data, error } = await supabase.functions.invoke('truwallet-redeem', { body: { voucher: voucher.trim(), expectedUsdAmount, referralEmail: referralEmail || '' } });
     setLoading(false);
     if (error || !data?.success) {
       const errorMessage = data?.message ?? await getFunctionErrorMessage(error) ?? 'Redeem failed';
@@ -750,7 +752,7 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
 // ══════════════════════════════════════════════════════════════
 //  Premium Add-Balance UI — complete redesign
 // ══════════════════════════════════════════════════════════════
-function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void }) {
+function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess: () => void; referralEmail?: string }) {
   const [step, setStep] = useState<1|2|3>(1);
   const [amount, setAmount] = useState(10);
   const [custom, setCustom] = useState('');
@@ -782,7 +784,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
     setSubmitting(true);
     const { error } = await safeQuery(() => supabase.from('transactions').insert({
       user_id:user.id, user_email:email.trim(), user_name:user.name,
-      amount:selAmount, method:methodId, transaction_id:txnId.trim(), status:'pending', screenshot_url:screenshotPreview || ''
+      amount:selAmount, method:methodId, transaction_id:txnId.trim(), status:'pending', screenshot_url:screenshotPreview || '', referral_email: referralEmail || ''
     }));
     if (error) {
       if (error.message==='timeout') toast.error('Request timed out.');
@@ -1083,12 +1085,12 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
               {/* PayPal / TrueWallet inline components */}
               {selMethod.id === 'paypal' && (
                 <div style={{ marginTop:16 }}>
-                  <PayPalButton amount={selAmount} user={user} onSuccess={onSuccess} />
+                    <PayPalButton amount={selAmount} user={user} onSuccess={onSuccess} referralEmail={referralEmail} />
                 </div>
               )}
               {selMethod.id === 'truewallet' && (
                 <div style={{ marginTop:16 }}>
-                  <TrueWalletRedeem user={user} onSuccess={onSuccess} expectedUsdAmount={selAmount} />
+                    <TrueWalletRedeem user={user} onSuccess={onSuccess} expectedUsdAmount={selAmount} referralEmail={referralEmail} />
                 </div>
               )}
 
@@ -1876,7 +1878,7 @@ export default function WalletPage() {
         {/* ══ DEPOSIT TAB ══ */}
         {activeTab==='deposit'&&(
           <div style={{ animation:'w-slide-up .4s cubic-bezier(.22,1,.36,1) both' }}>
-            <AddBalanceUI user={user} onSuccess={loadTxns}/>
+            <AddBalanceUI user={user} onSuccess={loadTxns} referralEmail={activeReferral}/>
           </div>
         )}
 
