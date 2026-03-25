@@ -183,10 +183,10 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
 
       {/* ══ TOP PILL ══ */}
       <div className="nav-pill">
-        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 8px', borderRadius:22, background:'rgba(6,6,16,0.92)', backdropFilter:'blur(32px)', WebkitBackdropFilter:'blur(32px)', border:'1px solid rgba(255,255,255,0.07)', boxShadow:'0 8px 48px rgba(0,0,0,.65)', minHeight:52 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr auto 1fr', alignItems:'center', padding:'6px 8px', borderRadius:22, background:'rgba(6,6,16,0.92)', backdropFilter:'blur(32px)', WebkitBackdropFilter:'blur(32px)', border:'1px solid rgba(255,255,255,0.07)', boxShadow:'0 8px 48px rgba(0,0,0,.65)', minHeight:52 }}>
 
-          {/* Left: Logo — flex:1 */}
-          <div style={{ flex:1, display:'flex', alignItems:'center', gap:6 }}>
+          {/* Left: Logo */}
+          <div style={{ display:'flex', alignItems:'center', gap:6, justifySelf:'start' }}>
             <button onClick={() => handleNav('/')} style={{ display:'flex', alignItems:'center', background:'none', border:'none', cursor:'pointer', padding:'4px 6px', borderRadius:12 }}>
               <img src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1" alt="1999X" className="logo-img"
                 onError={e => { const t2=e.target as HTMLImageElement; t2.style.display='none'; const s=document.createElement('span'); s.textContent='1999X'; s.style.cssText='font-size:15px;font-weight:900;color:#fff;letter-spacing:-.02em'; t2.parentNode?.appendChild(s); }} />
@@ -194,8 +194,8 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             <div style={{ width:1, height:20, background:'rgba(255,255,255,0.07)', flexShrink:0 }} />
           </div>
 
-          {/* Center: Nav — no flex-grow → sits between equal flex:1 sides */}
-          <div className="desk-nav" style={{ display:'flex', alignItems:'center' }}>
+          {/* Center: Nav — auto column = always exactly centered */}
+          <div className="desk-nav" style={{ display:'flex', alignItems:'center', justifyContent:'center' }}>
             <div className="glass-radio-group">
               <div className="glass-glider" style={{ transform:`translateX(${activeNavIndex * 100}%)` }} />
               {navItems.map(item => (
@@ -209,8 +209,8 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             </div>
           </div>
 
-          {/* Right: Controls — flex:1, end-aligned */}
-          <div style={{ flex:1, display:'flex', alignItems:'center', gap:3, justifyContent:'flex-end' }}>
+          {/* Right: Controls — always end-aligned */}
+          <div style={{ display:'flex', alignItems:'center', gap:3, justifySelf:'end' }}>
             <button onClick={() => handleNav('/wallet')} className="balance-pill"><Wallet size={12}/>${balance.toFixed(2)}</button>
 
             {/* Language */}
