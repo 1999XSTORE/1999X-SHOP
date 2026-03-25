@@ -141,10 +141,9 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
           animation: nav-fade-in .45s cubic-bezier(.22,1,.36,1) both;
         }
         .nav-inner {
-          display: grid;
-          grid-template-columns: auto 1fr auto;
+          display: flex;
           align-items: center;
-          gap: 6px;
+          position: relative;
           padding: 6px 8px; border-radius: 22px;
           background: rgba(6,6,16,0.92);
           backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
@@ -155,8 +154,17 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             0 1px 0 rgba(255,255,255,.06) inset;
         }
         .nav-inner-left  { display:flex; align-items:center; gap:4px; flex-shrink:0; }
-        .nav-inner-center { display:flex; align-items:center; justify-content:center; }
-        .nav-inner-right { display:flex; align-items:center; gap:3px; justify-content:flex-end; flex-shrink:0; }
+        /* Absolutely centered — always at exact 50% of the bar */
+        .nav-inner-center {
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          align-items: center;
+          pointer-events: none;
+        }
+        .nav-inner-center > * { pointer-events: auto; }
+        .nav-inner-right { display:flex; align-items:center; gap:3px; margin-left:auto; flex-shrink:0; }
 
         /* ── Desktop radio group ── */
         .glass-radio-group {

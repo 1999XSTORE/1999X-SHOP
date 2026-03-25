@@ -923,7 +923,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
 
       {/* ══ STEP 1: Choose Amount ══ */}
       {step === 1 && (
-        <div className="dep-wrap dep-card" style={{ maxWidth:560, padding:'32px 32px 36px' }}>
+        <div className="dep-wrap dep-card" style={{ padding:'32px 32px 36px' }}>
           <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:6 }}>Deposit Wallet Balance</div>
           <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-.03em', marginBottom:26 }}>Choose Your Amount</div>
 
@@ -1193,7 +1193,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
 
       {/* ══ STEP 3: Review + Final Submit ══ */}
       {step === 3 && (
-        <div className="dep-wrap dep-card" style={{ maxWidth:520, padding:'32px' }}>
+        <div className="dep-wrap dep-card" style={{ padding:'32px' }}>
           <button onClick={() => setStep(2)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,.4)', fontSize:13, fontFamily:'inherit', marginBottom:22, padding:0, fontWeight:600 }}>
             <ArrowLeft size={14}/> Back
           </button>
