@@ -141,7 +141,10 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
           animation: nav-fade-in .45s cubic-bezier(.22,1,.36,1) both;
         }
         .nav-inner {
-          display: flex; align-items: center; gap: 3px;
+          display: grid;
+          grid-template-columns: auto 1fr auto;
+          align-items: center;
+          gap: 6px;
           padding: 6px 8px; border-radius: 22px;
           background: rgba(6,6,16,0.92);
           backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
@@ -151,6 +154,9 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             0 0 0 1px rgba(255,255,255,.03) inset,
             0 1px 0 rgba(255,255,255,.06) inset;
         }
+        .nav-inner-left  { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+        .nav-inner-center { display:flex; align-items:center; justify-content:center; }
+        .nav-inner-right { display:flex; align-items:center; gap:3px; justify-content:flex-end; flex-shrink:0; }
 
         /* ── Desktop radio group ── */
         .glass-radio-group {
@@ -336,47 +342,48 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
       <div className="nav-pill">
         <div className="nav-inner">
 
-          {/* Logo */}
-          <button onClick={() => handleNav('/')} style={{ display:'flex', alignItems:'center', marginRight:2, flexShrink:0, background:'none', border:'none', cursor:'pointer', padding:'4px 6px', borderRadius:12 }}>
-            <img
-              src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1"
-              alt="1999X" className="logo-img"
-              onError={e => {
-                const t2 = e.target as HTMLImageElement; t2.style.display='none';
-                const s = document.createElement('span'); s.textContent='1999X';
-                s.style.cssText='font-size:15px;font-weight:900;color:#fff;letter-spacing:-.02em';
-                t2.parentNode?.appendChild(s);
-              }}
-            />
-          </button>
+          {/* ── Left: Logo ── */}
+          <div className="nav-inner-left">
+            <button onClick={() => handleNav('/')} style={{ display:'flex', alignItems:'center', background:'none', border:'none', cursor:'pointer', padding:'4px 6px', borderRadius:12 }}>
+              <img
+                src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1"
+                alt="1999X" className="logo-img"
+                onError={e => {
+                  const t2 = e.target as HTMLImageElement; t2.style.display='none';
+                  const s = document.createElement('span'); s.textContent='1999X';
+                  s.style.cssText='font-size:15px;font-weight:900;color:#fff;letter-spacing:-.02em';
+                  t2.parentNode?.appendChild(s);
+                }}
+              />
+            </button>
+            <div style={{ width:1, height:20, background:'rgba(255,255,255,0.07)', flexShrink:0 }} />
+          </div>
 
-          <div style={{ width:1, height:20, background:'rgba(255,255,255,0.07)', flexShrink:0, margin:'0 2px' }} />
-
-          {/* Desktop nav */}
-          <div className="hidden lg:flex items-center flex-1 justify-center">
-            <div className="glass-radio-group">
+          {/* ── Center: Nav tabs (always centered) ── */}
+          <div className="nav-inner-center">
+            <div className="glass-radio-group hidden lg:flex">
               <div
                 className="glass-glider"
                 style={{ transform: `translateX(${activeNavIndex * 100}%)` }}
               />
-            {navItems.map(item => (
-              <button key={item.key} onClick={() => handleNav(item.path)}
-                className={cn('nav-link', currentPath === item.path && 'active')}>
-                <item.Icon size={13} className="nav-ic" />
-                {t(item.tKey)}
-                {item.path === '/chat' && chatUnread > 0 && (
-                  <span className="nav-badge">{chatUnread > 9 ? '9+' : chatUnread}</span>
-                )}
-                {item.path === '/panel-status' && annUnread > 0 && (
-                  <span className="nav-badge">{annUnread > 9 ? '9+' : annUnread}</span>
-                )}
-              </button>
-            ))}
+              {navItems.map(item => (
+                <button key={item.key} onClick={() => handleNav(item.path)}
+                  className={cn('nav-link', currentPath === item.path && 'active')}>
+                  <item.Icon size={13} className="nav-ic" />
+                  {t(item.tKey)}
+                  {item.path === '/chat' && chatUnread > 0 && (
+                    <span className="nav-badge">{chatUnread > 9 ? '9+' : chatUnread}</span>
+                  )}
+                  {item.path === '/panel-status' && annUnread > 0 && (
+                    <span className="nav-badge">{annUnread > 9 ? '9+' : annUnread}</span>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Right controls */}
-          <div style={{ display:'flex', alignItems:'center', gap:3, marginLeft:'auto', flexShrink:0 }}>
+          {/* ── Right: Balance + Lang + Profile + Mobile menu ── */}
+          <div className="nav-inner-right">
 
             <button onClick={() => handleNav('/wallet')} className="balance-pill hidden sm:flex">
               <Wallet size={12} />${balance.toFixed(2)}
@@ -396,10 +403,10 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                     {LANGUAGES.map(lang => (
                       <button key={lang.code} onClick={() => { i18n.changeLanguage(lang.code); setLangOpen(false); }}
                         className="dropdown-item"
-                        style={{ color: lang.code===i18n.language?'#c4b5fd':undefined, fontWeight: lang.code===i18n.language?600:undefined }}>
+                        style={{ color: lang.code===i18n.language?'#fde68a':undefined, fontWeight: lang.code===i18n.language?600:undefined }}>
                         <span style={{ fontSize:16 }}>{lang.flag}</span>
                         <span>{lang.label}</span>
-                        {lang.code===i18n.language && <span style={{ marginLeft:'auto',fontSize:10,color:'var(--purple)' }}>✓</span>}
+                        {lang.code===i18n.language && <span style={{ marginLeft:'auto',fontSize:10,color:'#f59e0b' }}>✓</span>}
                       </button>
                     ))}
                   </div>

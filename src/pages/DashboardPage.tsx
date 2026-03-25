@@ -104,27 +104,46 @@ function LicCard({ lic, accent }: { lic: any; accent: 'p' | 'b' }) {
   const total = Math.max(30, Math.ceil((new Date(lic.expiresAt).getTime() - new Date(lic.lastLogin).getTime()) / 86400000));
   const pct = Math.min(100, (dLeft / total) * 100);
   const isPurple = accent === 'p';
-  const color = isPurple ? 'var(--purple)' : 'var(--blue)';
-  const bg = isPurple ? 'rgba(109,40,217,.07)' : 'rgba(56,189,248,.06)';
-  const bc = isPurple ? 'rgba(139,92,246,.18)' : 'rgba(56,189,248,.16)';
+  const color = isPurple ? '#8b5cf6' : '#38bdf8';
+  const glow  = isPurple ? 'rgba(139,92,246,.3)' : 'rgba(56,189,248,.3)';
+  const bg    = isPurple ? 'rgba(109,40,217,.08)' : 'rgba(56,189,248,.07)';
+  const bc    = isPurple ? 'rgba(139,92,246,.2)'  : 'rgba(56,189,248,.18)';
+  const barBg = isPurple ? 'linear-gradient(90deg,#6d28d9,#8b5cf6)' : 'linear-gradient(90deg,#0ea5e9,#38bdf8)';
 
   return (
-    <div className="g g-hover g-lift fu" style={{ background:bg, borderColor:bc, padding:20 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:7 }}>
-          <div className={isPurple ? 'dot dot-purple' : 'dot'} style={!isPurple ? { background:'var(--blue)', boxShadow:'0 0 7px var(--blue)', animation:'blink 2s infinite' } : {}} />
-          <span className="label" style={{ color }}>{lic.productName}</span>
+    <div className="dash-lic-card" style={{
+      background:`linear-gradient(160deg,rgba(13,13,22,.97) 0%,rgba(9,9,16,.97) 100%)`,
+      border:`1px solid ${bc}`,
+      boxShadow:`0 24px 48px rgba(0,0,0,.45), 0 0 40px ${glow}`,
+    }}>
+      {/* Top accent bar */}
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg,transparent,${color},transparent)` }} />
+
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ width:8, height:8, borderRadius:'50%', background:color, boxShadow:`0 0 10px ${color}`, animation:'blink 2s infinite' }} />
+          <span style={{ fontSize:13, fontWeight:700, color, letterSpacing:'.01em' }}>{lic.productName}</span>
         </div>
-        <span className={`badge badge-${isPurple ? 'purple' : 'blue'}`}>Active</span>
+        <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:20, background:bg, border:`1px solid ${bc}`, fontSize:10, fontWeight:800, color, letterSpacing:'.06em', textTransform:'uppercase' }}>
+          ● Active
+        </span>
       </div>
+
       <Ticker expiresAt={lic.expiresAt} />
-      <p style={{ fontSize:11, color:'var(--dim)', margin:'4px 0 12px' }}>
+      <p style={{ fontSize:11, color:'rgba(255,255,255,.28)', margin:'5px 0 16px' }}>
         until {new Date(lic.expiresAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
       </p>
-      <div className="prog" style={{ marginBottom:8 }}>
-        <div className="prog-bar" style={{ width:`${pct}%`, background:isPurple ? 'linear-gradient(90deg,#6d28d9,#8b5cf6)' : 'linear-gradient(90deg,#0ea5e9,#38bdf8)' }} />
+
+      {/* Progress */}
+      <div style={{ height:4, borderRadius:999, background:'rgba(255,255,255,.07)', overflow:'hidden', marginBottom:14 }}>
+        <div style={{ height:'100%', width:`${pct}%`, borderRadius:999, background:barBg, boxShadow:`0 0 8px ${glow}`, transition:'width .8s cubic-bezier(.22,1,.36,1)' }} />
       </div>
-      <code className="mono" style={{ fontSize:10, color:'rgba(255,255,255,.22)', wordBreak:'break-all' }}>{key}</code>
+      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:14 }}>
+        <span style={{ fontSize:10, color:'rgba(255,255,255,.25)', fontWeight:600 }}>{dLeft} days left</span>
+        <span style={{ fontSize:10, color:'rgba(255,255,255,.25)' }}>{Math.round(pct)}% remaining</span>
+      </div>
+
+      <code style={{ fontSize:10, fontFamily:'monospace', color:'rgba(255,255,255,.18)', wordBreak:'break-all', letterSpacing:'.05em' }}>{key}</code>
     </div>
   );
 }
@@ -252,11 +271,9 @@ function FreeKeyCard() {
 
   if (dbLoading) {
     return (
-      <div className="g fu" style={{ padding:'18px 22px', background:'rgba(99,102,241,.05)', borderColor:'rgba(99,102,241,.18)' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8, color:'var(--muted)' }}>
-          <Loader2 size={14} className="animate-spin" />
-          <span style={{ fontSize:13 }}>{t('common.loading')}</span>
-        </div>
+      <div style={{ padding:'20px 24px', borderRadius:20, background:'rgba(99,102,241,.05)', border:'1px solid rgba(99,102,241,.14)', display:'flex', alignItems:'center', gap:10, color:'rgba(255,255,255,.4)' }}>
+        <Loader2 size={14} className="animate-spin" />
+        <span style={{ fontSize:13 }}>{t('common.loading')}</span>
       </div>
     );
   }
@@ -268,58 +285,68 @@ function FreeKeyCard() {
   ];
 
   return (
-    <div className="g fu" style={{ padding:'28px 30px', background:'linear-gradient(135deg,rgba(255,255,255,.14),rgba(109,40,217,.12) 48%,rgba(56,189,248,.08))', borderColor:'rgba(167,139,250,.28)', boxShadow:'0 0 0 1px rgba(255,255,255,.08) inset, 0 20px 70px rgba(109,40,217,.18), 0 0 90px rgba(56,189,248,.08)', position:'relative', overflow:'hidden', backdropFilter:'blur(22px)' }}>
-      <div style={{ position:'absolute', inset:-80, background:'radial-gradient(circle at top left, rgba(139,92,246,.2), transparent 40%), radial-gradient(circle at bottom right, rgba(56,189,248,.18), transparent 38%)', pointerEvents:'none' }} />
-      <div style={{ position:'relative', display:'flex', alignItems:'flex-start', gap:18, marginBottom:isActive && keyList.length ? 18 : 0 }}>
-        <div style={{ width:58, height:58, borderRadius:18, background:'rgba(99,102,241,.16)', border:'1px solid rgba(167,139,250,.36)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 30px rgba(99,102,241,.22)' }}>
-          <Zap size={26} color="#c4b5fd" />
-        </div>
-        <div style={{ flex:1 }}>
-          <div style={{ fontSize:18, fontWeight:800, color:'#fff', marginBottom:5 }}>{t('dashboard.freeKey')}</div>
-          <div style={{ fontSize:12, color:'rgba(255,255,255,.72)', marginBottom:14 }}>{t('dashboard.freeKeyDesc')}</div>
+    <div style={{ borderRadius:22, overflow:'hidden', padding:'26px 26px', position:'relative',
+      background:'linear-gradient(160deg,rgba(14,12,28,.98) 0%,rgba(9,8,18,.98) 100%)',
+      border:'1px solid rgba(167,139,250,.22)',
+      boxShadow:'0 32px 64px rgba(0,0,0,.5), 0 0 60px rgba(99,102,241,.12)' }}>
+      {/* Top line */}
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:'linear-gradient(90deg,transparent,#8b5cf6 35%,#38bdf8 70%,transparent)', pointerEvents:'none' }} />
+      {/* Glow orb */}
+      <div style={{ position:'absolute', top:-60, right:-40, width:180, height:180, borderRadius:'50%', background:'radial-gradient(circle,rgba(99,102,241,.2) 0%,transparent 70%)', pointerEvents:'none' }} />
 
+      <div style={{ position:'relative', display:'flex', alignItems:'flex-start', gap:16, marginBottom: isActive && keyList.length ? 20 : 0 }}>
+        <div style={{ width:52, height:52, borderRadius:16, background:'rgba(99,102,241,.14)', border:'1px solid rgba(167,139,250,.3)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 28px rgba(99,102,241,.3)', flexShrink:0 }}>
+          <Zap size={24} color="#c4b5fd" />
+        </div>
+
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:17, fontWeight:800, color:'#fff', marginBottom:4, letterSpacing:'-.01em' }}>{t('dashboard.freeKey')}</div>
+          <div style={{ fontSize:12, color:'rgba(255,255,255,.45)', marginBottom:16, lineHeight:1.5 }}>{t('dashboard.freeKeyDesc')}</div>
+
+          {/* Active status */}
           {isActive && row && (
-            <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:12, flexWrap:'wrap' }}>
-              <div className="dot dot-green" style={{ width:5, height:5 }} />
+            <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 12px', borderRadius:20, background:'rgba(16,232,152,.08)', border:'1px solid rgba(16,232,152,.2)', marginBottom:14, flexWrap:'wrap' }}>
+              <div style={{ width:5, height:5, borderRadius:'50%', background:'var(--green)', boxShadow:'0 0 8px var(--green)' }} />
               <span style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>{t('dashboard.freeKeyActive')}</span>
-              <span style={{ fontSize:11, color:'var(--muted)' }}>{t('dashboard.freeKeyExpiresIn')}</span>
+              <span style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>{t('dashboard.freeKeyExpiresIn')}</span>
               <MiniCountdown ms={new Date(row.expires_at).getTime()} />
             </div>
           )}
 
           {row && !isActive && (
-            <div style={{ fontSize:11, color:'var(--dim)', display:'flex', alignItems:'center', gap:5, marginBottom:12 }}>
-              <span style={{ color:'var(--red)', fontSize:8 }}>•</span>
-              {t('dashboard.freeKeyExpired')}
+            <div style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:20, background:'rgba(248,113,113,.06)', border:'1px solid rgba(248,113,113,.18)', marginBottom:14, fontSize:11, color:'var(--red)', fontWeight:600 }}>
+              ● {t('dashboard.freeKeyExpired')}
             </div>
           )}
 
           {canClaim ? (
-            <button onClick={handleClaim} disabled={generating} className="btn btn-sm" style={{ background:'linear-gradient(135deg,#4f46e5,#7c3aed)', color:'#fff', border:'none', fontWeight:800, gap:6, boxShadow:'0 0 24px rgba(99,102,241,.45)', padding:'11px 16px' }}>
-              {generating ? <><Loader2 size={13} className="animate-spin" /> {t('dashboard.freeKeyGenerating')}</> : <><Zap size={13} /> {t('dashboard.freeKeyBtn')}</>}
+            <button onClick={handleClaim} disabled={generating} className="dash-free-btn">
+              {generating
+                ? <><Loader2 size={13} className="animate-spin" /> {t('dashboard.freeKeyGenerating')}</>
+                : <><Zap size={14} /> {t('dashboard.freeKeyBtn')}</>}
             </button>
           ) : (
-            <div style={{ fontSize:11, color:'var(--dim)', display:'flex', alignItems:'center', gap:5 }}>
-              <Clock size={11} />
-              {t('dashboard.freeKeyCooldown')} <MiniCountdown ms={cooldownMs} />
+            <div style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:12, color:'rgba(255,255,255,.3)', fontWeight:600, padding:'7px 12px', borderRadius:20, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.07)' }}>
+              <Clock size={12} /> {t('dashboard.freeKeyCooldown')} <MiniCountdown ms={cooldownMs} />
             </div>
           )}
         </div>
       </div>
 
+      {/* Key display */}
       {isActive && keyList.length > 0 && (
-        <div style={{ position:'relative', display:'flex', flexDirection:'column', gap:8, paddingTop:4 }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:8, paddingTop:4, position:'relative' }}>
           {keyList.map((keyItem) => (
-            <div key={keyItem.id} style={{ background:'rgba(255,255,255,.08)', border:'1px solid rgba(255,255,255,.12)', borderRadius:12, padding:'12px 14px', backdropFilter:'blur(14px)' }}>
-              <div style={{ fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.08em', marginBottom:6 }}>{keyItem.label}</div>
+            <div key={keyItem.id} className="dash-key-row">
+              <div style={{ fontSize:10, color:'rgba(255,255,255,.3)', textTransform:'uppercase', letterSpacing:'.1em', marginBottom:7, fontWeight:700 }}>{keyItem.label}</div>
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 <code style={{ flex:1, fontSize:12, fontFamily:'monospace', color:'#fff', letterSpacing:'1px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', filter:revealed[keyItem.id] ? 'none' : 'blur(5px)', transition:'filter .3s' }}>
                   {keyItem.key}
                 </code>
-                <button onClick={() => setRevealed((prev) => ({ ...prev, [keyItem.id]:!prev[keyItem.id] }))} style={{ padding:'4px 7px', borderRadius:7, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.09)', cursor:'pointer', color:'var(--muted)', display:'flex' }}>
+                <button onClick={() => setRevealed(p => ({ ...p, [keyItem.id]:!p[keyItem.id] }))} style={{ padding:'5px 8px', borderRadius:8, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', cursor:'pointer', color:'rgba(255,255,255,.5)', display:'flex', transition:'all .15s' }}>
                   {revealed[keyItem.id] ? <EyeOff size={12} /> : <Eye size={12} />}
                 </button>
-                <button onClick={() => copyKey(keyItem.key, keyItem.id)} style={{ padding:'4px 7px', borderRadius:7, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.09)', cursor:'pointer', color:copied[keyItem.id] ? 'var(--green)' : 'var(--muted)', display:'flex' }}>
+                <button onClick={() => copyKey(keyItem.key, keyItem.id)} style={{ padding:'5px 8px', borderRadius:8, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', cursor:'pointer', color:copied[keyItem.id] ? 'var(--green)' : 'rgba(255,255,255,.5)', display:'flex', transition:'all .15s' }}>
                   {copied[keyItem.id] ? <CheckCircle size={12} /> : <Copy size={12} />}
                 </button>
               </div>
@@ -406,74 +433,187 @@ export default function DashboardPage() {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-      <div className="g fu" style={{ padding:'22px 24px', background:'linear-gradient(135deg,rgba(109,40,217,.1) 0%,rgba(255,255,255,.025) 100%)', position:'relative', overflow:'hidden' }}>
-        <div style={{ position:'absolute', top:0, right:0, width:250, height:250, borderRadius:'50%', background:'radial-gradient(circle,rgba(109,40,217,.15) 0%,transparent 70%)', transform:'translate(30%,-30%)', pointerEvents:'none' }} />
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', position:'relative', flexWrap:'wrap', gap:12 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-            {user?.avatar
-              ? <img src={user.avatar} style={{ width:46, height:46, borderRadius:12, objectFit:'cover', border:'2px solid rgba(139,92,246,.3)' }} />
-              : <div style={{ width:46, height:46, borderRadius:12, background:'linear-gradient(135deg,#6d28d9,#4c1d95)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:800, color:'#fff' }}>{user?.name?.charAt(0) || 'U'}</div>}
+      <style>{`
+        @keyframes dash-in  { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+        @keyframes dash-glow{ 0%,100%{opacity:.7} 50%{opacity:1} }
+        @keyframes dash-bar  { from{width:0} to{width:var(--w)} }
+        .dash-card {
+          background: linear-gradient(160deg,rgba(13,13,22,.97) 0%,rgba(8,8,16,.97) 100%);
+          border: 1px solid rgba(255,255,255,.07);
+          border-radius: 22px;
+          box-shadow: 0 24px 48px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.03) inset;
+          backdrop-filter: blur(20px);
+          animation: dash-in .4s cubic-bezier(.22,1,.36,1) both;
+        }
+        .dash-stat {
+          background: rgba(255,255,255,.03);
+          border: 1px solid rgba(255,255,255,.07);
+          border-radius: 18px; padding: 22px 20px;
+          transition: all .22s cubic-bezier(.22,1,.36,1);
+          animation: dash-in .4s cubic-bezier(.22,1,.36,1) both;
+        }
+        .dash-stat:hover {
+          background: rgba(255,255,255,.055);
+          border-color: rgba(255,255,255,.12);
+          transform: translateY(-2px);
+          box-shadow: 0 16px 40px rgba(0,0,0,.3);
+        }
+        .dash-prog-track {
+          height: 4px; border-radius: 999px;
+          background: rgba(255,255,255,.07); overflow: hidden; margin-top:14px;
+        }
+        .dash-prog-fill {
+          height: 100%; border-radius: 999px;
+          animation: dash-bar .8s cubic-bezier(.22,1,.36,1) both;
+        }
+        .dash-lic-card {
+          border-radius: 20px; overflow: hidden; padding: 24px;
+          transition: all .25s cubic-bezier(.22,1,.36,1);
+          animation: dash-in .4s cubic-bezier(.22,1,.36,1) both;
+          position: relative;
+        }
+        .dash-lic-card:hover { transform: translateY(-3px); }
+        .dash-key-row {
+          border-radius: 12px; padding: 12px 14px;
+          background: rgba(255,255,255,.06);
+          border: 1px solid rgba(255,255,255,.1);
+          backdrop-filter: blur(12px);
+          margin-bottom: 8px;
+        }
+        .dash-bonus-bar { height: 3px; border-radius: 999px; background: rgba(255,255,255,.06); overflow:hidden; margin-top:16px; }
+        .dash-free-btn {
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 11px 20px; border-radius: 12px; border: none; cursor: pointer;
+          font-family: inherit; font-size: 13px; font-weight: 700;
+          background: linear-gradient(135deg,#4f46e5,#7c3aed);
+          color: #fff; box-shadow: 0 0 24px rgba(99,102,241,.45);
+          transition: all .22s cubic-bezier(.22,1,.36,1);
+        }
+        .dash-free-btn:hover { transform: translateY(-2px); box-shadow: 0 0 36px rgba(99,102,241,.65); }
+        .dash-free-btn:disabled { opacity:.5; cursor:not-allowed; transform:none !important; }
+      `}</style>
+
+      {/* ══ HERO WELCOME ══ */}
+      <div className="dash-card" style={{ padding:'28px 32px', position:'relative', overflow:'hidden',
+        background:'linear-gradient(135deg,rgba(15,10,30,.98) 0%,rgba(8,8,18,.98) 60%,rgba(5,12,8,.98) 100%)',
+        border:'1px solid rgba(139,92,246,.16)',
+        boxShadow:'0 40px 80px rgba(0,0,0,.55), 0 0 80px rgba(109,40,217,.07)' }}>
+        {/* Orbs */}
+        <div style={{ position:'absolute', top:-60, right:-60, width:220, height:220, borderRadius:'50%', background:'radial-gradient(circle,rgba(109,40,217,.2) 0%,transparent 70%)', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', bottom:-40, left:-20, width:160, height:160, borderRadius:'50%', background:'radial-gradient(circle,rgba(16,232,152,.1) 0%,transparent 70%)', pointerEvents:'none' }} />
+        {/* Top line */}
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:1, background:'linear-gradient(90deg,transparent,rgba(139,92,246,.5) 40%,rgba(16,232,152,.3) 70%,transparent)', pointerEvents:'none' }} />
+
+        <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+            {/* Avatar */}
+            <div style={{ position:'relative', flexShrink:0 }}>
+              {user?.avatar
+                ? <img src={user.avatar} style={{ width:54, height:54, borderRadius:16, objectFit:'cover', border:'2px solid rgba(139,92,246,.35)', boxShadow:'0 0 24px rgba(109,40,217,.3)' }} />
+                : <div style={{ width:54, height:54, borderRadius:16, background:'linear-gradient(135deg,#6d28d9,#4c1d95)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:900, color:'#fff', boxShadow:'0 0 24px rgba(109,40,217,.4)' }}>{user?.name?.charAt(0) || 'U'}</div>}
+              <div style={{ position:'absolute', bottom:-3, right:-3, width:14, height:14, borderRadius:'50%', background:'#10e898', border:'2px solid rgba(8,8,18,.95)', boxShadow:'0 0 10px rgba(16,232,152,.7)' }} />
+            </div>
+
             <div>
-              <div className="label" style={{ marginBottom:4 }}>{t('dashboard.welcomeBack')}</div>
-              <div style={{ fontSize:20, fontWeight:800, color:'#fff' }}>{t('dashboard.welcomeBack')}, {user?.name?.split(' ')[0] || 'User'}</div>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', marginBottom:5 }}>{t('dashboard.welcomeBack')}</div>
+              <div style={{ fontSize:24, fontWeight:900, color:'#fff', letterSpacing:'-.02em', lineHeight:1 }}>{user?.name?.split(' ')[0] || 'User'} 👋</div>
             </div>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:7, padding:'6px 12px', borderRadius:20, background:'rgba(16,232,152,.08)', border:'1px solid rgba(16,232,152,.18)' }}>
-            <div className="dot dot-green" />
-            <span style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>{t('dashboard.undetected')}</span>
+
+          {/* Status badges */}
+          <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:20, background:'rgba(16,232,152,.08)', border:'1px solid rgba(16,232,152,.2)' }}>
+              <div className="dot dot-green" style={{ width:5, height:5 }} />
+              <span style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>{t('dashboard.undetected')}</span>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:20, background:'rgba(139,92,246,.08)', border:'1px solid rgba(139,92,246,.2)' }}>
+              <span style={{ fontSize:11, fontWeight:700, color:'#c4b5fd' }}>OB52 Ready</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12 }} className="stg">
-        {stats.map((stat, index) => (
-          <div key={stat.label} className="g g-hover g-lift fu" style={{ padding:'18px 20px', background:stat.bg, borderColor:stat.bc, animationDelay:`${index * 55}ms` }}>
-            <stat.icon size={18} style={{ color:stat.c, marginBottom:10 }} />
-            <div style={{ fontSize:26, fontWeight:800, color:'#fff', marginBottom:4 }}>{stat.val}</div>
-            <div className="label">{stat.label}</div>
+      {/* ══ STATS GRID ══ */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12 }}>
+        {stats.map((stat, i) => (
+          <div key={stat.label} className="dash-stat" style={{ animationDelay:`${i * 60}ms` }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+              <div style={{ width:38, height:38, borderRadius:11, background:stat.bg, border:`1px solid ${stat.bc}`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 0 16px ${stat.bc}` }}>
+                <stat.icon size={17} style={{ color:stat.c }} />
+              </div>
+              <div style={{ width:6, height:6, borderRadius:'50%', background:stat.c, boxShadow:`0 0 8px ${stat.c}`, animation:'dash-glow 2s ease-in-out infinite' }} />
+            </div>
+            <div style={{ fontSize:32, fontWeight:900, color:'#fff', letterSpacing:'-.04em', lineHeight:1, marginBottom:5 }}>{stat.val}</div>
+            <div style={{ fontSize:11, fontWeight:600, color:'rgba(255,255,255,.35)', textTransform:'uppercase', letterSpacing:'.1em' }}>{stat.label}</div>
           </div>
         ))}
       </div>
 
+      {/* ══ ACTIVE SUBSCRIPTIONS ══ */}
       {active.length > 0 ? (
-        <div className="fu" style={{ animationDelay:'80ms' }}>
-          <div className="label" style={{ color:'var(--purple)', marginBottom:10 }}>{t('dashboard.activeSubscriptions')}</div>
-          <div style={{ display:'grid', gap:12, gridTemplateColumns:internal.length > 0 && lag.length > 0 ? 'repeat(auto-fit,minmax(280px,1fr))' : '1fr' }}>
+        <div style={{ animationDelay:'80ms' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+            <div style={{ width:3, height:16, borderRadius:999, background:'linear-gradient(180deg,#8b5cf6,#6d28d9)' }} />
+            <span style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.12em', color:'rgba(255,255,255,.4)' }}>{t('dashboard.activeSubscriptions')}</span>
+          </div>
+          <div style={{ display:'grid', gap:14, gridTemplateColumns: internal.length > 0 && lag.length > 0 ? 'repeat(auto-fit,minmax(280px,1fr))' : '1fr' }}>
             {internal.map((license) => <LicCard key={license.id} lic={license} accent="b" />)}
             {lag.map((license) => <LicCard key={license.id} lic={license} accent="p" />)}
           </div>
         </div>
       ) : (
-        <div className="g fu" style={{ padding:'48px 20px', textAlign:'center', borderStyle:'dashed', animationDelay:'80ms' }}>
-          <Key size={36} style={{ color:'rgba(255,255,255,.08)', margin:'0 auto 12px' }} />
-          <p style={{ fontSize:15, fontWeight:600, color:'var(--muted)', marginBottom:6 }}>{t('dashboard.noLicense')}</p>
-          <p style={{ fontSize:13, color:'var(--dim)' }}>{t('dashboard.noLicenseDesc')}</p>
+        <div className="dash-card" style={{ padding:'52px 24px', textAlign:'center', borderStyle:'dashed', borderColor:'rgba(255,255,255,.08)' }}>
+          <div style={{ width:56, height:56, borderRadius:16, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+            <Key size={24} style={{ color:'rgba(255,255,255,.2)' }} />
+          </div>
+          <p style={{ fontSize:15, fontWeight:700, color:'rgba(255,255,255,.45)', marginBottom:6 }}>{t('dashboard.noLicense')}</p>
+          <p style={{ fontSize:13, color:'rgba(255,255,255,.22)' }}>{t('dashboard.noLicenseDesc')}</p>
         </div>
       )}
 
+      {/* ══ FREE KEY CARD ══ */}
       {user && <FreeKeyCard />}
 
-      <div className="g g-hover fu" style={{ padding:'18px 20px', background:'rgba(251,191,36,.06)', borderColor:'rgba(251,191,36,.16)' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-            <div style={{ width:42, height:42, borderRadius:11, background:'rgba(251,191,36,.1)', border:'1px solid rgba(251,191,36,.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <Gift size={20} color="var(--amber)" />
+      {/* ══ DAILY BONUS ══ */}
+      <div className="dash-card" style={{ padding:'22px 24px', background:'linear-gradient(135deg,rgba(18,14,4,.98) 0%,rgba(10,8,4,.98) 100%)', border:'1px solid rgba(251,191,36,.14)', boxShadow:'0 24px 48px rgba(0,0,0,.4), 0 0 40px rgba(251,191,36,.05)' }}>
+        {/* Top accent */}
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:1, borderRadius:'22px 22px 0 0', background:'linear-gradient(90deg,transparent,rgba(251,191,36,.4),transparent)', pointerEvents:'none' }} />
+
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:14, flex:1 }}>
+            <div style={{ width:46, height:46, borderRadius:14, background:'rgba(251,191,36,.1)', border:'1px solid rgba(251,191,36,.22)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 20px rgba(251,191,36,.15)', flexShrink:0 }}>
+              <Gift size={22} color="#fbbf24" />
             </div>
             <div>
-              <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:3 }}>{t('dashboard.dailyBonus')}</div>
-              <div style={{ fontSize:12, color:'var(--muted)' }}>{t('dashboard.dailyBonusDesc')}</div>
+              <div style={{ fontSize:15, fontWeight:800, color:'#fff', marginBottom:3 }}>{t('dashboard.dailyBonus')}</div>
+              <div style={{ fontSize:12, color:'rgba(255,255,255,.35)' }}>{t('dashboard.dailyBonusDesc')}</div>
             </div>
           </div>
-          <div style={{ textAlign:'right', flexShrink:0, marginLeft:12 }}>
-            <div style={{ fontSize:20, fontWeight:800, color:'var(--amber)', marginBottom:6 }}>{bonusPoints}<span style={{ fontSize:11, color:'var(--dim)', fontWeight:400, marginLeft:3 }}>{t('bonus.title')}</span></div>
+
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:8, flexShrink:0 }}>
+            <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
+              <span style={{ fontSize:28, fontWeight:900, color:'#fbbf24', letterSpacing:'-.03em' }}>{bonusPoints}</span>
+              <span style={{ fontSize:11, color:'rgba(255,255,255,.3)', fontWeight:500 }}>{t('bonus.title')}</span>
+            </div>
             {canClaimBonus
-              ? <button className="btn btn-sm" style={{ background:'linear-gradient(135deg,#fbbf24,#f59e0b)', color:'#3a1a00', fontWeight:700, boxShadow:'0 0 14px rgba(245,158,11,.3)', border:'none' }} onClick={handleClaimBonus} disabled={claimingBonus}>{claimingBonus ? <><Loader2 size={12} className="animate-spin" /> {t('common.save')}</> : t('dashboard.claimNow')}</button>
-              : <div style={{ fontSize:11, color:'var(--dim)', display:'flex', alignItems:'center', gap:4 }}><Clock size={11} />{bonusCooldown}</div>
+              ? <button className="btn btn-sm" style={{ background:'linear-gradient(135deg,#fbbf24,#f59e0b)', color:'#3a1a00', fontWeight:800, border:'none', boxShadow:'0 0 20px rgba(245,158,11,.4)', padding:'9px 18px', borderRadius:11, fontSize:13 }}
+                  onClick={handleClaimBonus} disabled={claimingBonus}>
+                  {claimingBonus ? <><Loader2 size={12} className="animate-spin" /> Claiming…</> : t('dashboard.claimNow')}
+                </button>
+              : <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'rgba(255,255,255,.3)', fontWeight:600 }}>
+                  <Clock size={11} style={{ color:'rgba(255,255,255,.25)' }} /> {bonusCooldown}
+                </div>
             }
           </div>
         </div>
-        <div className="prog" style={{ marginTop:14 }}>
-          <div className="prog-bar prog-a" style={{ width:`${bonusPoints % 100}%` }} />
+
+        {/* Progress bar */}
+        <div className="dash-bonus-bar">
+          <div style={{ height:'100%', width:`${bonusPoints % 100}%`, borderRadius:999, background:'linear-gradient(90deg,#f59e0b,#fbbf24)', boxShadow:'0 0 8px rgba(251,191,36,.5)', transition:'width .6s cubic-bezier(.22,1,.36,1)' }} />
+        </div>
+        <div style={{ display:'flex', justifyContent:'space-between', marginTop:6 }}>
+          <span style={{ fontSize:10, color:'rgba(255,255,255,.2)', fontWeight:600 }}>{bonusPoints % 100}/100 to next reward</span>
+          <span style={{ fontSize:10, color:'rgba(255,255,255,.2)' }}>Level {Math.floor(bonusPoints / 100) + 1}</span>
         </div>
       </div>
     </div>

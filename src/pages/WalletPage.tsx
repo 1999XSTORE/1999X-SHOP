@@ -7,7 +7,6 @@ import { logActivity, notifyUser } from '@/lib/activity';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { buildReferralLink, captureReferralFromUrl, getStoredReferralEmail, normalizeResellerEmail } from '@/lib/reseller';
 
 const SUPABASE_URL  = 'https://wkjqrjafogufqeasfeev.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
@@ -45,17 +44,6 @@ function localAmt(usd: number, methodId: string): string {
   return `≈ ${lc.symbol}${val} ${lc.code}`;
 }
 
-function roundMoney(value: number) {
-  return Math.round(value * 100) / 100;
-}
-
-async function applyResellerCreditForTransaction(transactionId: string) {
-  const { data, error } = await safeQuery(() => supabase.rpc('apply_reseller_credit', { p_transaction_id: transactionId }));
-  if (error) return { data: null, error };
-  const row = Array.isArray(data) ? data[0] : data;
-  return { data: row ?? null, error: null };
-}
-
 const AMOUNTS = [5, 10, 15, 25, 50, 100];
 
 // ── QR Zoom Modal ────────────────────────────────────────────
@@ -72,7 +60,7 @@ function QRZoomModal({ src, onClose }: { src: string; onClose: () => void }) {
 }
 
 // ── PayPal Smart Button (auto-capture → auto-credit balance) ─
-function PayPalButton({ amount, user, onSuccess, referralEmail }: { amount: number; user: any; onSuccess: () => void; referralEmail: string }) {
+function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; onSuccess: () => void }) {
   const SUPABASE_URL_PP  = 'https://wkjqrjafogufqeasfeev.supabase.co';
   const SUPABASE_ANON_PP = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
   // Read client ID from Vite env var (set VITE_PAYPAL_CLIENT_ID in Netlify environment variables)
@@ -137,7 +125,7 @@ function PayPalButton({ amount, user, onSuccess, referralEmail }: { amount: numb
 
           // Step 2: Insert approved transaction directly via Supabase (no edge function needed)
           // This is safe because the SDK capture already verified the payment with PayPal
-          const { data: txRow, error: txErr } = await supabase.from('transactions').insert({
+          const { error: txErr } = await supabase.from('transactions').insert({
             user_id:        user.id,
             user_email:     user.email,
             user_name:      user.name,
@@ -146,8 +134,7 @@ function PayPalButton({ amount, user, onSuccess, referralEmail }: { amount: numb
             transaction_id: orderId,
             status:         'approved',
             note:           'Auto-verified via PayPal JS SDK capture',
-            referral_email: referralEmail || '',
-          }).select('id').single();
+          });
 
           // Step 3: Record in paypal_auto_credits for idempotency (ignore if already exists)
           await supabase.from('paypal_auto_credits').insert({
@@ -163,8 +150,7 @@ function PayPalButton({ amount, user, onSuccess, referralEmail }: { amount: numb
             body: JSON.stringify({ order_id:orderId, user_id:user.id, user_email:user.email, user_name:user.name, amount:finalAmount }),
           }).catch(() => {}); // fire-and-forget, won't block or error
 
-          if (!txErr && txRow?.id) {
-            await applyResellerCreditForTransaction(txRow.id);
+          if (!txErr) {
             setDone(true);
             toast.success(`🎉 $${finalAmount.toFixed(2)} added to your balance!`);
             onSuccess();
@@ -239,7 +225,7 @@ function PayPalButton({ amount, user, onSuccess, referralEmail }: { amount: numb
 }
 
 // ── Admin/Support Payment Panel ───────────────────────────────
-function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount, referralEmail }: { user: any; onSuccess: () => void; expectedUsdAmount: number; referralEmail: string }) {
+function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount }: { user: any; onSuccess: () => void; expectedUsdAmount: number }) {
   const [voucher, setVoucher] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ amountUsd: number; grossAmountUsd: number; feeUsd: number; feeRate: number; amountThb: number; exchangeRate: number; transactionId: string; shortfallUsd: number } | null>(null);
@@ -265,7 +251,7 @@ function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount, referralEmail }:
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke('truwallet-redeem', { body: { voucher: voucher.trim(), expectedUsdAmount, referralEmail } });
+    const { data, error } = await supabase.functions.invoke('truwallet-redeem', { body: { voucher: voucher.trim(), expectedUsdAmount } });
     setLoading(false);
     if (error || !data?.success) {
       const errorMessage = data?.message ?? await getFunctionErrorMessage(error) ?? 'Redeem failed';
@@ -319,8 +305,6 @@ function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount, referralEmail }:
 function AdminPanel() {
   const { user: adminUser } = useAppStore();
   const [txns,setTxns]         = useState<any[]>([]);
-  const [withdrawals,setWithdrawals] = useState<any[]>([]);
-  const [platformEarned,setPlatformEarned] = useState(0);
   const [loading,setL]         = useState(false);
   const [filter,setFilter]     = useState<'pending'|'approved'|'rejected'|'all'>('pending');
   const [search,setSearch]     = useState('');
@@ -331,23 +315,13 @@ function AdminPanel() {
     setL(true);
     let q = supabase.from('transactions').select('*').order('created_at',{ ascending:false });
     if (search.trim()) q = (q as any).or(`user_email.ilike.%${search.trim()}%,user_name.ilike.%${search.trim()}%,transaction_id.ilike.%${search.trim()}%`);
-    const [{ data, error }, { data: wdData }, { data: platformData }] = await Promise.all([
-      safeQuery(() => q),
-      safeQuery(() => supabase.from('withdrawal_requests').select('*').order('created_at',{ ascending:false })),
-      safeQuery(() => supabase.from('platform_earnings').select('amount')),
-    ]);
+    const { data, error } = await safeQuery(() => q);
     if (!error && data) setTxns(data);
-    if (wdData) setWithdrawals(wdData);
-    setPlatformEarned((platformData ?? []).reduce((sum: number, row: any) => sum + Number(row.amount ?? 0), 0));
     setL(false);
   };
   useEffect(() => {
     load(); intv.current = setInterval(load, 20000);
-    const ch = supabase.channel('admin-wallet')
-      .on('postgres_changes',{ event:'*', schema:'public', table:'transactions' },load)
-      .on('postgres_changes',{ event:'*', schema:'public', table:'withdrawal_requests' },load)
-      .on('postgres_changes',{ event:'*', schema:'public', table:'platform_earnings' },load)
-      .subscribe();
+    const ch = supabase.channel('admin-txns').on('postgres_changes',{ event:'*', schema:'public', table:'transactions' },load).subscribe();
     return () => { clearInterval(intv.current); supabase.removeChannel(ch); };
   },[]);
   useEffect(() => { load(); }, [search]);
@@ -355,9 +329,8 @@ function AdminPanel() {
   const approve = async (tx: any) => {
     const { error } = await safeQuery(() => supabase.from('transactions').update({ status:'approved', updated_at:new Date().toISOString() }).eq('id',tx.id));
     if (error) { toast.error('Failed: '+error.message); return; }
-    const resellerResult = await applyResellerCreditForTransaction(tx.id);
     toast.success(`✅ Approved $${tx.amount} for ${tx.user_name}`);
-    setTxns(p => p.map(t => t.id===tx.id ? {...t,status:'approved',reseller_processed:true,reseller_net_amount:resellerResult.data?.reseller_amount ?? t.reseller_net_amount ?? 0,platform_fee:resellerResult.data?.platform_amount ?? t.platform_fee ?? 0} : t));
+    setTxns(p => p.map(t => t.id===tx.id ? {...t,status:'approved'} : t));
     logActivity({ userId:adminUser?.id??'', userEmail:adminUser?.email??'', userName:adminUser?.name??'', action:'payment_approved', amount:Number(tx.amount), status:'success', meta:{ for_user:tx.user_email, method:tx.method } });
     notifyUser(tx.user_id, { type:'payment', title:`✅ Payment Approved — $${Number(tx.amount).toFixed(2)}`, body:`Your ${tx.method} payment has been approved.`, linkPath:'/wallet' });
   };
@@ -368,16 +341,9 @@ function AdminPanel() {
     logActivity({ userId:adminUser?.id??'', userEmail:adminUser?.email??'', userName:adminUser?.name??'', action:'payment_rejected', amount:Number(tx.amount), status:'success', meta:{ for_user:tx.user_email } });
     notifyUser(tx.user_id, { type:'payment', title:`❌ Payment Rejected — $${Number(tx.amount).toFixed(2)}`, body:`Your ${tx.method} payment was rejected.`, linkPath:'/wallet' });
   };
-  const handleWithdrawal = async (requestId: string, status: 'approved' | 'rejected') => {
-    const { error } = await safeQuery(() => supabase.rpc('handle_withdrawal_request', { p_request_id: requestId, p_status: status }));
-    if (error) { toast.error('Failed: ' + error.message); return; }
-    toast.success(`Withdrawal ${status}.`);
-    load();
-  };
   const filtered = filter==='all' ? txns : txns.filter(t=>t.status===filter);
   const pending  = txns.filter(t=>t.status==='pending').length;
   const appTotal = txns.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount),0);
-  const pendingWithdrawals = withdrawals.filter((request) => request.status === 'pending').length;
 
   return (
     <div style={{ display:'flex',flexDirection:'column',gap:14 }}>
@@ -392,8 +358,8 @@ function AdminPanel() {
       )}
 
       {/* Stats row */}
-      <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10 }}>
-        {[{label:'Pending',val:pending,c:'var(--amber)',bg:'rgba(251,191,36,.07)',bc:'rgba(251,191,36,.15)'},{label:'Withdrawals',val:pendingWithdrawals,c:'var(--blue)',bg:'rgba(56,189,248,.06)',bc:'rgba(56,189,248,.13)'},{label:'Approved $',val:`$${appTotal.toFixed(2)}`,c:'var(--green)',bg:'rgba(16,232,152,.06)',bc:'rgba(16,232,152,.13)'},{label:'Platform $',val:`$${platformEarned.toFixed(2)}`,c:'#f97316',bg:'rgba(249,115,22,.06)',bc:'rgba(249,115,22,.13)'}].map(s=>(
+      <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10 }}>
+        {[{label:'Pending',val:pending,c:'var(--amber)',bg:'rgba(251,191,36,.07)',bc:'rgba(251,191,36,.15)'},{label:'Total',val:txns.length,c:'var(--blue)',bg:'rgba(56,189,248,.06)',bc:'rgba(56,189,248,.13)'},{label:'Approved $',val:`$${appTotal.toFixed(2)}`,c:'var(--green)',bg:'rgba(16,232,152,.06)',bc:'rgba(16,232,152,.13)'}].map(s=>(
           <div key={s.label} className="g" style={{ padding:'14px 12px',textAlign:'center',background:s.bg,borderColor:s.bc }}>
             <div style={{ fontSize:20,fontWeight:800,color:s.c }}>{s.val}</div>
             <div className="label" style={{ marginTop:3 }}>{s.label}</div>
@@ -436,7 +402,6 @@ function AdminPanel() {
                 <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:4,flexWrap:'wrap' }}>
                   <span style={{ fontSize:15,fontWeight:800,color:'#fff' }}>{tx.user_name}</span>
                   <span className={`badge badge-${tx.status==='pending'?'amber':tx.status==='approved'?'green':'red'}`}>{tx.status}</span>
-                  {!!tx.referral_email&&<span className="badge badge-purple" style={{fontSize:9}}>Ref {tx.referral_email}</span>}
                   {tx.method==='paypal'&&tx.note?.includes('Auto')&&<span className="badge badge-blue" style={{fontSize:9}}>🤖 Auto</span>}
                 </div>
                 <div style={{ fontSize:12,color:'var(--muted)' }}>{tx.user_email}</div>
@@ -452,7 +417,6 @@ function AdminPanel() {
               {[
                 {label:'Method',         val:tx.method || '—'},
                 {label:'Transaction ID', val:tx.transaction_id || '—'},
-                {label:'Referral',       val:tx.referral_email || 'Direct'},
                 {label:'User ID',        val:(tx.user_id||'').slice(0,14)+'…'},
                 {label:'Last Updated',   val:tx.updated_at ? new Date(tx.updated_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—'},
               ].map(f=>(
@@ -483,7 +447,6 @@ function AdminPanel() {
 
             {/* Note */}
             {tx.note && <div style={{ fontSize:11,color:'var(--dim)',marginBottom:12,padding:'7px 10px',background:'rgba(255,255,255,.03)',borderRadius:8 }}>Note: {tx.note}</div>}
-            {tx.status==='approved' && <div style={{ fontSize:11,color:'var(--dim)',marginBottom:12,padding:'7px 10px',background:'rgba(255,255,255,.03)',borderRadius:8 }}>Reseller payout: ${Number(tx.reseller_net_amount ?? 0).toFixed(2)} · Platform: ${Number(tx.platform_fee ?? 0).toFixed(2)}</div>}
 
             {/* Action buttons */}
             {tx.status==='pending'&&(
@@ -494,41 +457,6 @@ function AdminPanel() {
             )}
           </div>
         ))}
-      </div>
-
-      <div className="g" style={{ padding:18 }}>
-        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:8 }}>
-          <div>
-            <div style={{ fontSize:15,fontWeight:800,color:'#fff' }}>Withdrawal Requests</div>
-            <div style={{ fontSize:11,color:'var(--muted)' }}>Friday-only payouts submitted by resellers</div>
-          </div>
-          <span className="badge badge-blue">{pendingWithdrawals} pending</span>
-        </div>
-        <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
-          {withdrawals.length===0
-            ? <div style={{ textAlign:'center',padding:'18px 0',fontSize:13,color:'var(--muted)' }}>No withdrawal requests yet</div>
-            : withdrawals.map((request)=>(
-              <div key={request.id} style={{ padding:14,borderRadius:14,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)' }}>
-                <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,marginBottom:10,flexWrap:'wrap' }}>
-                  <div>
-                    <div style={{ fontSize:14,fontWeight:700,color:'#fff' }}>{request.user_email}</div>
-                    <div style={{ fontSize:11,color:'var(--muted)' }}>{new Date(request.created_at).toLocaleString()}</div>
-                  </div>
-                  <div style={{ textAlign:'right' }}>
-                    <div style={{ fontSize:22,fontWeight:900,color:'#fff' }}>${Number(request.amount).toFixed(2)}</div>
-                    <span className={`badge badge-${request.status==='pending'?'amber':request.status==='approved'?'green':'red'}`}>{request.status}</span>
-                  </div>
-                </div>
-                {request.status==='pending' && (
-                  <div style={{ display:'flex',gap:8 }}>
-                    <button onClick={()=>handleWithdrawal(request.id,'approved')} className="btn btn-g btn-sm" style={{ flex:1 }}><Check size={13}/> Approve</button>
-                    <button onClick={()=>handleWithdrawal(request.id,'rejected')} className="btn btn-danger btn-sm" style={{ flex:1 }}><X size={13}/> Reject</button>
-                  </div>
-                )}
-              </div>
-            ))
-          }
-        </div>
       </div>
     </div>
   );
@@ -820,17 +748,15 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
 }
 
 // ══════════════════════════════════════════════════════════════
-//  NEW Premium Add-Balance UI
+//  Premium Add-Balance UI — complete redesign
 // ══════════════════════════════════════════════════════════════
-function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess: () => void; referralEmail: string }) {
-  const { addBalance } = useAppStore();
+function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void }) {
   const [step, setStep] = useState<1|2|3>(1);
   const [amount, setAmount] = useState(10);
   const [custom, setCustom] = useState('');
   const [methodId, setMethodId] = useState<MethodId>('binance');
   const [txnId, setTxnId] = useState('');
   const [email, setEmail] = useState(user?.email || '');
-  const [screenshot, setScreenshot] = useState<File | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [qrZoom, setQrZoom] = useState(false);
@@ -838,11 +764,11 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
 
   const selAmount = custom ? parseFloat(custom)||0 : amount;
   const selMethod = PAYMENT_METHODS.find(m=>m.id===methodId) ?? PAYMENT_METHODS[0];
+  const lc = localAmt(selAmount, methodId);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    setScreenshot(f);
     const reader = new FileReader();
     reader.onload = ev => setScreenshotPreview(ev.target?.result as string);
     reader.readAsDataURL(f);
@@ -856,7 +782,7 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
     setSubmitting(true);
     const { error } = await safeQuery(() => supabase.from('transactions').insert({
       user_id:user.id, user_email:email.trim(), user_name:user.name,
-      amount:selAmount, method:methodId, transaction_id:txnId.trim(), status:'pending', screenshot_url:screenshotPreview || '', referral_email: referralEmail || ''
+      amount:selAmount, method:methodId, transaction_id:txnId.trim(), status:'pending', screenshot_url:screenshotPreview || ''
     }));
     if (error) {
       if (error.message==='timeout') toast.error('Request timed out.');
@@ -864,9 +790,8 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
       else toast.error('Failed: '+error.message);
     } else {
       toast.success('✅ Submitted! Admin will approve shortly.');
-      // Log activity
       logActivity({ userId:user.id, userEmail:email.trim(), userName:user.name, action:'payment_submit', amount:selAmount, status:'success', meta:{ method:methodId, txnId:txnId.trim()||'paypal-auto' } });
-      setStep(1); setTxnId(''); setCustom(''); setScreenshot(null); setScreenshotPreview('');
+      setStep(1); setTxnId(''); setCustom(''); setScreenshotPreview('');
       onSuccess();
     }
     setSubmitting(false);
@@ -877,363 +802,430 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
       {qrZoom && selMethod.hasQr && selMethod.qr && !selMethod.qr.startsWith('YOUR_') && (
         <QRZoomModal src={selMethod.qr} onClose={()=>setQrZoom(false)}/>
       )}
+
       <style>{`
-        .pm-pill { transition: all 0.22s cubic-bezier(.22,1,.36,1); backdrop-filter: blur(16px); }
-        .pm-pill:hover { transform: translateY(-2px) scale(1.01); }
-        .amt-btn { transition: all 0.22s ease; backdrop-filter: blur(14px); }
-        .amt-btn:hover { transform: scale(1.04); }
-        @keyframes slideIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
-        @keyframes panelGlow { 0%,100%{opacity:.55} 50%{opacity:1} }
-        .pay-panel { animation: slideIn 0.32s cubic-bezier(.22,1,.36,1) both; }
-        .pay-shell { position: relative; overflow: hidden; }
-        .pay-shell::before {
-          content: "";
-          position: absolute;
-          inset: -1px;
-          border-radius: inherit;
-          background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(139,92,246,.22), rgba(34,211,238,.14));
-          opacity: .85;
-          pointer-events: none;
+        @keyframes dep-in { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
+        .dep-wrap { animation: dep-in .32s cubic-bezier(.22,1,.36,1) both; }
+
+        /* ── Step bar ── */
+        .dep-step-bar {
+          display:flex; align-items:center; gap:0;
+          background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+          border-radius:14px; padding:8px 20px; width:fit-content; margin-bottom:24px;
+          backdrop-filter:blur(12px);
         }
-        .pay-shell::after {
-          content: "";
-          position: absolute;
-          width: 320px;
-          height: 320px;
-          top: -110px;
-          right: -90px;
-          border-radius: 999px;
-          background: radial-gradient(circle, rgba(139,92,246,.22) 0%, rgba(139,92,246,0) 72%);
-          filter: blur(8px);
-          pointer-events: none;
-          animation: panelGlow 5s ease-in-out infinite;
+        .dep-step { display:flex; align-items:center; gap:8px; padding:4px 10px; border-radius:9px; cursor:default; transition:background .2s; }
+        .dep-step.done  { cursor:pointer; }
+        .dep-step.done:hover { background:rgba(16,232,152,.08); }
+        .dep-step.active { background:rgba(139,92,246,.12); }
+        .dep-step-num {
+          width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+          font-size:11px; font-weight:900; flex-shrink:0; transition:all .2s;
         }
-        .pay-inner { position: relative; z-index: 1; }
-        @media(max-width:700px){ .pay-cols{ grid-template-columns: 1fr !important; } }
+        .dep-step-label { font-size:12px; font-weight:700; transition:color .2s; }
+        .dep-sep { width:28px; height:1px; background:rgba(255,255,255,.08); margin:0 2px; flex-shrink:0; }
+        .dep-sep.done { background:rgba(16,232,152,.35); }
+
+        /* ── Card ── */
+        .dep-card {
+          background:linear-gradient(160deg,rgba(14,14,22,.97) 0%,rgba(9,9,18,.97) 100%);
+          border:1px solid rgba(255,255,255,.08); border-radius:22px; overflow:hidden;
+          box-shadow:0 32px 64px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.03) inset;
+        }
+
+        /* ── Amount grid ── */
+        .dep-amt-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+        .dep-amt-btn {
+          padding:18px 8px; border-radius:16px; font-size:20px; font-weight:900;
+          cursor:pointer; font-family:inherit; transition:all .2s cubic-bezier(.22,1,.36,1);
+          display:flex; flex-direction:column; align-items:center; gap:3; position:relative;
+        }
+        .dep-amt-btn:hover { transform:translateY(-2px); }
+        .dep-amt-btn.sel { border-color:rgba(139,92,246,.6) !important; }
+
+        /* ── Field ── */
+        .dep-field {
+          width:100%; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09);
+          border-radius:12px; padding:14px 16px; color:#fff; font-family:inherit;
+          font-size:14px; outline:none; transition:all .2s; box-sizing:border-box;
+        }
+        .dep-field:focus { border-color:rgba(139,92,246,.5); box-shadow:0 0 0 3px rgba(139,92,246,.1); }
+        .dep-field::placeholder { color:rgba(255,255,255,.25); }
+        .dep-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.12em; color:rgba(255,255,255,.35); margin-bottom:7px; display:block; }
+
+        /* ── Method chips ── */
+        .dep-method-chip {
+          display:inline-flex; align-items:center; gap:7px; padding:8px 14px; border-radius:999px;
+          font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;
+          transition:all .2s cubic-bezier(.22,1,.36,1); white-space:nowrap; flex-shrink:0;
+        }
+        .dep-method-chip:hover { transform:translateY(-1px); }
+
+        /* ── Upload drop zone ── */
+        .dep-upload {
+          border:1.5px dashed rgba(255,255,255,.12); border-radius:14px; padding:28px 16px;
+          text-align:center; cursor:pointer; transition:all .2s;
+          background:rgba(255,255,255,.02);
+        }
+        .dep-upload:hover { border-color:rgba(139,92,246,.4); background:rgba(139,92,246,.04); }
+
+        /* ── Submit button ── */
+        .dep-submit {
+          width:100%; padding:16px; border-radius:14px; border:none; cursor:pointer;
+          font-family:inherit; font-size:15px; font-weight:800; display:flex; align-items:center;
+          justify-content:center; gap:9px; transition:all .25s cubic-bezier(.22,1,.36,1);
+          background:linear-gradient(135deg,#8b5cf6,#7c3aed,#c026d3);
+          color:#fff; box-shadow:0 0 32px rgba(109,40,217,.45), 0 4px 20px rgba(0,0,0,.3);
+          position:relative; overflow:hidden;
+        }
+        .dep-submit::before {
+          content:''; position:absolute; top:0; bottom:0; left:-80%; width:40%;
+          background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);
+          transition:left .4s ease; pointer-events:none;
+        }
+        .dep-submit:hover { transform:translateY(-2px); box-shadow:0 0 48px rgba(109,40,217,.65), 0 8px 28px rgba(0,0,0,.4); }
+        .dep-submit:hover::before { left:160%; }
+        .dep-submit:active { transform:translateY(0) scale(.98); }
+        .dep-submit:disabled { opacity:.45; cursor:not-allowed; transform:none !important; }
+
+        /* ── QR card ── */
+        .dep-qr-wrap {
+          display:inline-block; cursor:zoom-in; padding:12px; border-radius:22px;
+          background:#fff; transition:transform .2s,box-shadow .2s;
+        }
+        .dep-qr-wrap:hover { transform:scale(1.03); }
+
+        @media(max-width:720px){ .dep-split{ grid-template-columns:1fr !important; } }
       `}</style>
 
-      {/* Step indicator bar */}
-      <div style={{ display:'flex', alignItems:'center', gap:0, marginBottom:26, background:'linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.03))', borderRadius:18, padding:'8px 18px', border:'1px solid rgba(255,255,255,.08)', width:'fit-content', boxShadow:'0 18px 40px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.04)', backdropFilter:'blur(18px)' }}>
-        {['Amount','Payment','Submit'].map((l,i)=>{
-          const n=i+1, done=n<step, active=n===step;
+      {/* ── Step indicator ── */}
+      <div className="dep-step-bar">
+        {(['Amount','Payment','Submit'] as const).map((label, i) => {
+          const n = i + 1;
+          const done = n < step;
+          const active = n === step;
           return (
-            <div key={l} style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:7, padding:'6px 10px', borderRadius:10, background:active?'rgba(139,92,246,.15)':'transparent', cursor:done?'pointer':'default', transition:'all .2s' }} onClick={()=>{if(done)setStep(n as 1|2|3);}}>
-                <div style={{ width:22, height:22, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:900, background:done?'var(--green)':active?'linear-gradient(135deg,#8b5cf6,#6d28d9)':'rgba(255,255,255,.06)', color:done||active?'#fff':'var(--muted)', boxShadow:active?'0 0 14px rgba(109,40,217,.5)':'none', transition:'all .2s', flexShrink:0 }}>{done?'✓':n}</div>
-                <span style={{ fontSize:12, fontWeight:700, color:active?'#fff':done?'var(--green)':'rgba(255,255,255,.3)' }}>{l}</span>
+            <div key={label} style={{ display:'flex', alignItems:'center' }}>
+              <div className={`dep-step${done?' done':''}${active?' active':''}`}
+                onClick={() => done && setStep(n as 1|2|3)}>
+                <div className="dep-step-num" style={{
+                  background: done ? 'var(--green)' : active ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : 'rgba(255,255,255,.06)',
+                  color: done || active ? '#fff' : 'rgba(255,255,255,.3)',
+                  boxShadow: active ? '0 0 14px rgba(109,40,217,.5)' : 'none',
+                }}>{done ? '✓' : n}</div>
+                <span className="dep-step-label" style={{ color: active ? '#fff' : done ? 'var(--green)' : 'rgba(255,255,255,.3)' }}>{label}</span>
               </div>
-              {i<2&&<div style={{ width:24, height:1, background:done?'rgba(16,232,152,.4)':'rgba(255,255,255,.07)', margin:'0 2px' }}/>}
+              {i < 2 && <div className={`dep-sep${done?' done':''}`} />}
             </div>
           );
         })}
       </div>
 
-      {/* ── STEP 1: Amount ── */}
-      {step===1&&(
-        <div className="pay-panel pay-shell g" style={{ padding:1, borderRadius:28, background:'linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.015))', boxShadow:'0 28px 60px rgba(0,0,0,.24)' }}>
-          <div className="pay-inner" style={{ padding:'30px 30px 34px', borderRadius:27, background:'linear-gradient(180deg,rgba(16,18,30,.95),rgba(10,10,18,.92))' }}>
-          <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.38)', marginBottom:8 }}>Deposit Wallet Balance</div>
-          <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-.04em', marginBottom:18 }}>Choose Your Amount</div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:16 }}>
-            {AMOUNTS.map(a=>(
-              <button key={a} className="amt-btn" onClick={()=>{setAmount(a);setCustom('');}}
-                style={{ padding:'22px 8px', borderRadius:20, fontSize:22, fontWeight:900, cursor:'pointer', border:`1px solid ${amount===a&&!custom?'rgba(168,85,247,.65)':'rgba(255,255,255,.08)'}`, background:amount===a&&!custom?'linear-gradient(135deg,rgba(139,92,246,.24),rgba(34,211,238,.08))':'linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.025))', color:amount===a&&!custom?'#f5f3ff':'rgba(255,255,255,.62)', fontFamily:'inherit', position:'relative', boxShadow:amount===a&&!custom?'0 18px 34px rgba(109,40,217,.22), inset 0 1px 0 rgba(255,255,255,.08)':'inset 0 1px 0 rgba(255,255,255,.03)' }}>
-                <span style={{ display:'block', fontSize:9, fontWeight:700, color:'rgba(255,255,255,.28)', marginBottom:3, letterSpacing:'.1em' }}>USD</span>
-                ${a}
-                {amount===a&&!custom&&<div style={{ position:'absolute', top:8, right:10, width:7, height:7, borderRadius:'50%', background:'#8b5cf6', boxShadow:'0 0 8px #8b5cf6', animation:'blink 1.5s infinite' }}/>}
-              </button>
-            ))}
+      {/* ══ STEP 1: Choose Amount ══ */}
+      {step === 1 && (
+        <div className="dep-wrap dep-card" style={{ maxWidth:560, padding:'32px 32px 36px' }}>
+          <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:6 }}>Deposit Wallet Balance</div>
+          <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-.03em', marginBottom:26 }}>Choose Your Amount</div>
+
+          {/* Amount grid */}
+          <div className="dep-amt-grid" style={{ marginBottom:16 }}>
+            {AMOUNTS.map(a => {
+              const sel = amount === a && !custom;
+              return (
+                <button key={a} className={`dep-amt-btn${sel?' sel':''}`}
+                  onClick={() => { setAmount(a); setCustom(''); }}
+                  style={{
+                    border: `1px solid ${sel ? 'rgba(139,92,246,.6)' : 'rgba(255,255,255,.08)'}`,
+                    background: sel ? 'linear-gradient(135deg,rgba(139,92,246,.2),rgba(139,92,246,.08))' : 'rgba(255,255,255,.04)',
+                    color: sel ? '#e9d5ff' : 'rgba(255,255,255,.55)',
+                    boxShadow: sel ? '0 0 24px rgba(109,40,217,.25), inset 0 1px 0 rgba(255,255,255,.06)' : 'none',
+                  }}>
+                  <span style={{ fontSize:9, fontWeight:700, color: sel ? 'rgba(233,213,255,.5)' : 'rgba(255,255,255,.25)', letterSpacing:'.1em' }}>USD</span>
+                  ${a}
+                  {sel && <div style={{ position:'absolute', top:8, right:10, width:7, height:7, borderRadius:'50%', background:'#8b5cf6', boxShadow:'0 0 8px #8b5cf6', animation:'blink 1.5s infinite' }} />}
+                </button>
+              );
+            })}
           </div>
-          <div style={{ position:'relative', marginBottom:22 }}>
-            <span style={{ position:'absolute', left:16, top:'50%', transform:'translateY(-50%)', color:'var(--muted)', fontWeight:700, fontSize:18, pointerEvents:'none' }}>$</span>
-            <input type="number" placeholder="Or enter custom amount..." value={custom} onChange={e=>setCustom(e.target.value)}
-              style={{ width:'100%', background:'linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03))', border:`1px solid ${custom?'rgba(139,92,246,.45)':'rgba(255,255,255,.08)'}`, borderRadius:16, padding:'16px 18px 16px 36px', color:'#fff', fontFamily:'inherit', fontSize:16, fontWeight:700, outline:'none', transition:'all .2s', boxShadow:'inset 0 1px 0 rgba(255,255,255,.04)' }}
-              onFocus={e=>{e.target.style.borderColor='rgba(139,92,246,.5)';e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,.1)';}}
-              onBlur={e=>{e.target.style.borderColor=custom?'rgba(139,92,246,.35)':'rgba(255,255,255,.08)';e.target.style.boxShadow='none';}}
-            />
+
+          {/* Custom amount */}
+          <div style={{ position:'relative', marginBottom:24 }}>
+            <span style={{ position:'absolute', left:16, top:'50%', transform:'translateY(-50%)', color:'rgba(255,255,255,.4)', fontWeight:700, fontSize:18, pointerEvents:'none' }}>$</span>
+            <input type="number" className="dep-field" placeholder="Or enter custom amount…"
+              value={custom} onChange={e => setCustom(e.target.value)}
+              style={{ paddingLeft:36, fontSize:16, fontWeight:700 }} />
           </div>
-          {selAmount>0&&(
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderRadius:18, background:'linear-gradient(135deg,rgba(139,92,246,.18),rgba(236,72,153,.1),rgba(34,211,238,.08))', border:'1px solid rgba(139,92,246,.24)', marginBottom:22, boxShadow:'0 18px 38px rgba(15,10,30,.22)' }}>
-              <span style={{ fontSize:13, color:'var(--muted)' }}>You will deposit</span>
-              <span style={{ fontSize:30, fontWeight:900, color:'#fff', letterSpacing:'-.03em', textShadow:'0 0 24px rgba(139,92,246,.4)' }}>${selAmount.toFixed(2)}</span>
+
+          {/* Preview */}
+          {selAmount > 0 && (
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 20px', borderRadius:14, background:'rgba(139,92,246,.1)', border:'1px solid rgba(139,92,246,.22)', marginBottom:24 }}>
+              <span style={{ fontSize:13, color:'rgba(255,255,255,.5)' }}>You will deposit</span>
+              <span style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-.03em' }}>${selAmount.toFixed(2)}</span>
             </div>
           )}
-          <button onClick={()=>selAmount>0?setStep(2):toast.error('Please select an amount')} className="btn btn-p btn-lg btn-full" style={{ fontSize:15, borderRadius:18, padding:'17px', background:'linear-gradient(90deg,#8b5cf6,#7c3aed,#c026d3)', boxShadow:'0 18px 34px rgba(124,58,237,.32)' }}>
-            Continue to Payment Method <ArrowRight size={17}/>
+
+          <button className="dep-submit" onClick={() => selAmount > 0 ? setStep(2) : toast.error('Please select an amount')}>
+            Continue to Payment <ArrowRight size={17} />
           </button>
-          </div>
         </div>
       )}
 
-      {/* ── STEP 2: Payment Method + Split Panel ── */}
-      {step===2&&(
-        <div className="pay-panel pay-shell g" style={{ borderRadius:28, overflow:'hidden', padding:1, background:'linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.015))', boxShadow:'0 30px 70px rgba(0,0,0,.28)' }}>
-          <div className="pay-inner" style={{ borderRadius:27, overflow:'hidden', background:'linear-gradient(180deg,rgba(15,16,28,.96),rgba(9,10,18,.94))' }}>
-          {/* Method selector */}
-          <div style={{ padding:'24px 26px 18px', borderBottom:'1px solid rgba(255,255,255,.06)', background:'linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015))' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
-              <button onClick={()=>setStep(1)} style={{ display:'flex', alignItems:'center', gap:5, background:'linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03))', border:'1px solid rgba(255,255,255,.08)', borderRadius:12, cursor:'pointer', color:'var(--muted)', fontSize:12, fontFamily:'inherit', padding:'8px 12px', backdropFilter:'blur(10px)' }}>
+      {/* ══ STEP 2: Method + Details + Form ══ */}
+      {step === 2 && (
+        <div className="dep-wrap dep-card">
+          {/* ── Top bar: Back + Method chips + Amount ── */}
+          <div style={{ padding:'20px 24px 18px', borderBottom:'1px solid rgba(255,255,255,.07)', background:'rgba(255,255,255,.02)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
+              <button onClick={() => setStep(1)} style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 13px', borderRadius:10, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.09)', cursor:'pointer', color:'rgba(255,255,255,.55)', fontSize:12, fontFamily:'inherit', fontWeight:600, transition:'all .15s' }}
+                onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.09)';(e.currentTarget as HTMLButtonElement).style.color='#fff';}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.05)';(e.currentTarget as HTMLButtonElement).style.color='rgba(255,255,255,.55)';}}>
                 <ArrowLeft size={13}/> Back
               </button>
-              <span style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.34)' }}>Select Payment Method</span>
-              <div style={{ marginLeft:'auto', padding:'7px 15px', borderRadius:999, background:'linear-gradient(135deg,rgba(124,58,237,.22),rgba(192,38,211,.14))', border:'1px solid rgba(139,92,246,.24)', fontSize:13, fontWeight:900, color:'#d8b4fe', boxShadow:'0 12px 24px rgba(109,40,217,.18)' }}>${selAmount.toFixed(2)}</div>
+              <span style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.28)' }}>Select Payment Method</span>
+              <div style={{ marginLeft:'auto', padding:'7px 16px', borderRadius:999, background:'rgba(139,92,246,.15)', border:'1px solid rgba(139,92,246,.28)', fontSize:14, fontWeight:900, color:'#c4b5fd' }}>${selAmount.toFixed(2)}</div>
             </div>
-            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-              {PAYMENT_METHODS.map(m=>(
-                <button key={m.id} className="pm-pill" onClick={()=>setMethodId(m.id)}
-                  style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 15px', borderRadius:999, fontSize:12, fontWeight:700, cursor:'pointer', border:`1px solid ${methodId===m.id?m.color:'rgba(255,255,255,.08)'}`, background:methodId===m.id?`linear-gradient(135deg, ${m.bgColor}, rgba(255,255,255,.05))`:'linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02))', color:methodId===m.id?m.color:'rgba(255,255,255,.58)', fontFamily:'inherit', boxShadow:methodId===m.id?`0 18px 30px ${m.glow}`:'inset 0 1px 0 rgba(255,255,255,.03)', whiteSpace:'nowrap', transition:'all .2s' }}>
-                  <span style={{ width:20, height:20, borderRadius:'50%', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{m.icon}</span>
-                  {m.label}
-                  {methodId===m.id&&<div style={{ width:5, height:5, borderRadius:'50%', background:m.color, marginLeft:2, boxShadow:`0 0 5px ${m.color}` }}/>}
-                </button>
-              ))}
+
+            {/* Method chips — scrollable row */}
+            <div style={{ display:'flex', gap:8, overflowX:'auto', paddingBottom:4 }}>
+              {PAYMENT_METHODS.map(m => {
+                const active = methodId === m.id;
+                return (
+                  <button key={m.id} className="dep-method-chip"
+                    onClick={() => setMethodId(m.id)}
+                    style={{
+                      border: `1px solid ${active ? m.color : 'rgba(255,255,255,.09)'}`,
+                      background: active ? `linear-gradient(135deg,${m.bgColor},rgba(255,255,255,.04))` : 'rgba(255,255,255,.04)',
+                      color: active ? m.color : 'rgba(255,255,255,.5)',
+                      boxShadow: active ? `0 0 20px ${m.glow}` : 'none',
+                    }}>
+                    <span style={{ width:18, height:18, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{m.icon}</span>
+                    {m.label}
+                    {active && <div style={{ width:5, height:5, borderRadius:'50%', background:m.color, boxShadow:`0 0 6px ${m.color}` }} />}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Split: Left = QR + details, Right = Form */}
-          <div className="pay-cols" style={{ display:'grid', gridTemplateColumns:'1fr 1fr' }}>
+          {/* ── Split: Left info | Right form ── */}
+          <div className="dep-split" style={{ display:'grid', gridTemplateColumns:'1fr 1fr' }}>
 
-            {/* LEFT */}
-            <div style={{ padding:'26px', borderRight:'1px solid rgba(255,255,255,.05)', background:'linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01))' }}>
-              {/* Payment summary */}
-              {(() => { const lc = localAmt(selAmount, methodId); return lc ? (
-                <div style={{ padding:'12px 14px', borderRadius:18, background:'linear-gradient(135deg,rgba(34,211,238,.1),rgba(168,85,247,.12))', border:'1px solid rgba(255,255,255,.08)', marginBottom:14, display:'flex', alignItems:'center', gap:10, boxShadow:'0 14px 28px rgba(34,211,238,.08)' }}>
-                  <span style={{ fontSize:20 }}>{LOCAL[methodId as keyof typeof LOCAL]?.flag ?? '🌐'}</span>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:10, color:'rgba(255,255,255,.34)', marginBottom:2, textTransform:'uppercase', letterSpacing:'.12em', fontWeight:700 }}>Local Equivalent</div>
-                    <div style={{ fontSize:17, fontWeight:900, color:'#f8fafc' }}>{lc}</div>
+            {/* LEFT — order summary + QR + payment details */}
+            <div style={{ padding:'28px 26px', borderRight:'1px solid rgba(255,255,255,.06)' }}>
+
+              {/* Local currency chip */}
+              {lc && (
+                <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:12, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', marginBottom:16 }}>
+                  <span style={{ fontSize:18 }}>{LOCAL[methodId as keyof typeof LOCAL]?.flag ?? '🌐'}</span>
+                  <div>
+                    <div style={{ fontSize:10, color:'rgba(255,255,255,.3)', letterSpacing:'.1em', textTransform:'uppercase', fontWeight:700, marginBottom:1 }}>Local Equivalent</div>
+                    <div style={{ fontSize:15, fontWeight:800, color:'#fff' }}>{lc}</div>
                   </div>
-                  <div style={{ marginLeft:'auto', fontSize:10, color:'var(--dim)', maxWidth:110, textAlign:'right', lineHeight:1.45 }}>Estimate for this payment method.</div>
                 </div>
-              ) : null; })()}
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', background:`linear-gradient(135deg, ${selMethod.bgColor}, rgba(255,255,255,.03))`, border:`1px solid ${selMethod.borderColor}`, borderRadius:24, padding:'20px 20px', marginBottom:18, boxShadow:'0 20px 42px rgba(0,0,0,.16)' }}>
-                <div>
-                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:4 }}>Order Summary</div>
-                  <div style={{ fontSize:16, color:'rgba(255,255,255,.72)', fontWeight:700, marginBottom:4 }}>{selMethod.label}</div>
-                  <div style={{ fontSize:38, fontWeight:900, color:'#fff', letterSpacing:'-.05em' }}>${selAmount.toFixed(2)}</div>
-                </div>
-                <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 14px', borderRadius:999, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.08)', backdropFilter:'blur(14px)' }}>
-                  <span style={{ width:18, height:18, display:'flex', alignItems:'center', justifyContent:'center' }}>{selMethod.icon}</span>
-                  <span style={{ fontSize:12, fontWeight:800, color:'#fff' }}>Ready to pay</span>
+              )}
+
+              {/* Order summary card */}
+              <div style={{ padding:'18px 20px', borderRadius:16, background:`linear-gradient(135deg,${selMethod.bgColor},rgba(0,0,0,.3))`, border:`1px solid ${selMethod.borderColor}`, marginBottom:20 }}>
+                <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:6 }}>Order Summary</div>
+                <div style={{ fontSize:15, fontWeight:700, color:'rgba(255,255,255,.7)', marginBottom:4 }}>{selMethod.label}</div>
+                <div style={{ fontSize:36, fontWeight:900, color:'#fff', letterSpacing:'-.04em', lineHeight:1, marginBottom:10 }}>${selAmount.toFixed(2)}</div>
+                <div style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'5px 11px', borderRadius:999, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', fontSize:11, fontWeight:700, color:'#fff' }}>
+                  <span style={{ display:'flex', alignItems:'center', justifyContent:'center', width:14, height:14 }}>{selMethod.icon}</span>
+                  Ready to pay
                 </div>
               </div>
 
               {/* QR Code */}
-              {selMethod.hasQr && (
-                <div style={{ textAlign:'center', marginBottom:24, padding:'18px', borderRadius:22, background:'linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015))', border:'1px solid rgba(255,255,255,.07)' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-                    <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.34)' }}>Scan Code</div>
-                    <div style={{ fontSize:11, color:'var(--muted)' }}>Tap to zoom</div>
+              {selMethod.hasQr && selMethod.qr && !selMethod.qr.startsWith('YOUR_') && (
+                <div style={{ padding:'18px', borderRadius:16, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', marginBottom:18, textAlign:'center' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+                    <span style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.12em', color:'rgba(255,255,255,.3)' }}>Scan Code</span>
+                    <span style={{ fontSize:11, color:'rgba(255,255,255,.3)' }}>Tap to zoom</span>
                   </div>
-                  {selMethod.qr && !selMethod.qr.startsWith('YOUR_') ? (
-                    <>
-                      <div onClick={()=>setQrZoom(true)} style={{ display:'inline-block', cursor:'zoom-in', position:'relative', padding:12, borderRadius:28, background:'linear-gradient(180deg,#ffffff,#f3f4f6)', boxShadow:`0 0 56px ${selMethod.glow}, 0 22px 44px rgba(0,0,0,.34)`, transition:'transform .2s,box-shadow .2s' }}
-                        onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform='scale(1.04)';}}
-                        onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform='scale(1)';}}>
-                        <img src={selMethod.qr} alt="QR Code" style={{ width:178, height:178, objectFit:'contain', borderRadius:18, display:'block' }} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
-                        <div style={{ position:'absolute', bottom:12, right:12, width:26, height:26, borderRadius:'50%', background:'rgba(0,0,0,.55)', display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(6px)' }}>
-                          <ZoomIn size={12} color="white"/>
-                        </div>
-                      </div>
-                      <p style={{ fontSize:11, color:'rgba(255,255,255,.28)', marginTop:10 }}>Fast checkout via QR</p>
-                    </>
-                  ) : (
-                    <div style={{ width:170, height:170, borderRadius:20, border:`2px dashed ${selMethod.borderColor}`, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, margin:'0 auto', background:selMethod.bgColor }}>
-                      <div style={{ fontSize:36 }}>📷</div>
-                      <span style={{ fontSize:11, color:'var(--dim)' }}>QR coming soon</span>
+                  <div className="dep-qr-wrap" onClick={() => setQrZoom(true)}
+                    style={{ boxShadow:`0 0 40px ${selMethod.glow}, 0 16px 40px rgba(0,0,0,.4)` }}>
+                    <img src={selMethod.qr} alt="QR" style={{ width:160, height:160, objectFit:'contain', borderRadius:14, display:'block' }}
+                      onError={e=>{(e.target as HTMLImageElement).style.display='none';}} />
+                    <div style={{ position:'absolute', bottom:10, right:10, width:24, height:24, borderRadius:'50%', background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <ZoomIn size={11} color="white" />
                     </div>
-                  )}
+                  </div>
+                  <p style={{ fontSize:11, color:'rgba(255,255,255,.25)', marginTop:10, marginBottom:0 }}>Fast checkout via QR</p>
                 </div>
               )}
 
-              {/* Fields */}
-              <div style={{ padding:'18px', borderRadius:22, background:'linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015))', border:'1px solid rgba(255,255,255,.07)', marginBottom:14 }}>
-                <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.34)', marginBottom:12 }}>Payment Details</div>
-                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                {selMethod.fields.map((f,i)=>(
-                  <div key={i} style={{ background:'linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.025))', border:`1px solid ${selMethod.borderColor}`, borderRadius:16, padding:'13px 15px', boxShadow:'inset 0 1px 0 rgba(255,255,255,.03)' }}>
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:5 }}>
-                      <span style={{ fontSize:10, color:'rgba(255,255,255,.32)', textTransform:'uppercase', letterSpacing:'.1em', fontWeight:700 }}>{f.label}</span>
-                      {f.note&&<span style={{ fontSize:10, color:selMethod.color, fontWeight:600 }}>{f.note}</span>}
-                    </div>
-                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                      <code style={{ flex:1, fontSize:12, fontFamily:'monospace', color:'#fff', fontWeight:700, wordBreak:'break-all' }}>{f.value}</code>
-                      {!f.value.startsWith('YOUR_')&&!f.value.startsWith('http')&&(
-                        <button onClick={()=>{navigator.clipboard.writeText(f.value);toast.success(`${f.label} copied!`);}} style={{ padding:'4px 8px', borderRadius:7, background:'rgba(255,255,255,.06)', border:`1px solid ${selMethod.borderColor}`, cursor:'pointer', color:'var(--muted)', flexShrink:0 }}>
-                          <Copy size={12}/>
-                        </button>
-                      )}
-                    </div>
+              {/* Payment details fields */}
+              {selMethod.fields.length > 0 && (
+                <div style={{ borderRadius:14, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', overflow:'hidden' }}>
+                  <div style={{ padding:'12px 16px 10px', borderBottom:'1px solid rgba(255,255,255,.06)' }}>
+                    <span style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.12em', color:'rgba(255,255,255,.3)' }}>Payment Details</span>
                   </div>
-                ))}
+                  {selMethod.fields.map((f, i) => (
+                    <div key={i} style={{ padding:'12px 16px', borderBottom: i < selMethod.fields.length-1 ? '1px solid rgba(255,255,255,.05)' : 'none' }}>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:4 }}>
+                        <span style={{ fontSize:10, color:'rgba(255,255,255,.3)', textTransform:'uppercase', letterSpacing:'.1em', fontWeight:700 }}>{f.label}</span>
+                        {f.note && <span style={{ fontSize:10, color:selMethod.color, fontWeight:700 }}>{f.note}</span>}
+                      </div>
+                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                        <code style={{ flex:1, fontSize:13, fontFamily:'monospace', color:'#fff', fontWeight:700, wordBreak:'break-all' }}>{f.value}</code>
+                        {!f.value.startsWith('http') && !f.value.startsWith('YOUR_') && (
+                          <button onClick={() => { navigator.clipboard.writeText(f.value); toast.success(`${f.label} copied!`); }}
+                            style={{ padding:'4px 8px', borderRadius:7, background:'rgba(255,255,255,.06)', border:`1px solid ${selMethod.borderColor}`, cursor:'pointer', color:'rgba(255,255,255,.5)', display:'flex', alignItems:'center', flexShrink:0 }}>
+                            <Copy size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
 
-              {selMethod.id==='paypal'&&<PayPalButton amount={selAmount} user={user} onSuccess={onSuccess} referralEmail={referralEmail}/>}
-              {selMethod.id==='truewallet'&&<TrueWalletRedeem user={user} onSuccess={onSuccess} expectedUsdAmount={selAmount} referralEmail={referralEmail}/>}
+              {/* PayPal / TrueWallet inline components */}
+              {selMethod.id === 'paypal' && (
+                <div style={{ marginTop:16 }}>
+                  <PayPalButton amount={selAmount} user={user} onSuccess={onSuccess} />
+                </div>
+              )}
+              {selMethod.id === 'truewallet' && (
+                <div style={{ marginTop:16 }}>
+                  <TrueWalletRedeem user={user} onSuccess={onSuccess} expectedUsdAmount={selAmount} />
+                </div>
+              )}
 
-              <div style={{ padding:'13px 15px', borderRadius:16, background:'linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.02))', border:'1px solid rgba(255,255,255,.05)', display:'flex', gap:10, alignItems:'flex-start', marginTop: selMethod.id==='paypal'?12:0 }}>
-                <span style={{ fontSize:16 }}>💡</span>
-                <p style={{ fontSize:11, color:'var(--muted)', lineHeight:1.65, margin:0 }}>{selMethod.instruction}</p>
+              {/* Instruction */}
+              <div style={{ display:'flex', gap:10, alignItems:'flex-start', padding:'12px 14px', borderRadius:12, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.06)', marginTop:16 }}>
+                <span style={{ fontSize:15, flexShrink:0 }}>💡</span>
+                <p style={{ fontSize:11, color:'rgba(255,255,255,.4)', lineHeight:1.65, margin:0 }}>{selMethod.instruction}</p>
               </div>
             </div>
 
-            {/* RIGHT: Form — PayPal gets its own panel, others get the manual form */}
-            <div style={{ padding:'26px', background:'linear-gradient(180deg,rgba(255,255,255,.015),rgba(255,255,255,.005))' }}>
+            {/* RIGHT — checkout form */}
+            <div style={{ padding:'28px 26px' }}>
+
               {selMethod.id === 'paypal' ? (
-                /* ── PayPal: no form needed, SDK handles everything ── */
                 <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-                  <div style={{ padding:'16px 18px', borderRadius:18, background:'linear-gradient(135deg,rgba(16,232,152,.1),rgba(34,211,238,.06))', border:'1px solid rgba(16,232,152,.18)' }}>
-                    <div style={{ fontSize:13,fontWeight:700,color:'var(--green)',marginBottom:6 }}>⚡ Fully Automatic</div>
-                    <p style={{ fontSize:12,color:'var(--muted)',margin:0,lineHeight:1.65 }}>
-                      Click the PayPal button on the left. After you complete payment, your balance is credited <strong style={{color:'#fff'}}>instantly and automatically</strong>. No form needed.
-                    </p>
+                  <div style={{ padding:'16px 18px', borderRadius:14, background:'rgba(16,232,152,.08)', border:'1px solid rgba(16,232,152,.18)' }}>
+                    <div style={{ fontSize:14, fontWeight:800, color:'var(--green)', marginBottom:6 }}>⚡ Fully Automatic</div>
+                    <p style={{ fontSize:12, color:'rgba(255,255,255,.5)', margin:0, lineHeight:1.65 }}>Click the PayPal button on the left. Balance is credited <strong style={{ color:'#fff' }}>instantly</strong> after payment. No form needed.</p>
                   </div>
-                  <div style={{ padding:'14px 16px', borderRadius:18, background:'linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02))', border:'1px solid rgba(255,255,255,.06)', display:'flex', flexDirection:'column', gap:9 }}>
-                    {[
-                      { step:'1', text:'Click the PayPal button on the left' },
-                      { step:'2', text:'Log in and complete payment in the PayPal popup' },
-                      { step:'3', text:'Balance is added instantly — no action needed' },
-                    ].map(s => (
-                      <div key={s.step} style={{ display:'flex', alignItems:'center', gap:10 }}>
-                        <div style={{ width:22,height:22,borderRadius:'50%',background:'linear-gradient(135deg,#003087,#009cde)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,color:'#fff',flexShrink:0 }}>{s.step}</div>
-                        <span style={{ fontSize:12,color:'rgba(255,255,255,.65)' }}>{s.text}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ padding:'12px 14px', borderRadius:16, background:'linear-gradient(135deg,rgba(0,112,186,.1),rgba(0,156,222,.05))', border:'1px solid rgba(0,156,222,.15)' }}>
-                    <p style={{ fontSize:11,color:'var(--dim)',margin:0,lineHeight:1.5 }}>
-                      💡 If you experience any issue, contact support with your PayPal transaction ID and we will credit you manually.
-                    </p>
-                  </div>
+                  {[{step:'1',text:'Click the PayPal button on the left'},{step:'2',text:'Log in and complete payment in PayPal popup'},{step:'3',text:'Balance added instantly — no action needed'}].map(s=>(
+                    <div key={s.step} style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <div style={{ width:24, height:24, borderRadius:'50%', background:'linear-gradient(135deg,#003087,#009cde)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:900, color:'#fff', flexShrink:0 }}>{s.step}</div>
+                      <span style={{ fontSize:12, color:'rgba(255,255,255,.6)' }}>{s.text}</span>
+                    </div>
+                  ))}
                 </div>
               ) : selMethod.id === 'truewallet' ? (
                 <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-                  <div style={{ padding:'16px 18px', borderRadius:18, background:'linear-gradient(135deg,rgba(249,115,22,.14),rgba(236,72,153,.06))', border:'1px solid rgba(249,115,22,.18)' }}>
-                    <div style={{ fontSize:13,fontWeight:700,color:'#fb923c',marginBottom:6 }}>Automatic Voucher Flow</div>
-                    <p style={{ fontSize:12,color:'var(--muted)',margin:0,lineHeight:1.65 }}>
-                      Paste a TrueWallet gift link on the left. We redeem the actual THB amount, apply a 3% fee, convert the net amount to USD balance, and credit exactly that value.
-                    </p>
-                  </div>
-                  <div style={{ padding:'16px 18px', borderRadius:18, background:'linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02))', border:'1px solid rgba(255,255,255,.06)' }}>
-                    <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.34)', marginBottom:12 }}>How It Works</div>
-                    <div style={{ display:'grid', gap:10 }}>
-                      {['Paste a valid TrueMoney gift link', 'System reads the real THB value and applies a 3% fee', 'Less than selected amount only credits the lower net converted value'].map((text, index) => (
-                        <div key={text} style={{ display:'flex', alignItems:'center', gap:10 }}>
-                          <div style={{ width:24, height:24, borderRadius:'50%', background:'linear-gradient(135deg,#f97316,#ec4899)', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:11, fontWeight:900, flexShrink:0 }}>{index + 1}</div>
-                          <div style={{ fontSize:12, color:'rgba(255,255,255,.7)' }}>{text}</div>
-                        </div>
-                      ))}
-                    </div>
+                  <div style={{ padding:'16px 18px', borderRadius:14, background:'rgba(249,115,22,.1)', border:'1px solid rgba(249,115,22,.2)' }}>
+                    <div style={{ fontSize:14, fontWeight:800, color:'#fb923c', marginBottom:6 }}>Automatic Voucher Flow</div>
+                    <p style={{ fontSize:12, color:'rgba(255,255,255,.5)', margin:0, lineHeight:1.65 }}>Paste a TrueWallet gift link on the left. We redeem the THB value, apply a 3% fee, and convert to USD balance instantly.</p>
                   </div>
                 </div>
               ) : (
-                /* ── Other methods: manual form ── */
                 <>
-              <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.32)', marginBottom:8 }}>Checkout</div>
-              <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-.04em', marginBottom:18 }}>Complete Your Payment</div>
+                  <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', marginBottom:6 }}>Checkout</div>
+                  <div style={{ fontSize:26, fontWeight:900, color:'#fff', letterSpacing:'-.03em', marginBottom:26 }}>Complete Your Payment</div>
 
-              {/* Email */}
-              <div style={{ marginBottom:16 }}>
-                <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Your Email</label>
-                <input type="email" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}
-                  style={{ width:'100%', background:'linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.03))', border:'1px solid rgba(255,255,255,.08)', borderRadius:16, padding:'14px 16px', color:'#fff', fontFamily:'inherit', fontSize:14, outline:'none', transition:'all .2s', boxShadow:'inset 0 1px 0 rgba(255,255,255,.03)' }}
-                  onFocus={e=>{e.target.style.borderColor='rgba(139,92,246,.45)';e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,.1)';}}
-                  onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,.08)';e.target.style.boxShadow='none';}}
-                />
-              </div>
-
-              {/* TXN ID */}
-              <div style={{ marginBottom:16 }}>
-                <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Transaction ID</label>
-                <input type="text" placeholder="Paste your TXN / reference ID..." value={txnId} onChange={e=>setTxnId(e.target.value)}
-                  style={{ width:'100%', background:'linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.03))', border:'1px solid rgba(255,255,255,.08)', borderRadius:16, padding:'14px 16px', color:'#fff', fontFamily:'monospace', fontSize:13, outline:'none', transition:'all .2s', letterSpacing:'0.5px', boxShadow:'inset 0 1px 0 rgba(255,255,255,.03)' }}
-                  onFocus={e=>{e.target.style.borderColor='rgba(139,92,246,.45)';e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,.1)';}}
-                  onBlur={e=>{e.target.style.borderColor='rgba(255,255,255,.08)';e.target.style.boxShadow='none';}}
-                />
-                <p style={{ fontSize:11, color:'var(--dim)', marginTop:6 }}>From your payment receipt or confirmation</p>
-              </div>
-
-              {/* Screenshot */}
-              <div style={{ marginBottom:20 }}>
-                <label style={{ display:'block', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.4)', letterSpacing:'.08em', marginBottom:8, textTransform:'uppercase' }}>Payment Screenshot</label>
-                <input type="file" ref={fileRef} accept="image/*" style={{ display:'none' }} onChange={handleFileChange}/>
-                {screenshotPreview ? (
-                  <div style={{ position:'relative', borderRadius:18, overflow:'hidden', border:'1px solid rgba(16,232,152,.25)', cursor:'pointer', boxShadow:'0 16px 36px rgba(0,0,0,.18)' }} onClick={()=>fileRef.current?.click()}>
-                    <img src={screenshotPreview} alt="Screenshot" style={{ width:'100%', maxHeight:140, objectFit:'cover', display:'block' }}/>
-                    <div style={{ position:'absolute',top:8,right:8,background:'rgba(16,232,152,.15)',border:'1px solid rgba(16,232,152,.3)',borderRadius:20,padding:'3px 10px',fontSize:10,fontWeight:700,color:'var(--green)' }}>✓ Uploaded</div>
-                    <div style={{ position:'absolute',inset:0,background:'rgba(0,0,0,.5)',display:'flex',alignItems:'center',justifyContent:'center',opacity:0,transition:'opacity .2s',fontSize:12,color:'#fff',fontWeight:700 }} onMouseEnter={e=>(e.currentTarget.style.opacity='1')} onMouseLeave={e=>(e.currentTarget.style.opacity='0')}>Change Screenshot</div>
+                  {/* Email */}
+                  <div style={{ marginBottom:18 }}>
+                    <label className="dep-label">Your Email</label>
+                    <input type="email" className="dep-field" placeholder="you@example.com"
+                      value={email} onChange={e => setEmail(e.target.value)} />
                   </div>
-                ) : (
-                  <div onClick={()=>fileRef.current?.click()} style={{ border:'1px dashed rgba(255,255,255,.14)', borderRadius:20, padding:'30px 16px', textAlign:'center', cursor:'pointer', transition:'all .2s', background:'linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015))', boxShadow:'inset 0 1px 0 rgba(255,255,255,.02)' }}
-                    onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.borderColor='rgba(139,92,246,.3)';(e.currentTarget as HTMLDivElement).style.background='rgba(139,92,246,.04)';}}
-                    onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.borderColor='rgba(255,255,255,.09)';(e.currentTarget as HTMLDivElement).style.background='rgba(255,255,255,.02)';}}>
-                    <div style={{ width:40,height:40,borderRadius:11,background:'rgba(139,92,246,.1)',border:'1px solid rgba(139,92,246,.2)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 10px' }}>
-                      <Upload size={18} color="var(--purple)"/>
+
+                  {/* TXN ID */}
+                  <div style={{ marginBottom:18 }}>
+                    <label className="dep-label">Transaction ID</label>
+                    <input type="text" className="dep-field" placeholder="Paste your TXN / reference ID..."
+                      value={txnId} onChange={e => setTxnId(e.target.value)}
+                      style={{ fontFamily:'monospace', letterSpacing:'0.5px' }} />
+                    <p style={{ fontSize:11, color:'rgba(255,255,255,.28)', marginTop:6, marginBottom:0 }}>From your payment receipt or confirmation</p>
+                  </div>
+
+                  {/* Screenshot */}
+                  <div style={{ marginBottom:24 }}>
+                    <label className="dep-label">Payment Screenshot</label>
+                    <input type="file" ref={fileRef} accept="image/*" style={{ display:'none' }} onChange={handleFileChange} />
+                    {screenshotPreview ? (
+                      <div style={{ position:'relative', borderRadius:14, overflow:'hidden', border:'1px solid rgba(16,232,152,.25)', cursor:'pointer' }}
+                        onClick={() => fileRef.current?.click()}>
+                        <img src={screenshotPreview} alt="Screenshot" style={{ width:'100%', maxHeight:130, objectFit:'cover', display:'block' }} />
+                        <div style={{ position:'absolute', top:8, right:8, padding:'3px 10px', borderRadius:20, background:'rgba(16,232,152,.15)', border:'1px solid rgba(16,232,152,.3)', fontSize:10, fontWeight:700, color:'var(--green)' }}>✓ Uploaded</div>
+                      </div>
+                    ) : (
+                      <div className="dep-upload" onClick={() => fileRef.current?.click()}>
+                        <div style={{ width:44, height:44, borderRadius:12, background:'rgba(139,92,246,.1)', border:'1px solid rgba(139,92,246,.2)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 10px' }}>
+                          <Upload size={20} color="var(--purple)" />
+                        </div>
+                        <div style={{ fontSize:13, fontWeight:700, color:'rgba(255,255,255,.45)', marginBottom:4 }}>Upload payment proof</div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.22)' }}>JPG, PNG, WEBP · Click to browse</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Summary pill */}
+                  <div style={{ display:'flex', alignItems:'center', gap:12, padding:'13px 16px', borderRadius:14, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', marginBottom:20 }}>
+                    <div style={{ width:36, height:36, borderRadius:10, background:selMethod.bgColor, border:`1px solid ${selMethod.borderColor}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{selMethod.icon}</div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:1 }}>{selMethod.label}</div>
+                      <div style={{ fontSize:18, fontWeight:900, color:'#fff', letterSpacing:'-.02em' }}>${selAmount.toFixed(2)}</div>
                     </div>
-                    <div style={{ fontSize:13,fontWeight:700,color:'rgba(255,255,255,.5)',marginBottom:4 }}>Upload payment proof</div>
-                    <div style={{ fontSize:11,color:'var(--dim)' }}>JPG, PNG, WEBP · Click to browse</div>
+                    <div style={{ textAlign:'right' }}>
+                      <div style={{ fontSize:10, color:'rgba(255,255,255,.3)' }}>Pending admin</div>
+                      <div style={{ fontSize:11, fontWeight:700, color:'var(--amber)', marginTop:2 }}>~1–10 min</div>
+                    </div>
                   </div>
-                )}
-              </div>
 
-              {/* Summary */}
-              <div style={{ background:'linear-gradient(135deg,rgba(139,92,246,.14),rgba(79,70,229,.08))', border:'1px solid rgba(139,92,246,.18)', borderRadius:18, padding:'15px 16px', marginBottom:18, display:'flex', alignItems:'center', gap:12, boxShadow:'0 16px 32px rgba(76,29,149,.14)' }}>
-                <div style={{ width:36,height:36,borderRadius:10,background:selMethod.bgColor,border:`1px solid ${selMethod.borderColor}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>{selMethod.icon}</div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:11,color:'var(--muted)',marginBottom:1 }}>{selMethod.label}</div>
-                  <div style={{ fontSize:18,fontWeight:900,color:'#fff',letterSpacing:'-.02em' }}>${selAmount.toFixed(2)}</div>
-                </div>
-                <div style={{ textAlign:'right',fontSize:10,color:'var(--muted)' }}>
-                  <div>Pending admin</div>
-                  <div style={{ color:'var(--amber)',fontWeight:700,marginTop:2 }}>~1–10 min</div>
-                </div>
-              </div>
-
-              <button onClick={()=>{
-                if(!txnId.trim()){toast.error('Enter your transaction ID');return;}
-                if(!email.trim()){toast.error('Enter your email');return;}
-                setStep(3);
-              }} className="btn btn-p btn-lg btn-full" style={{ borderRadius:18, fontSize:15, boxShadow:'0 20px 40px rgba(109,40,217,.35)', padding:'17px', background:'linear-gradient(90deg,#8b5cf6,#7c3aed,#c026d3)' }}>
-                I've Sent Payment <ArrowRight size={16}/>
-              </button>
+                  <button className="dep-submit" onClick={() => {
+                    if (!txnId.trim()) { toast.error('Enter your transaction ID'); return; }
+                    if (!email.trim()) { toast.error('Enter your email'); return; }
+                    setStep(3);
+                  }}>
+                    I've Sent Payment <ArrowRight size={16} />
+                  </button>
                 </>
               )}
             </div>
           </div>
-          </div>
         </div>
       )}
 
-      {/* ── STEP 3: Final Submit ── */}
-      {step===3&&(
-        <div className="pay-panel" style={{ maxWidth:520, margin:'0 auto' }}>
-          <button onClick={()=>setStep(2)} style={{ display:'flex',alignItems:'center',gap:6,background:'none',border:'none',cursor:'pointer',color:'var(--muted)',fontSize:13,fontFamily:'inherit',marginBottom:20,padding:0 }}>
+      {/* ══ STEP 3: Review + Final Submit ══ */}
+      {step === 3 && (
+        <div className="dep-wrap dep-card" style={{ maxWidth:520, padding:'32px' }}>
+          <button onClick={() => setStep(2)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,.4)', fontSize:13, fontFamily:'inherit', marginBottom:22, padding:0, fontWeight:600 }}>
             <ArrowLeft size={14}/> Back
           </button>
-          <div className="g" style={{ padding:'28px', borderRadius:20, marginBottom:16 }}>
-            <div style={{ fontSize:11,fontWeight:700,color:'rgba(255,255,255,.4)',letterSpacing:'.1em',textTransform:'uppercase',marginBottom:18 }}>Review Your Submission</div>
-            {[{l:'Method',v:selMethod.label},{l:'Amount',v:`$${selAmount.toFixed(2)}`},{l:'Email',v:email},{l:'Transaction ID',v:txnId}].map(r=>(
-              <div key={r.l} style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 0',borderBottom:'1px solid rgba(255,255,255,.04)' }}>
-                <span style={{ fontSize:12,color:'var(--muted)' }}>{r.l}</span>
-                <span style={{ fontSize:13,fontWeight:700,color:'#fff',fontFamily:r.l==='Transaction ID'?'monospace':undefined,maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{r.v}</span>
+
+          <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', marginBottom:6 }}>Review</div>
+          <div style={{ fontSize:24, fontWeight:900, color:'#fff', letterSpacing:'-.03em', marginBottom:24 }}>Confirm Submission</div>
+
+          <div style={{ borderRadius:16, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', overflow:'hidden', marginBottom:20 }}>
+            {[{l:'Method',v:selMethod.label},{l:'Amount',v:`$${selAmount.toFixed(2)}`},{l:'Email',v:email},{l:'Transaction ID',v:txnId}].map((r,i)=>(
+              <div key={r.l} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 18px', borderBottom:i<3?'1px solid rgba(255,255,255,.05)':'none' }}>
+                <span style={{ fontSize:12, color:'rgba(255,255,255,.4)' }}>{r.l}</span>
+                <span style={{ fontSize:13, fontWeight:700, color:'#fff', fontFamily:r.l==='Transaction ID'?'monospace':undefined, maxWidth:220, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.v}</span>
               </div>
             ))}
-            {screenshotPreview&&(
-              <div style={{ marginTop:14 }}>
-                <div style={{ fontSize:11,color:'var(--muted)',marginBottom:8 }}>Payment Screenshot</div>
-                <img src={screenshotPreview} alt="Proof" style={{ width:'100%',maxHeight:110,objectFit:'cover',borderRadius:10 }}/>
-              </div>
-            )}
           </div>
-          <div style={{ display:'flex',alignItems:'flex-start',gap:12,padding:'14px 18px',borderRadius:14,background:'rgba(251,191,36,.05)',border:'1px solid rgba(251,191,36,.14)',marginBottom:18 }}>
-            <span style={{ fontSize:20 }}>⚡</span>
-            <p style={{ fontSize:12,color:'var(--muted)',lineHeight:1.65,margin:0 }}>
+
+          {screenshotPreview && (
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:8, fontWeight:700, textTransform:'uppercase', letterSpacing:'.1em' }}>Payment Screenshot</div>
+              <img src={screenshotPreview} alt="Proof" style={{ width:'100%', maxHeight:110, objectFit:'cover', borderRadius:12 }} />
+            </div>
+          )}
+
+          <div style={{ display:'flex', alignItems:'flex-start', gap:12, padding:'14px 18px', borderRadius:13, background:'rgba(251,191,36,.05)', border:'1px solid rgba(251,191,36,.15)', marginBottom:22 }}>
+            <span style={{ fontSize:18, flexShrink:0 }}>⚡</span>
+            <p style={{ fontSize:12, color:'rgba(255,255,255,.5)', lineHeight:1.65, margin:0 }}>
               After submission, admin will verify and credit <strong style={{ color:'var(--green)' }}>${selAmount.toFixed(2)}</strong> to your balance within minutes.
             </p>
           </div>
-          <button onClick={handleSubmit} disabled={submitting} className="btn btn-g btn-lg btn-full" style={{ borderRadius:14, fontSize:16, fontWeight:900, padding:'18px' }}>
-            {submitting?<><Loader2 size={18} className="animate-spin"/> Submitting...</>:<><CheckCircle size={18}/> Confirm & Submit</>}
+
+          <button className="dep-submit" onClick={handleSubmit} disabled={submitting}>
+            {submitting ? <><Loader2 size={18} className="animate-spin"/> Submitting…</> : <><CheckCircle size={17}/> Confirm &amp; Submit</>}
           </button>
         </div>
       )}
@@ -1248,12 +1240,6 @@ export default function WalletPage() {
   const { t } = useTranslation();
   const { balance, deductBalance, refundBalance, addLicense, addBalance, user } = useAppStore();
   const [myTxns, setMyTxns] = useState<any[]>([]);
-  const [resellerWallet, setResellerWallet] = useState<any | null>(null);
-  const [resellerTransactions, setResellerTransactions] = useState<any[]>([]);
-  const [withdrawRequests, setWithdrawRequests] = useState<any[]>([]);
-  const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawing, setWithdrawing] = useState(false);
-  const [activeReferral, setActiveReferral] = useState('');
   const [txnsLoad, setTxnsLoad] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState<{ product: any; keys: Array<{ key: string; panelId: string; panelName: string; expiresAt: string }> } | null>(null);
   const [confirmPending, setConfirmPending] = useState<any | null>(null);
@@ -1261,9 +1247,6 @@ export default function WalletPage() {
 
   const isAdmin   = user?.role === 'admin';
   const isSupport = user?.role === 'support';
-  const referralLink = user?.email ? buildReferralLink(user.email) : '';
-  const isFriday = new Date().getDay() === 5;
-  const normalizedUserEmail = normalizeResellerEmail(user?.email ?? '');
 
   const loadTxns = async () => {
     if (!user) return;
@@ -1273,49 +1256,9 @@ export default function WalletPage() {
     setTxnsLoad(false);
   };
 
-  const loadResellerData = async () => {
-    if (!user?.id || !user.email || isAdmin || isSupport) return;
-    await safeQuery(() => supabase.rpc('ensure_reseller_wallet', { p_user_id: user.id, p_email: user.email }));
-    const [{ data: walletData }, { data: resellerData }, { data: withdrawalData }] = await Promise.all([
-      safeQuery(() => supabase.from('reseller_wallets').select('*').eq('user_id', user.id).maybeSingle()),
-      safeQuery(() => supabase.from('reseller_transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false })),
-      safeQuery(() => supabase.from('withdrawal_requests').select('*').eq('user_id', user.id).order('created_at', { ascending: false })),
-    ]);
-    setResellerWallet(walletData ?? null);
-    setResellerTransactions(resellerData ?? []);
-    setWithdrawRequests(withdrawalData ?? []);
-  };
-
-  const handleWithdrawRequest = async () => {
-    if (!user?.id || !user.email) { toast.error('Please login first'); return; }
-    const amountValue = roundMoney(Number(withdrawAmount || resellerWallet?.balance || 0));
-    if (amountValue <= 0) { toast.error('Enter a valid withdrawal amount'); return; }
-    setWithdrawing(true);
-    const { error } = await safeQuery(() => supabase.rpc('request_reseller_withdrawal', {
-      p_user_id: user.id,
-      p_email: user.email,
-      p_amount: amountValue,
-    }));
-    setWithdrawing(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success('Withdrawal request submitted.');
-    setWithdrawAmount('');
-    loadResellerData();
-  };
-
-  useEffect(() => {
-    const captured = captureReferralFromUrl(user?.email);
-    const cleanReferral = normalizeResellerEmail(captured || getStoredReferralEmail());
-    setActiveReferral(cleanReferral && cleanReferral !== normalizedUserEmail ? cleanReferral : '');
-  }, [normalizedUserEmail]);
-
   useEffect(() => {
     if (!user||isAdmin||isSupport) return;
     loadTxns();
-    loadResellerData();
     const creditedKey = `1999x-credited-${user.id}`;
     const getCredited = (): Set<string> => { try { return new Set<string>(JSON.parse(localStorage.getItem(creditedKey)||'[]')); } catch { return new Set(); } };
     const addCredited = (id: string) => { const s=getCredited(); s.add(id); try { localStorage.setItem(creditedKey,JSON.stringify([...s])); } catch {} };
@@ -1339,12 +1282,7 @@ export default function WalletPage() {
     const poll = setInterval(check,12000);
     const onFocus = () => { if (!isChecking) check(); };
     window.addEventListener('focus',onFocus);
-    const ch = supabase.channel(`wallet-${user.id}`)
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'transactions',filter:`user_id=eq.${user.id}`},()=>check())
-      .on('postgres_changes',{event:'*',schema:'public',table:'reseller_wallets',filter:`user_id=eq.${user.id}`},()=>loadResellerData())
-      .on('postgres_changes',{event:'*',schema:'public',table:'reseller_transactions',filter:`user_id=eq.${user.id}`},()=>loadResellerData())
-      .on('postgres_changes',{event:'*',schema:'public',table:'withdrawal_requests',filter:`user_id=eq.${user.id}`},()=>loadResellerData())
-      .subscribe();
+    const ch = supabase.channel(`wallet-${user.id}`).on('postgres_changes',{event:'UPDATE',schema:'public',table:'transactions',filter:`user_id=eq.${user.id}`},()=>check()).subscribe();
     return () => { clearTimeout(initTimer); clearInterval(poll); window.removeEventListener('focus',onFocus); supabase.removeChannel(ch); };
   },[user?.id]);
 
@@ -1766,7 +1704,7 @@ export default function WalletPage() {
         {/* ══ DEPOSIT TAB ══ */}
         {activeTab==='deposit'&&(
           <div style={{ animation:'w-slide-up .4s cubic-bezier(.22,1,.36,1) both' }}>
-            <AddBalanceUI user={user} onSuccess={loadTxns} referralEmail={activeReferral}/>
+            <AddBalanceUI user={user} onSuccess={loadTxns}/>
           </div>
         )}
 
