@@ -16,6 +16,7 @@ import AnnouncementsPage from '@/pages/AnnouncementsPage';
 import AdminActivityPage from '@/pages/AdminActivityPage';
 import SafePageContent from '@/components/layout/SafePageContent';
 import { toast } from 'sonner';
+import { captureReferralFromUrl } from '@/lib/reseller';
 
 const pageComponents: Record<string, React.FC> = {
   '/':              DashboardPage,
@@ -36,6 +37,8 @@ const VALID_PATHS = Object.keys(pageComponents);
 const PATH_KEY = '1999x-current-path';
 function getSavedPath(): string {
   try {
+    const currentPath = window.location.pathname === '/pay' ? '/wallet' : window.location.pathname;
+    if (VALID_PATHS.includes(currentPath)) return currentPath;
     const p = sessionStorage.getItem(PATH_KEY);
     return p && VALID_PATHS.includes(p) ? p : '/';
   } catch { return '/'; }
@@ -72,6 +75,8 @@ export default function Index() {
   };
 
   useEffect(() => {
+    captureReferralFromUrl();
+
     const loginWithRole = async (session: any) => {
       if (loggingIn.current) return;
       loggingIn.current = true;
@@ -124,6 +129,15 @@ export default function Index() {
       clearTimeout(safetyTimer);
     };
   }, []);
+
+  useEffect(() => {
+    if (!user?.id || !user.email) return;
+    captureReferralFromUrl(user.email);
+    void supabase.rpc('ensure_reseller_wallet', {
+      p_user_id: user.id,
+      p_email: user.email,
+    });
+  }, [user?.id, user?.email]);
 
   const handleLogout = async () => {
     intentionalLogout.current = true;
@@ -222,61 +236,201 @@ export default function Index() {
   // If Zustand has isAuthenticated=true, skip straight to app
   if (!authReady) {
     return (
-      <div style={{ minHeight:'100svh', background:'radial-gradient(circle at 20% 20%, rgba(109,40,217,.18), transparent 28%), radial-gradient(circle at 80% 75%, rgba(16,232,152,.12), transparent 24%), #05060b', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
+      <div style={{ minHeight:'100svh', background:'#000', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
         <style>{`
-          @keyframes word-spin {
-            10% { transform: translateY(-102%); }
-            25% { transform: translateY(-100%); }
-            35% { transform: translateY(-202%); }
-            50% { transform: translateY(-200%); }
-            60% { transform: translateY(-302%); }
-            75% { transform: translateY(-300%); }
-            85% { transform: translateY(-402%); }
-            100% { transform: translateY(-400%); }
+          .ld-loader {
+            position: absolute;
+            top: 50%;
+            margin-left: -50px;
+            left: 50%;
+            animation: speeder 0.4s linear infinite;
           }
-          @keyframes load-bar { from{width:0;} to{width:100%;} }
-          @keyframes soft-float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
+          .ld-loader > span {
+            height: 5px;
+            width: 35px;
+            background: #fff;
+            position: absolute;
+            top: -19px;
+            left: 60px;
+            border-radius: 2px 10px 1px 0;
+          }
+          .ld-base span {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-top: 6px solid transparent;
+            border-right: 100px solid #fff;
+            border-bottom: 6px solid transparent;
+          }
+          .ld-base span:before {
+            content: "";
+            height: 22px;
+            width: 22px;
+            border-radius: 50%;
+            background: #fff;
+            position: absolute;
+            right: -110px;
+            top: -16px;
+          }
+          .ld-base span:after {
+            content: "";
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-top: 0 solid transparent;
+            border-right: 55px solid #fff;
+            border-bottom: 16px solid transparent;
+            top: -16px;
+            right: -98px;
+          }
+          .ld-face {
+            position: absolute;
+            height: 12px;
+            width: 20px;
+            background: #fff;
+            border-radius: 20px 20px 0 0;
+            transform: rotate(-40deg);
+            right: -125px;
+            top: -15px;
+          }
+          .ld-face:after {
+            content: "";
+            height: 12px;
+            width: 12px;
+            background: #fff;
+            right: 4px;
+            top: 7px;
+            position: absolute;
+            transform: rotate(40deg);
+            transform-origin: 50% 50%;
+            border-radius: 0 0 0 2px;
+          }
+          .ld-loader > span > span:nth-child(1),
+          .ld-loader > span > span:nth-child(2),
+          .ld-loader > span > span:nth-child(3),
+          .ld-loader > span > span:nth-child(4) {
+            width: 30px;
+            height: 1px;
+            background: #fff;
+            position: absolute;
+            animation: fazer1 0.2s linear infinite;
+          }
+          .ld-loader > span > span:nth-child(2) {
+            top: 3px;
+            animation: fazer2 0.4s linear infinite;
+          }
+          .ld-loader > span > span:nth-child(3) {
+            top: 1px;
+            animation: fazer3 0.4s linear infinite;
+            animation-delay: -1s;
+          }
+          .ld-loader > span > span:nth-child(4) {
+            top: 4px;
+            animation: fazer4 1s linear infinite;
+            animation-delay: -1s;
+          }
+          @keyframes fazer1 {
+            0%   { left: 0; }
+            100% { left: -80px; opacity: 0; }
+          }
+          @keyframes fazer2 {
+            0%   { left: 0; }
+            100% { left: -100px; opacity: 0; }
+          }
+          @keyframes fazer3 {
+            0%   { left: 0; }
+            100% { left: -50px; opacity: 0; }
+          }
+          @keyframes fazer4 {
+            0%   { left: 0; }
+            100% { left: -150px; opacity: 0; }
+          }
+          @keyframes speeder {
+            0%   { transform: translate(2px, 1px)   rotate(0deg);  }
+            10%  { transform: translate(-1px, -3px) rotate(-1deg); }
+            20%  { transform: translate(-2px, 0px)  rotate(1deg);  }
+            30%  { transform: translate(1px, 2px)   rotate(0deg);  }
+            40%  { transform: translate(1px, -1px)  rotate(1deg);  }
+            50%  { transform: translate(-1px, 3px)  rotate(-1deg); }
+            60%  { transform: translate(-1px, 1px)  rotate(0deg);  }
+            70%  { transform: translate(3px, 1px)   rotate(-1deg); }
+            80%  { transform: translate(-2px, -1px) rotate(1deg);  }
+            90%  { transform: translate(2px, 1px)   rotate(0deg);  }
+            100% { transform: translate(1px, -2px)  rotate(-1deg); }
+          }
+          .ld-longfazers {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+          }
+          .ld-longfazers span {
+            position: absolute;
+            height: 2px;
+            width: 20%;
+            background: #fff;
+          }
+          .ld-longfazers span:nth-child(1) {
+            top: 20%;
+            animation: lf 0.6s linear infinite;
+            animation-delay: -5s;
+          }
+          .ld-longfazers span:nth-child(2) {
+            top: 40%;
+            animation: lf2 0.8s linear infinite;
+            animation-delay: -1s;
+          }
+          .ld-longfazers span:nth-child(3) {
+            top: 60%;
+            animation: lf3 0.6s linear infinite;
+          }
+          .ld-longfazers span:nth-child(4) {
+            top: 80%;
+            animation: lf4 0.5s linear infinite;
+            animation-delay: -3s;
+          }
+          @keyframes lf {
+            0%   { left: 200%; }
+            100% { left: -200%; opacity: 0; }
+          }
+          @keyframes lf2 {
+            0%   { left: 200%; }
+            100% { left: -200%; opacity: 0; }
+          }
+          @keyframes lf3 {
+            0%   { left: 200%; }
+            100% { left: -100%; opacity: 0; }
+          }
+          @keyframes lf4 {
+            0%   { left: 200%; }
+            100% { left: -100%; opacity: 0; }
+          }
+          @keyframes ld-fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
           }
         `}</style>
 
-        <div style={{ position:'relative', zIndex:2, width:'min(92vw, 760px)', display:'flex', flexDirection:'column', alignItems:'center' }}>
-          <div style={{ position:'relative', width:'100%', maxWidth:560, borderRadius:32, border:'1px solid rgba(255,255,255,.08)', background:'linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015))', boxShadow:'0 30px 90px rgba(0,0,0,.6)', overflow:'hidden', padding:'42px 28px' }}>
-            <div style={{ position:'absolute', inset:0, background:'radial-gradient(circle at 30% 20%, rgba(139,92,246,.14), transparent 34%), radial-gradient(circle at 75% 80%, rgba(16,232,152,.1), transparent 30%)' }} />
-            <div style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center', gap:24, animation:'soft-float 3.4s ease-in-out infinite' }}>
-              <div style={{ width:78, height:78, borderRadius:24, background:'linear-gradient(135deg, rgba(139,92,246,.22), rgba(16,232,152,.14))', border:'1px solid rgba(255,255,255,.12)', boxShadow:'0 0 40px rgba(139,92,246,.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <div style={{ fontSize:26, fontWeight:900, color:'#fff', letterSpacing:'.08em' }}>1999X</div>
-              </div>
-
-              <div style={{ textAlign:'center' }}>
-                <div style={{ fontSize:14, letterSpacing:'.18em', textTransform:'uppercase', color:'rgba(255,255,255,.45)', fontWeight:800, marginBottom:8 }}>
-                  1999X SHOP - BUY FREE FIRE PANELS
-                </div>
-                <div style={{ fontSize:29, fontWeight:900, color:'#fff', lineHeight:1.2 }}>
-                  Preparing your panel access
-                </div>
-              </div>
-
-              <div style={{ '--bg-color': '#0d0f17' } as React.CSSProperties}>
-                <div style={{ background:'rgba(10,12,18,.88)', padding:'1rem 1.6rem', borderRadius:'1.25rem', border:'1px solid rgba(255,255,255,.08)', boxShadow:'0 0 32px rgba(139,92,246,.12)' }}>
-                  <div style={{ color:'rgb(145, 145, 160)', fontFamily:'Poppins, sans-serif', fontWeight:600, fontSize:25, boxSizing:'content-box', height:40, padding:'10px 10px', display:'flex', borderRadius:8 }}>
-                    <p style={{ margin:0 }}>loading</p>
-                    <div style={{ overflow:'hidden', position:'relative', marginLeft:6 }}>
-                      <div style={{ position:'absolute', inset:0, background:'linear-gradient(var(--bg-color) 10%, transparent 30%, transparent 70%, var(--bg-color) 90%)', zIndex:20 }} />
-                      {['aimbot', 'headshot', 'free', 'fire', '1999X'].map((word) => (
-                        <span key={word} style={{ display:'block', height:'100%', paddingLeft:6, color:'#956afa', animation:'word-spin 4s infinite', fontWeight:800 }}>
-                          {word}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Speeder loader */}
+        <div style={{ position:'relative', width:300, height:120 }}>
+          <div className="ld-longfazers">
+            <span /><span /><span /><span />
           </div>
-          <div style={{ width:220, height:3, borderRadius:999, background:'rgba(255,255,255,.08)', overflow:'hidden', marginTop:16 }}>
-            <div style={{ width:'100%', height:'100%', background:'linear-gradient(90deg,#8b5cf6,#10e898)', boxShadow:'0 0 16px rgba(139,92,246,.5)', animation:'load-bar 2s linear both' }} />
+          <div className="ld-loader">
+            <span className="ld-base">
+              <span />
+            </span>
+            <span>
+              <span /><span /><span /><span />
+            </span>
+            <div className="ld-face" />
+          </div>
+        </div>
+
+        {/* Branding below */}
+        <div style={{ marginTop:72, textAlign:'center', animation:'ld-fade-in .7s ease both', animationDelay:'.2s' }}>
+          <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'.06em', marginBottom:6 }}>1999X</div>
+          <div style={{ fontSize:12, letterSpacing:'.2em', textTransform:'uppercase', color:'rgba(255,255,255,.35)', fontWeight:600 }}>
+            Loading your panel…
           </div>
         </div>
       </div>

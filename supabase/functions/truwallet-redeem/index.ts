@@ -29,6 +29,8 @@ function roundCurrency(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+const TRUEWALLET_FEE_RATE = 0.03;
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
@@ -112,7 +114,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    const amountUsd = roundCurrency(amountThb / exchangeRate);
+    const grossAmountUsd = roundCurrency(amountThb / exchangeRate);
+    const feeUsd = roundCurrency(grossAmountUsd * TRUEWALLET_FEE_RATE);
+    const amountUsd = roundCurrency(grossAmountUsd - feeUsd);
     if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
       return json({ success: false, message: 'Redeemed amount is too small to convert' }, 400);
     }
@@ -134,7 +138,7 @@ Deno.serve(async (req) => {
         method: 'truewallet',
         transaction_id: transactionId,
         status: 'approved',
-        note: `Auto-approved via TrueWallet gift link redeem (${amountThb.toFixed(2)} THB @ ${exchangeRate} THB/USD)`,
+        note: `Auto-approved via TrueWallet gift link redeem (${amountThb.toFixed(2)} THB @ ${exchangeRate} THB/USD, 3% fee applied)`,
       });
 
     if (transactionError) {
@@ -163,6 +167,9 @@ Deno.serve(async (req) => {
       orderId: orderRow.id,
       transactionId,
       amount: amountUsd,
+      grossAmountUsd,
+      feeUsd,
+      feeRate: TRUEWALLET_FEE_RATE,
       amountThb,
       exchangeRate,
       expectedUsdAmount: Number.isFinite(expectedUsdAmount) ? expectedUsdAmount : 0,

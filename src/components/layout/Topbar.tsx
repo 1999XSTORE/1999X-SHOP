@@ -120,61 +120,95 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
   return (
     <>
       <style>{`
+        /* ── Keyframes ── */
+        @keyframes gold-pulse {
+          0%, 100% { box-shadow: 0 0 18px rgba(251,191,36,.55), 0 0 6px rgba(251,191,36,.25) inset; }
+          50%       { box-shadow: 0 0 32px rgba(251,191,36,.85), 0 0 12px rgba(251,191,36,.35) inset; }
+        }
+        @keyframes gold-shine {
+          0%   { left: -120%; }
+          100% { left: 160%; }
+        }
+        @keyframes nav-fade-in {
+          from { opacity:0; transform:translateY(-6px); }
+          to   { opacity:1; transform:translateY(0); }
+        }
+
+        /* ── Pill wrapper ── */
         .nav-pill {
           position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
           z-index: 50; width: calc(100% - 24px); max-width: 1100px;
+          animation: nav-fade-in .45s cubic-bezier(.22,1,.36,1) both;
         }
         .nav-inner {
           display: flex; align-items: center; gap: 3px;
-          padding: 7px 8px; border-radius: 22px;
-          background: rgba(8, 8, 18, 0.9);
-          backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
-          border: 1px solid rgba(255,255,255,0.08);
-          box-shadow: 0 8px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.03) inset;
+          padding: 6px 8px; border-radius: 22px;
+          background: rgba(6,6,16,0.92);
+          backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
+          border: 1px solid rgba(255,255,255,0.07);
+          box-shadow:
+            0 8px 48px rgba(0,0,0,.65),
+            0 0 0 1px rgba(255,255,255,.03) inset,
+            0 1px 0 rgba(255,255,255,.06) inset;
         }
+
+        /* ── Desktop radio group ── */
         .glass-radio-group {
-          --bg: rgba(255, 255, 255, 0.06);
-          --text: #e5e5e5;
           display: flex;
           position: relative;
-          background: var(--bg);
-          border-radius: 1rem;
-          backdrop-filter: blur(12px);
-          box-shadow:
-            inset 1px 1px 4px rgba(255, 255, 255, 0.12),
-            inset -1px -1px 6px rgba(0, 0, 0, 0.28),
-            0 4px 12px rgba(0, 0, 0, 0.15);
-          overflow: hidden;
+          background: rgba(255,255,255,.045);
+          border-radius: 15px;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 -1px 0 rgba(0,0,0,.25);
+          overflow: visible;
           width: fit-content;
-          padding: 4px;
+          padding: 3px;
+          gap: 1px;
         }
+
+        /* ── Sliding glider — golden gradient ── */
         .glass-glider {
           position: absolute;
-          top: 4px;
-          bottom: 4px;
-          width: calc((100% - 8px) / 6);
-          border-radius: 0.9rem;
+          top: 3px; bottom: 3px;
+          width: calc((100% - 6px) / 6);
+          border-radius: 12px;
           z-index: 1;
           transition:
-            transform 0.5s cubic-bezier(0.37, 1.95, 0.66, 0.56),
-            background 0.4s ease-in-out,
-            box-shadow 0.4s ease-in-out;
-          background: linear-gradient(135deg, rgba(124, 58, 237, 0.5), rgba(34, 197, 94, 0.28));
+            transform 0.48s cubic-bezier(0.34, 1.56, 0.64, 1),
+            background 0.35s ease;
+          background: linear-gradient(135deg,
+            rgba(251,191,36,.28) 0%,
+            rgba(245,158,11,.22) 45%,
+            rgba(217,119,6,.18) 100%);
+          border: 1px solid rgba(251,191,36,.3);
           box-shadow:
-            0 0 18px rgba(139, 92, 246, 0.35),
-            0 0 10px rgba(220, 252, 231, 0.08) inset;
+            0 0 20px rgba(251,191,36,.4),
+            0 0 8px rgba(251,191,36,.2) inset;
+          animation: gold-pulse 2.8s ease-in-out infinite;
+          overflow: hidden;
         }
+        /* Shine sweep on glider */
+        .glass-glider::after {
+          content: '';
+          position: absolute;
+          top: 0; bottom: 0;
+          width: 45%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+          animation: gold-shine 3s ease-in-out infinite;
+          pointer-events: none;
+        }
+
+        /* ── Nav link ── */
         .nav-link {
-          min-width: 92px;
-          padding: 11px 14px;
-          border-radius: 14px;
+          min-width: 90px;
+          padding: 10px 13px;
+          border-radius: 12px;
           font-size: 13px;
-          font-weight: 700;
+          font-weight: 600;
           cursor: pointer;
           border: none;
           background: transparent;
-          color: var(--text);
-          transition: color 0.3s ease-in-out;
+          color: rgba(255,255,255,.48);
+          transition: color .25s ease, text-shadow .25s ease;
           font-family: inherit;
           white-space: nowrap;
           display: flex;
@@ -183,72 +217,120 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
           gap: 6px;
           position: relative;
           z-index: 2;
+          letter-spacing: .01em;
         }
-        .nav-link:hover { color: #fff; }
+        .nav-link:hover { color: rgba(255,255,255,.82); }
         .nav-link.active {
-          color: #fff;
+          color: #fde68a;
+          font-weight: 700;
+          text-shadow: 0 0 18px rgba(251,191,36,.7), 0 0 6px rgba(251,191,36,.4);
         }
-        .nav-link .nav-ic { opacity: 0.55; transition: opacity 0.18s; }
-        .nav-link:hover .nav-ic, .nav-link.active .nav-ic { opacity: 1; }
+        .nav-link .nav-ic {
+          opacity: 0.42;
+          transition: opacity .2s, filter .2s;
+        }
+        .nav-link:hover .nav-ic { opacity: .72; }
+        .nav-link.active .nav-ic {
+          opacity: 1;
+          filter: drop-shadow(0 0 5px rgba(251,191,36,.8));
+        }
+
+        /* ── Notification badge ── */
         .nav-badge {
-          position: absolute;
-          top: 4px;
-          right: 4px;
-          min-width: 15px;
-          height: 15px;
-          padding: 0 4px;
+          position: absolute; top: 3px; right: 3px;
+          min-width: 15px; height: 15px; padding: 0 4px;
           border-radius: 999px;
-          background: linear-gradient(135deg,#8b5cf6,#6d28d9);
-          border: 2px solid rgba(8,8,18,0.95);
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 8px;
-          font-weight: 900;
-          color: #fff;
-          line-height: 1;
-          box-shadow: 0 0 10px rgba(109,40,217,.5);
+          background: linear-gradient(135deg,#f59e0b,#d97706);
+          border: 2px solid rgba(6,6,16,.95);
+          display: inline-flex; align-items: center; justify-content: center;
+          font-size: 8px; font-weight: 900; color: #000; line-height: 1;
+          box-shadow: 0 0 10px rgba(245,158,11,.6);
         }
+
+        /* ── Icon buttons ── */
         .nav-btn {
-          padding: 7px 9px; border-radius: 13px; border: none; cursor: pointer;
-          background: transparent; color: rgba(255,255,255,0.45); display: flex;
-          align-items: center; justify-content: center; transition: all 0.18s;
-          font-family: inherit;
+          padding: 7px 9px; border-radius: 12px; border: none; cursor: pointer;
+          background: transparent; color: rgba(255,255,255,.38);
+          display: flex; align-items: center; justify-content: center;
+          transition: all .18s; font-family: inherit;
         }
-        .nav-btn:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.8); }
+        .nav-btn:hover {
+          background: rgba(255,255,255,.07);
+          color: rgba(255,255,255,.75);
+        }
+
+        /* ── Balance pill ── */
         .balance-pill {
-          display: flex; align-items: center; gap: 5px; padding: 6px 12px;
-          border-radius: 13px; border: 1px solid rgba(139,92,246,0.25);
-          background: rgba(139,92,246,0.1); color: #c4b5fd; font-size: 12px;
-          font-weight: 700; cursor: pointer; transition: all 0.18s; font-family: inherit;
+          display: flex; align-items: center; gap: 5px;
+          padding: 6px 13px; border-radius: 12px;
+          border: 1px solid rgba(251,191,36,.22);
+          background: rgba(251,191,36,.07);
+          color: #fde68a; font-size: 12px; font-weight: 700;
+          cursor: pointer; transition: all .2s; font-family: inherit;
           white-space: nowrap;
+          box-shadow: 0 0 12px rgba(251,191,36,.08);
         }
-        .balance-pill:hover { background: rgba(139,92,246,0.18); border-color: rgba(139,92,246,0.4); box-shadow: 0 0 14px rgba(109,40,217,0.25); }
-        .logo-img { height: 30px; width: auto; object-fit: contain; filter: drop-shadow(0 0 10px rgba(139,92,246,0.5)); }
+        .balance-pill:hover {
+          background: rgba(251,191,36,.13);
+          border-color: rgba(251,191,36,.4);
+          box-shadow: 0 0 22px rgba(251,191,36,.22);
+        }
+
+        /* ── Logo ── */
+        .logo-img {
+          height: 30px; width: auto; object-fit: contain;
+          filter: drop-shadow(0 0 10px rgba(251,191,36,.4));
+          transition: filter .2s;
+        }
+        .logo-img:hover { filter: drop-shadow(0 0 16px rgba(251,191,36,.7)); }
+
+        /* ── Dropdown ── */
         .dropdown {
           position: absolute; right: 0; top: calc(100% + 10px);
-          background: rgba(10,10,22,0.97); backdrop-filter: blur(24px);
-          border: 1px solid rgba(255,255,255,0.1); border-radius: 18px;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.7); padding: 6px; z-index: 60;
-          min-width: 200px; overflow: hidden;
+          background: rgba(8,8,18,.97);
+          backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+          border: 1px solid rgba(255,255,255,.09); border-radius: 18px;
+          box-shadow: 0 24px 64px rgba(0,0,0,.75), 0 0 0 1px rgba(255,255,255,.04) inset;
+          padding: 6px; z-index: 60; min-width: 210px; overflow: hidden;
+          animation: nav-fade-in .22s cubic-bezier(.22,1,.36,1) both;
         }
         .dropdown-item {
           display: flex; align-items: center; gap: 9px; padding: 9px 12px;
-          border-radius: 12px; font-size: 13px; cursor: pointer; border: none;
-          background: transparent; color: rgba(255,255,255,0.65); width: 100%;
-          transition: all 0.15s; font-family: inherit; text-align: left;
+          border-radius: 11px; font-size: 13px; cursor: pointer; border: none;
+          background: transparent; color: rgba(255,255,255,.6); width: 100%;
+          transition: all .15s; font-family: inherit; text-align: left;
         }
-        .dropdown-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
-        .avatar-ring { border-radius: 50%; border: 2px solid rgba(139,92,246,0.3); }
-        .mob-nav-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+        .dropdown-item:hover {
+          background: rgba(255,255,255,.06);
+          color: #fff;
+        }
+
+        /* ── Avatar ── */
+        .avatar-ring {
+          border-radius: 50%;
+          border: 2px solid rgba(251,191,36,.35);
+          box-shadow: 0 0 10px rgba(251,191,36,.15);
+        }
+
+        /* ── Mobile grid ── */
+        .mob-nav-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
         .mob-nav-item {
-          padding: 11px 6px; border-radius: 13px; font-size: 11.5px; font-weight: 500;
-          cursor: pointer; border: 1px solid rgba(255,255,255,0.06);
-          background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.5);
-          text-align: center; font-family: inherit; transition: all 0.15s;
+          padding: 12px 6px; border-radius: 14px; font-size: 11.5px; font-weight: 500;
+          cursor: pointer; border: 1px solid rgba(255,255,255,.06);
+          background: rgba(255,255,255,.03); color: rgba(255,255,255,.45);
+          text-align: center; font-family: inherit; transition: all .2s;
           display: flex; flex-direction: column; align-items: center; gap: 5px;
         }
-        .mob-nav-item.active { border-color: rgba(139,92,246,0.3); background: rgba(139,92,246,0.12); color: #c4b5fd; }
+        .mob-nav-item.active {
+          border-color: rgba(251,191,36,.3);
+          background: rgba(251,191,36,.08);
+          color: #fde68a;
+          box-shadow: 0 0 18px rgba(251,191,36,.12);
+        }
+        .mob-nav-item:hover:not(.active) {
+          background: rgba(255,255,255,.05);
+          color: rgba(255,255,255,.7);
+        }
       `}</style>
 
       <div className="nav-pill">

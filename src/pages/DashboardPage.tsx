@@ -46,6 +46,7 @@ async function upsertBonusRow(userId: string, userEmail: string, bonusPoints: nu
 }
 
 function Ticker({ expiresAt }: { expiresAt: string }) {
+  const { t } = useTranslation();
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -54,7 +55,7 @@ function Ticker({ expiresAt }: { expiresAt: string }) {
   }, []);
 
   const diff = new Date(expiresAt).getTime() - now;
-  if (diff <= 0) return <span style={{ color:'var(--red)', fontWeight:700, fontSize:13 }}>Expired</span>;
+  if (diff <= 0) return <span style={{ color:'var(--red)', fontWeight:700, fontSize:13 }}>{t('common.expired')}</span>;
 
   const d = Math.floor(diff / 86400000);
   const h = String(Math.floor((diff % 86400000) / 3600000)).padStart(2, '0');
@@ -129,6 +130,7 @@ function LicCard({ lic, accent }: { lic: any; accent: 'p' | 'b' }) {
 }
 
 function FreeKeyCard() {
+  const { t } = useTranslation();
   const { addLicense, user } = useAppStore();
   const [row, setRow] = useState<FreeRow | null>(null);
   const [dbLoading, setDbLoading] = useState(true);
@@ -199,7 +201,7 @@ function FreeKeyCard() {
 
       if (!lagKey && !intKey) {
         toast.dismiss('free-trial');
-        toast.error('Key generation failed');
+        toast.error(t('license.activationFailed'));
         setGenerating(false);
         return;
       }
@@ -232,7 +234,7 @@ function FreeKeyCard() {
       setRow({ lag_key:lagKey, internal_key:intKey, claimed_at:now, expires_at:expiresAt });
       logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'free_key_claim', product:'Free 1-Day Trial Key', status:'success', meta:{ lag:!!lagKey, internal:!!intKey, expires:expiresAt } });
       toast.dismiss('free-trial');
-      toast.success('Free 1-day trial claimed');
+      toast.success(t('dashboard.freeKeyClaimed'));
     } catch (error) {
       toast.dismiss('free-trial');
       toast.error(String(error));
@@ -245,7 +247,7 @@ function FreeKeyCard() {
     navigator.clipboard.writeText(key);
     setCopied((prev) => ({ ...prev, [id]:true }));
     setTimeout(() => setCopied((prev) => ({ ...prev, [id]:false })), 2000);
-    toast.success('Copied');
+    toast.success(t('common.copied'));
   };
 
   if (dbLoading) {
@@ -253,7 +255,7 @@ function FreeKeyCard() {
       <div className="g fu" style={{ padding:'18px 22px', background:'rgba(99,102,241,.05)', borderColor:'rgba(99,102,241,.18)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:8, color:'var(--muted)' }}>
           <Loader2 size={14} className="animate-spin" />
-          <span style={{ fontSize:13 }}>Loading trial card...</span>
+          <span style={{ fontSize:13 }}>{t('common.loading')}</span>
         </div>
       </div>
     );
@@ -273,14 +275,14 @@ function FreeKeyCard() {
           <Zap size={26} color="#c4b5fd" />
         </div>
         <div style={{ flex:1 }}>
-          <div style={{ fontSize:18, fontWeight:800, color:'#fff', marginBottom:5 }}>Free 1 Day Trial Key</div>
-          <div style={{ fontSize:12, color:'rgba(255,255,255,.72)', marginBottom:14 }}>Glassmorphism trial card with a 48-hour cooldown that stays saved on your account.</div>
+          <div style={{ fontSize:18, fontWeight:800, color:'#fff', marginBottom:5 }}>{t('dashboard.freeKey')}</div>
+          <div style={{ fontSize:12, color:'rgba(255,255,255,.72)', marginBottom:14 }}>{t('dashboard.freeKeyDesc')}</div>
 
           {isActive && row && (
             <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:12, flexWrap:'wrap' }}>
               <div className="dot dot-green" style={{ width:5, height:5 }} />
-              <span style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>Trial active</span>
-              <span style={{ fontSize:11, color:'var(--muted)' }}>Expires in</span>
+              <span style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>{t('dashboard.freeKeyActive')}</span>
+              <span style={{ fontSize:11, color:'var(--muted)' }}>{t('dashboard.freeKeyExpiresIn')}</span>
               <MiniCountdown ms={new Date(row.expires_at).getTime()} />
             </div>
           )}
@@ -288,18 +290,18 @@ function FreeKeyCard() {
           {row && !isActive && (
             <div style={{ fontSize:11, color:'var(--dim)', display:'flex', alignItems:'center', gap:5, marginBottom:12 }}>
               <span style={{ color:'var(--red)', fontSize:8 }}>•</span>
-              Trial expired
+              {t('dashboard.freeKeyExpired')}
             </div>
           )}
 
           {canClaim ? (
             <button onClick={handleClaim} disabled={generating} className="btn btn-sm" style={{ background:'linear-gradient(135deg,#4f46e5,#7c3aed)', color:'#fff', border:'none', fontWeight:800, gap:6, boxShadow:'0 0 24px rgba(99,102,241,.45)', padding:'11px 16px' }}>
-              {generating ? <><Loader2 size={13} className="animate-spin" /> Generating...</> : <><Zap size={13} /> Claim Free 1 Day Trial</>}
+              {generating ? <><Loader2 size={13} className="animate-spin" /> {t('dashboard.freeKeyGenerating')}</> : <><Zap size={13} /> {t('dashboard.freeKeyBtn')}</>}
             </button>
           ) : (
             <div style={{ fontSize:11, color:'var(--dim)', display:'flex', alignItems:'center', gap:5 }}>
               <Clock size={11} />
-              Next free claim in <MiniCountdown ms={cooldownMs} />
+              {t('dashboard.freeKeyCooldown')} <MiniCountdown ms={cooldownMs} />
             </div>
           )}
         </div>
@@ -379,14 +381,14 @@ export default function DashboardPage() {
     const claimTime = new Date().toISOString();
     const { error } = await upsertBonusRow(user.id, user.email, nextPoints, claimTime);
     if (error) {
-      toast.error('Failed to save bonus points');
+    toast.error(t('common.error'));
       setClaimingBonus(false);
       return;
     }
     setBonusPoints(nextPoints);
     setLastBonusClaim(claimTime);
     setClaimingBonus(false);
-    toast.success('Bonus updated: +10 points');
+    toast.success(t('bonus.claimed'));
     logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'bonus_claim', status:'success', meta:{ points:10, total:nextPoints } });
   };
 
@@ -413,7 +415,7 @@ export default function DashboardPage() {
               : <div style={{ width:46, height:46, borderRadius:12, background:'linear-gradient(135deg,#6d28d9,#4c1d95)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:800, color:'#fff' }}>{user?.name?.charAt(0) || 'U'}</div>}
             <div>
               <div className="label" style={{ marginBottom:4 }}>{t('dashboard.welcomeBack')}</div>
-              <div style={{ fontSize:20, fontWeight:800, color:'#fff' }}>{user?.name?.split(' ')[0] || 'User'} hello</div>
+              <div style={{ fontSize:20, fontWeight:800, color:'#fff' }}>{t('dashboard.welcomeBack')}, {user?.name?.split(' ')[0] || 'User'}</div>
             </div>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:7, padding:'6px 12px', borderRadius:20, background:'rgba(16,232,152,.08)', border:'1px solid rgba(16,232,152,.18)' }}>
@@ -459,13 +461,13 @@ export default function DashboardPage() {
             </div>
             <div>
               <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:3 }}>{t('dashboard.dailyBonus')}</div>
-              <div style={{ fontSize:12, color:'var(--muted)' }}>Always synced when you open the page and kept after refresh.</div>
+              <div style={{ fontSize:12, color:'var(--muted)' }}>{t('dashboard.dailyBonusDesc')}</div>
             </div>
           </div>
           <div style={{ textAlign:'right', flexShrink:0, marginLeft:12 }}>
-            <div style={{ fontSize:20, fontWeight:800, color:'var(--amber)', marginBottom:6 }}>{bonusPoints}<span style={{ fontSize:11, color:'var(--dim)', fontWeight:400, marginLeft:3 }}>pts</span></div>
+            <div style={{ fontSize:20, fontWeight:800, color:'var(--amber)', marginBottom:6 }}>{bonusPoints}<span style={{ fontSize:11, color:'var(--dim)', fontWeight:400, marginLeft:3 }}>{t('bonus.title')}</span></div>
             {canClaimBonus
-              ? <button className="btn btn-sm" style={{ background:'linear-gradient(135deg,#fbbf24,#f59e0b)', color:'#3a1a00', fontWeight:700, boxShadow:'0 0 14px rgba(245,158,11,.3)', border:'none' }} onClick={handleClaimBonus} disabled={claimingBonus}>{claimingBonus ? <><Loader2 size={12} className="animate-spin" /> Saving...</> : t('dashboard.claimNow')}</button>
+              ? <button className="btn btn-sm" style={{ background:'linear-gradient(135deg,#fbbf24,#f59e0b)', color:'#3a1a00', fontWeight:700, boxShadow:'0 0 14px rgba(245,158,11,.3)', border:'none' }} onClick={handleClaimBonus} disabled={claimingBonus}>{claimingBonus ? <><Loader2 size={12} className="animate-spin" /> {t('common.save')}</> : t('dashboard.claimNow')}</button>
               : <div style={{ fontSize:11, color:'var(--dim)', display:'flex', alignItems:'center', gap:4 }}><Clock size={11} />{bonusCooldown}</div>
             }
           </div>

@@ -7,6 +7,7 @@ import { logActivity, notifyUser } from '@/lib/activity';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { buildReferralLink, captureReferralFromUrl, getStoredReferralEmail, normalizeResellerEmail } from '@/lib/reseller';
 
 const SUPABASE_URL  = 'https://wkjqrjafogufqeasfeev.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
@@ -19,7 +20,7 @@ const PAYMENT_METHODS = [
   { id:'dana', label:'Dana', color:'#118EEA', glow:'rgba(17,142,234,0.35)', instruction:'Open Dana → Transfer → enter number or scan QR', hasQr:true, qr:'https://www.dropbox.com/scl/fi/hl4a1lmuqz205akk71mld/Dana-Qr-Code.jpg?rlkey=03z6tvrmcw7mrma64u2we82de&st=2ojdhtg9&raw=1', fields:[{label:'Name',value:'Syaiful mu\'an\'an',note:''},{label:'Number',value:'087869604325',note:'Dana transfer'}], icon:<img src="https://www.dropbox.com/scl/fi/r1v3mn866gqmqce95a9cn/dana-e-wallet-app-seeklogo.png?rlkey=h76nv5fmr2fpqt3dtpdl4oy1m&st=iqzs7wlk&raw=1" alt="logo" style={{ width:20, height:20, objectFit:'contain', borderRadius:4 }}/>, bgColor:'rgba(17,142,234,0.08)', borderColor:'rgba(17,142,234,0.25)' },
   { id:'usdt_trc20', label:'USDT TRC20', color:'#26A17B', glow:'rgba(38,161,123,0.35)', instruction:'Send USDT on Tron (TRC20) network only', hasQr:true, qr:'https://www.dropbox.com/scl/fi/1znlsr0llx3x0wanjknlc/Usdt-Trc20-QR-Code.jpg?rlkey=ndsagvf263w8y0g0ykubamgy3&st=qjbdaltp&raw=1', fields:[{label:'TRC20 Address',value:'TVinprV4QCHVuAtJ73fCJxhw3gcsqMFXMP',note:'Tron network only'}], icon:<img src="https://www.dropbox.com/scl/fi/x2r7ukhw2zn6qy8iuhx5e/usdt.png?rlkey=t0ytxc27b89zlj8j3o7ragy32&st=hyz6lplx&raw=1" alt="logo" style={{ width:20, height:20, objectFit:'contain', borderRadius:4 }}/>, bgColor:'rgba(38,161,123,0.08)', borderColor:'rgba(38,161,123,0.25)' },
   { id:'usdt_bep20', label:'USDT BEP20', color:'#F0B90B', glow:'rgba(240,185,11,0.3)', instruction:'Send USDT on BNB Smart Chain (BEP20) only', hasQr:true, qr:'https://www.dropbox.com/scl/fi/aicllbvxqn79zxieufixy/USDT-Bep20-QR-Code.jpg?rlkey=xhyesikquqvusrv4r4dscg6wg&st=8gtzmhir&raw=1', fields:[{label:'BEP20 Address',value:'0x33a0f57c8372a232b1a425210e897c1b0d1b8048',note:'BSC network only'}], icon:<img src="https://www.dropbox.com/scl/fi/x2r7ukhw2zn6qy8iuhx5e/usdt.png?rlkey=t0ytxc27b89zlj8j3o7ragy32&st=hyz6lplx&raw=1" alt="logo" style={{ width:20, height:20, objectFit:'contain', borderRadius:4 }}/>, bgColor:'rgba(240,185,11,0.07)', borderColor:'rgba(240,185,11,0.2)' },
-  { id:'truewallet', label:'TrueWallet AngPao', color:'#F97316', glow:'rgba(249,115,22,0.3)', instruction:'Paste your gift link below. The voucher redeems automatically and credits the redeemed amount to your wallet balance.', hasQr:false, qr:'', fields:[{label:'Flow',value:'Paste gift link',note:'Auto redeem + auto balance'}], icon:<Wallet size={18} color="#f97316"/>, bgColor:'rgba(249,115,22,0.08)', borderColor:'rgba(249,115,22,0.22)' },
+  { id:'truewallet', label:'TrueWallet AngPao', color:'#F97316', glow:'rgba(249,115,22,0.3)', instruction:'Paste your gift link below. The voucher redeems automatically and credits the net redeemed amount after a 3% TrueWallet fee.', hasQr:false, qr:'', fields:[{label:'Flow',value:'Paste gift link',note:'Auto redeem + auto balance'}], icon:<Wallet size={18} color="#f97316"/>, bgColor:'rgba(249,115,22,0.08)', borderColor:'rgba(249,115,22,0.22)' },
   { id:'litecoin', label:'Litecoin', color:'#A5A9B4', glow:'rgba(165,169,180,0.3)', instruction:'Send LTC to the address above', hasQr:true, qr:'https://www.dropbox.com/scl/fi/d7hcjghzalqk54o6zb0eh/Litecoin-QR-Code.jpg?rlkey=quvx4xj4ex0u6qce9bkhido0m&st=eq3jbe2k&raw=1', fields:[{label:'LTC Address',value:'LRXdzcWZ1mqGiFXNXe2Qe82tM7wUWVH9zd',note:'Litecoin network'}], icon:<img src="https://www.dropbox.com/scl/fi/lktwitcg1khz5f1ya0hhh/litecoin-ltc-icon.png?rlkey=5nlg06klolvrikw03b5zc5wqr&st=tgplvn4k&raw=1" alt="logo" style={{ width:20, height:20, objectFit:'contain', borderRadius:4 }}/>, bgColor:'rgba(52,93,157,0.08)', borderColor:'rgba(52,93,157,0.25)' },
 ] as const;
 
@@ -33,7 +34,7 @@ const LOCAL = {
   paypal:    { code:'USD', symbol:'$',  name:'USD',     rate:1,     flag:'🇺🇸', info:'' },
   usdt_trc20:{ code:'USD', symbol:'$',  name:'USDT',    rate:1,     flag:'🌐', info:'' },
   usdt_bep20:{ code:'USD', symbol:'$',  name:'USDT',    rate:1,     flag:'🌐', info:'' },
-  truewallet:{ code:'THB', symbol:'฿',  name:'Thai Baht', rate:35,   flag:'🇹🇭', info:'TrueWallet redeems the actual voucher amount in THB and converts it to USD balance automatically.' },
+  truewallet:{ code:'THB', symbol:'฿',  name:'Thai Baht', rate:35,   flag:'🇹🇭', info:'TrueWallet redeems the actual voucher amount in THB, applies a 3% fee, then converts the net amount to USD balance automatically.' },
   litecoin:  { code:'LTC', symbol:'Ł',  name:'Litecoin',rate:0.013, flag:'🔵', info:'Amount shown is approximate LTC equivalent. Check live rate before sending.' },
 } as const;
 
@@ -42,6 +43,17 @@ function localAmt(usd: number, methodId: string): string {
   if (!lc || lc.rate === 1) return '';
   const val = methodId === 'litecoin' ? (usd * lc.rate).toFixed(4) : Math.ceil(usd * lc.rate).toLocaleString();
   return `≈ ${lc.symbol}${val} ${lc.code}`;
+}
+
+function roundMoney(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+async function applyResellerCreditForTransaction(transactionId: string) {
+  const { data, error } = await safeQuery(() => supabase.rpc('apply_reseller_credit', { p_transaction_id: transactionId }));
+  if (error) return { data: null, error };
+  const row = Array.isArray(data) ? data[0] : data;
+  return { data: row ?? null, error: null };
 }
 
 const AMOUNTS = [5, 10, 15, 25, 50, 100];
@@ -60,7 +72,7 @@ function QRZoomModal({ src, onClose }: { src: string; onClose: () => void }) {
 }
 
 // ── PayPal Smart Button (auto-capture → auto-credit balance) ─
-function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; onSuccess: () => void }) {
+function PayPalButton({ amount, user, onSuccess, referralEmail }: { amount: number; user: any; onSuccess: () => void; referralEmail: string }) {
   const SUPABASE_URL_PP  = 'https://wkjqrjafogufqeasfeev.supabase.co';
   const SUPABASE_ANON_PP = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
   // Read client ID from Vite env var (set VITE_PAYPAL_CLIENT_ID in Netlify environment variables)
@@ -125,7 +137,7 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
 
           // Step 2: Insert approved transaction directly via Supabase (no edge function needed)
           // This is safe because the SDK capture already verified the payment with PayPal
-          const { error: txErr } = await supabase.from('transactions').insert({
+          const { data: txRow, error: txErr } = await supabase.from('transactions').insert({
             user_id:        user.id,
             user_email:     user.email,
             user_name:      user.name,
@@ -134,7 +146,8 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
             transaction_id: orderId,
             status:         'approved',
             note:           'Auto-verified via PayPal JS SDK capture',
-          });
+            referral_email: referralEmail || '',
+          }).select('id').single();
 
           // Step 3: Record in paypal_auto_credits for idempotency (ignore if already exists)
           await supabase.from('paypal_auto_credits').insert({
@@ -150,7 +163,8 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
             body: JSON.stringify({ order_id:orderId, user_id:user.id, user_email:user.email, user_name:user.name, amount:finalAmount }),
           }).catch(() => {}); // fire-and-forget, won't block or error
 
-          if (!txErr) {
+          if (!txErr && txRow?.id) {
+            await applyResellerCreditForTransaction(txRow.id);
             setDone(true);
             toast.success(`🎉 $${finalAmount.toFixed(2)} added to your balance!`);
             onSuccess();
@@ -225,10 +239,10 @@ function PayPalButton({ amount, user, onSuccess }: { amount: number; user: any; 
 }
 
 // ── Admin/Support Payment Panel ───────────────────────────────
-function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount }: { user: any; onSuccess: () => void; expectedUsdAmount: number }) {
+function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount, referralEmail }: { user: any; onSuccess: () => void; expectedUsdAmount: number; referralEmail: string }) {
   const [voucher, setVoucher] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ amountUsd: number; amountThb: number; exchangeRate: number; transactionId: string; shortfallUsd: number } | null>(null);
+  const [result, setResult] = useState<{ amountUsd: number; grossAmountUsd: number; feeUsd: number; feeRate: number; amountThb: number; exchangeRate: number; transactionId: string; shortfallUsd: number } | null>(null);
 
   const getFunctionErrorMessage = async (error: any) => {
     if (!error) return '';
@@ -251,18 +265,21 @@ function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount }: { user: any; o
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke('truwallet-redeem', { body: { voucher: voucher.trim(), expectedUsdAmount } });
+    const { data, error } = await supabase.functions.invoke('truwallet-redeem', { body: { voucher: voucher.trim(), expectedUsdAmount, referralEmail } });
     setLoading(false);
     if (error || !data?.success) {
       const errorMessage = data?.message ?? await getFunctionErrorMessage(error) ?? 'Redeem failed';
       toast.error(errorMessage);
       return;
     }
-    setResult({
-      amountUsd: Number(data.amount ?? 0),
-      amountThb: Number(data.amountThb ?? 0),
-      exchangeRate: Number(data.exchangeRate ?? 35),
-      transactionId: String(data.transactionId ?? ''),
+      setResult({
+        amountUsd: Number(data.amount ?? 0),
+        grossAmountUsd: Number(data.grossAmountUsd ?? data.amount ?? 0),
+        feeUsd: Number(data.feeUsd ?? 0),
+        feeRate: Number(data.feeRate ?? 0.03),
+        amountThb: Number(data.amountThb ?? 0),
+        exchangeRate: Number(data.exchangeRate ?? 35),
+        transactionId: String(data.transactionId ?? ''),
       shortfallUsd: Number(data.shortfallUsd ?? 0),
     });
     setVoucher('');
@@ -272,12 +289,12 @@ function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount }: { user: any; o
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      <div style={{ padding:'14px 16px', borderRadius:14, background:'rgba(249,115,22,.08)', border:'1px solid rgba(249,115,22,.2)' }}>
-        <div style={{ fontSize:13, fontWeight:800, color:'#fb923c', marginBottom:4 }}>TrueWallet AngPao</div>
-        <p style={{ margin:0, fontSize:12, color:'var(--muted)', lineHeight:1.6 }}>Paste a gift link to auto-redeem it and instantly add the USD equivalent to your wallet balance.</p>
-        <div style={{ marginTop:10, display:'flex', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
-          <span style={{ fontSize:11, color:'#f8fafc', fontWeight:700 }}>1 USD = {LOCAL.truewallet.rate} THB</span>
-          <span style={{ fontSize:11, color:'var(--muted)' }}>Target: ฿{Math.ceil(expectedUsdAmount * LOCAL.truewallet.rate).toLocaleString()}</span>
+        <div style={{ padding:'14px 16px', borderRadius:14, background:'rgba(249,115,22,.08)', border:'1px solid rgba(249,115,22,.2)' }}>
+          <div style={{ fontSize:13, fontWeight:800, color:'#fb923c', marginBottom:4 }}>TrueWallet AngPao</div>
+          <p style={{ margin:0, fontSize:12, color:'var(--muted)', lineHeight:1.6 }}>Paste a gift link to auto-redeem it and instantly add the USD equivalent to your wallet balance after a 3% fee.</p>
+          <div style={{ marginTop:10, display:'flex', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+            <span style={{ fontSize:11, color:'#f8fafc', fontWeight:700 }}>1 USD = {LOCAL.truewallet.rate} THB</span>
+            <span style={{ fontSize:11, color:'var(--muted)' }}>Target: ฿{Math.ceil(expectedUsdAmount * LOCAL.truewallet.rate).toLocaleString()}</span>
         </div>
       </div>
       <textarea value={voucher} onChange={e=>setVoucher(e.target.value)} rows={3} placeholder="https://gift.truemoney.com/..." style={{ width:'100%', background:'rgba(255,255,255,.04)', border:'1px solid rgba(249,115,22,.2)', borderRadius:12, padding:'13px 16px', color:'#fff', fontFamily:'inherit', fontSize:13, outline:'none', resize:'vertical' }} />
@@ -289,6 +306,7 @@ function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount }: { user: any; o
           <div style={{ fontSize:12, color:'var(--muted)', marginBottom:4 }}>Balance added successfully</div>
           <code style={{ display:'block', fontSize:13, color:'#fff', fontFamily:'monospace', wordBreak:'break-all', marginBottom:8 }}>{result.transactionId}</code>
           <div style={{ fontSize:11, color:'var(--green)', fontWeight:700 }}>Redeemed: ฿{result.amountThb.toFixed(2)} {'->'} ${result.amountUsd.toFixed(2)}</div>
+          <div style={{ fontSize:11, color:'var(--muted)', marginTop:5 }}>Gross USD: ${result.grossAmountUsd.toFixed(2)} · Fee ({Math.round(result.feeRate * 100)}%): ${result.feeUsd.toFixed(2)}</div>
           {result.shortfallUsd > 0 && (
             <div style={{ fontSize:11, color:'#fbbf24', fontWeight:700, marginTop:6 }}>This voucher was below your selected amount, so only the actual redeemed value was credited.</div>
           )}
@@ -301,6 +319,8 @@ function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount }: { user: any; o
 function AdminPanel() {
   const { user: adminUser } = useAppStore();
   const [txns,setTxns]         = useState<any[]>([]);
+  const [withdrawals,setWithdrawals] = useState<any[]>([]);
+  const [platformEarned,setPlatformEarned] = useState(0);
   const [loading,setL]         = useState(false);
   const [filter,setFilter]     = useState<'pending'|'approved'|'rejected'|'all'>('pending');
   const [search,setSearch]     = useState('');
@@ -311,13 +331,23 @@ function AdminPanel() {
     setL(true);
     let q = supabase.from('transactions').select('*').order('created_at',{ ascending:false });
     if (search.trim()) q = (q as any).or(`user_email.ilike.%${search.trim()}%,user_name.ilike.%${search.trim()}%,transaction_id.ilike.%${search.trim()}%`);
-    const { data, error } = await safeQuery(() => q);
+    const [{ data, error }, { data: wdData }, { data: platformData }] = await Promise.all([
+      safeQuery(() => q),
+      safeQuery(() => supabase.from('withdrawal_requests').select('*').order('created_at',{ ascending:false })),
+      safeQuery(() => supabase.from('platform_earnings').select('amount')),
+    ]);
     if (!error && data) setTxns(data);
+    if (wdData) setWithdrawals(wdData);
+    setPlatformEarned((platformData ?? []).reduce((sum: number, row: any) => sum + Number(row.amount ?? 0), 0));
     setL(false);
   };
   useEffect(() => {
     load(); intv.current = setInterval(load, 20000);
-    const ch = supabase.channel('admin-txns').on('postgres_changes',{ event:'*', schema:'public', table:'transactions' },load).subscribe();
+    const ch = supabase.channel('admin-wallet')
+      .on('postgres_changes',{ event:'*', schema:'public', table:'transactions' },load)
+      .on('postgres_changes',{ event:'*', schema:'public', table:'withdrawal_requests' },load)
+      .on('postgres_changes',{ event:'*', schema:'public', table:'platform_earnings' },load)
+      .subscribe();
     return () => { clearInterval(intv.current); supabase.removeChannel(ch); };
   },[]);
   useEffect(() => { load(); }, [search]);
@@ -325,8 +355,9 @@ function AdminPanel() {
   const approve = async (tx: any) => {
     const { error } = await safeQuery(() => supabase.from('transactions').update({ status:'approved', updated_at:new Date().toISOString() }).eq('id',tx.id));
     if (error) { toast.error('Failed: '+error.message); return; }
+    const resellerResult = await applyResellerCreditForTransaction(tx.id);
     toast.success(`✅ Approved $${tx.amount} for ${tx.user_name}`);
-    setTxns(p => p.map(t => t.id===tx.id ? {...t,status:'approved'} : t));
+    setTxns(p => p.map(t => t.id===tx.id ? {...t,status:'approved',reseller_processed:true,reseller_net_amount:resellerResult.data?.reseller_amount ?? t.reseller_net_amount ?? 0,platform_fee:resellerResult.data?.platform_amount ?? t.platform_fee ?? 0} : t));
     logActivity({ userId:adminUser?.id??'', userEmail:adminUser?.email??'', userName:adminUser?.name??'', action:'payment_approved', amount:Number(tx.amount), status:'success', meta:{ for_user:tx.user_email, method:tx.method } });
     notifyUser(tx.user_id, { type:'payment', title:`✅ Payment Approved — $${Number(tx.amount).toFixed(2)}`, body:`Your ${tx.method} payment has been approved.`, linkPath:'/wallet' });
   };
@@ -337,9 +368,16 @@ function AdminPanel() {
     logActivity({ userId:adminUser?.id??'', userEmail:adminUser?.email??'', userName:adminUser?.name??'', action:'payment_rejected', amount:Number(tx.amount), status:'success', meta:{ for_user:tx.user_email } });
     notifyUser(tx.user_id, { type:'payment', title:`❌ Payment Rejected — $${Number(tx.amount).toFixed(2)}`, body:`Your ${tx.method} payment was rejected.`, linkPath:'/wallet' });
   };
+  const handleWithdrawal = async (requestId: string, status: 'approved' | 'rejected') => {
+    const { error } = await safeQuery(() => supabase.rpc('handle_withdrawal_request', { p_request_id: requestId, p_status: status }));
+    if (error) { toast.error('Failed: ' + error.message); return; }
+    toast.success(`Withdrawal ${status}.`);
+    load();
+  };
   const filtered = filter==='all' ? txns : txns.filter(t=>t.status===filter);
   const pending  = txns.filter(t=>t.status==='pending').length;
   const appTotal = txns.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount),0);
+  const pendingWithdrawals = withdrawals.filter((request) => request.status === 'pending').length;
 
   return (
     <div style={{ display:'flex',flexDirection:'column',gap:14 }}>
@@ -354,8 +392,8 @@ function AdminPanel() {
       )}
 
       {/* Stats row */}
-      <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10 }}>
-        {[{label:'Pending',val:pending,c:'var(--amber)',bg:'rgba(251,191,36,.07)',bc:'rgba(251,191,36,.15)'},{label:'Total',val:txns.length,c:'var(--blue)',bg:'rgba(56,189,248,.06)',bc:'rgba(56,189,248,.13)'},{label:'Approved $',val:`$${appTotal.toFixed(2)}`,c:'var(--green)',bg:'rgba(16,232,152,.06)',bc:'rgba(16,232,152,.13)'}].map(s=>(
+      <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10 }}>
+        {[{label:'Pending',val:pending,c:'var(--amber)',bg:'rgba(251,191,36,.07)',bc:'rgba(251,191,36,.15)'},{label:'Withdrawals',val:pendingWithdrawals,c:'var(--blue)',bg:'rgba(56,189,248,.06)',bc:'rgba(56,189,248,.13)'},{label:'Approved $',val:`$${appTotal.toFixed(2)}`,c:'var(--green)',bg:'rgba(16,232,152,.06)',bc:'rgba(16,232,152,.13)'},{label:'Platform $',val:`$${platformEarned.toFixed(2)}`,c:'#f97316',bg:'rgba(249,115,22,.06)',bc:'rgba(249,115,22,.13)'}].map(s=>(
           <div key={s.label} className="g" style={{ padding:'14px 12px',textAlign:'center',background:s.bg,borderColor:s.bc }}>
             <div style={{ fontSize:20,fontWeight:800,color:s.c }}>{s.val}</div>
             <div className="label" style={{ marginTop:3 }}>{s.label}</div>
@@ -398,6 +436,7 @@ function AdminPanel() {
                 <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:4,flexWrap:'wrap' }}>
                   <span style={{ fontSize:15,fontWeight:800,color:'#fff' }}>{tx.user_name}</span>
                   <span className={`badge badge-${tx.status==='pending'?'amber':tx.status==='approved'?'green':'red'}`}>{tx.status}</span>
+                  {!!tx.referral_email&&<span className="badge badge-purple" style={{fontSize:9}}>Ref {tx.referral_email}</span>}
                   {tx.method==='paypal'&&tx.note?.includes('Auto')&&<span className="badge badge-blue" style={{fontSize:9}}>🤖 Auto</span>}
                 </div>
                 <div style={{ fontSize:12,color:'var(--muted)' }}>{tx.user_email}</div>
@@ -413,6 +452,7 @@ function AdminPanel() {
               {[
                 {label:'Method',         val:tx.method || '—'},
                 {label:'Transaction ID', val:tx.transaction_id || '—'},
+                {label:'Referral',       val:tx.referral_email || 'Direct'},
                 {label:'User ID',        val:(tx.user_id||'').slice(0,14)+'…'},
                 {label:'Last Updated',   val:tx.updated_at ? new Date(tx.updated_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—'},
               ].map(f=>(
@@ -443,6 +483,7 @@ function AdminPanel() {
 
             {/* Note */}
             {tx.note && <div style={{ fontSize:11,color:'var(--dim)',marginBottom:12,padding:'7px 10px',background:'rgba(255,255,255,.03)',borderRadius:8 }}>Note: {tx.note}</div>}
+            {tx.status==='approved' && <div style={{ fontSize:11,color:'var(--dim)',marginBottom:12,padding:'7px 10px',background:'rgba(255,255,255,.03)',borderRadius:8 }}>Reseller payout: ${Number(tx.reseller_net_amount ?? 0).toFixed(2)} · Platform: ${Number(tx.platform_fee ?? 0).toFixed(2)}</div>}
 
             {/* Action buttons */}
             {tx.status==='pending'&&(
@@ -453,6 +494,41 @@ function AdminPanel() {
             )}
           </div>
         ))}
+      </div>
+
+      <div className="g" style={{ padding:18 }}>
+        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:8 }}>
+          <div>
+            <div style={{ fontSize:15,fontWeight:800,color:'#fff' }}>Withdrawal Requests</div>
+            <div style={{ fontSize:11,color:'var(--muted)' }}>Friday-only payouts submitted by resellers</div>
+          </div>
+          <span className="badge badge-blue">{pendingWithdrawals} pending</span>
+        </div>
+        <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+          {withdrawals.length===0
+            ? <div style={{ textAlign:'center',padding:'18px 0',fontSize:13,color:'var(--muted)' }}>No withdrawal requests yet</div>
+            : withdrawals.map((request)=>(
+              <div key={request.id} style={{ padding:14,borderRadius:14,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)' }}>
+                <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,marginBottom:10,flexWrap:'wrap' }}>
+                  <div>
+                    <div style={{ fontSize:14,fontWeight:700,color:'#fff' }}>{request.user_email}</div>
+                    <div style={{ fontSize:11,color:'var(--muted)' }}>{new Date(request.created_at).toLocaleString()}</div>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <div style={{ fontSize:22,fontWeight:900,color:'#fff' }}>${Number(request.amount).toFixed(2)}</div>
+                    <span className={`badge badge-${request.status==='pending'?'amber':request.status==='approved'?'green':'red'}`}>{request.status}</span>
+                  </div>
+                </div>
+                {request.status==='pending' && (
+                  <div style={{ display:'flex',gap:8 }}>
+                    <button onClick={()=>handleWithdrawal(request.id,'approved')} className="btn btn-g btn-sm" style={{ flex:1 }}><Check size={13}/> Approve</button>
+                    <button onClick={()=>handleWithdrawal(request.id,'rejected')} className="btn btn-danger btn-sm" style={{ flex:1 }}><X size={13}/> Reject</button>
+                  </div>
+                )}
+              </div>
+            ))
+          }
+        </div>
       </div>
     </div>
   );
@@ -531,78 +607,213 @@ const PANEL_GROUPS = [
 function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUPS[number]; balance: number; onBuy: (plan: any) => void }) {
   const [sel, setSel] = useState(0);
   const plan = group.plans[sel];
-  const can = balance >= plan.price;
+  const can  = balance >= plan.price;
+  const isFeatured = !!(group as any).featured;
+
+  // per-day price for value label
+  const perDay = (plan.price / plan.days).toFixed(2);
+
+  // savings vs highest per-day (first plan)
+  const basePerDay = group.plans[0].price / group.plans[0].days;
+  const savePct = sel > 0 ? Math.round((1 - plan.price / plan.days / basePerDay) * 100) : 0;
+
   return (
-    <div style={{ background:(group as any).featured?'linear-gradient(135deg,rgba(22,18,8,.95),rgba(30,22,4,.95))':'rgba(14,14,22,.85)', border:`1px solid ${group.bc}`, borderRadius:22, overflow:'hidden', position:'relative', transition:'transform .25s,box-shadow .25s', boxShadow:(group as any).featured?`0 0 60px ${group.glow},0 8px 32px rgba(0,0,0,.5)`:`0 0 30px rgba(0,0,0,.4)` }}
-      onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform='translateY(-4px)';(e.currentTarget as HTMLDivElement).style.boxShadow=`0 0 80px ${group.glow},0 16px 40px rgba(0,0,0,.5)`;}}
-      onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform='none';(e.currentTarget as HTMLDivElement).style.boxShadow=(group as any).featured?`0 0 60px ${group.glow},0 8px 32px rgba(0,0,0,.5)`:`0 0 30px rgba(0,0,0,.4)`;}}
+    <div style={{
+      position: 'relative',
+      borderRadius: 24,
+      overflow: 'hidden',
+      background: isFeatured
+        ? 'linear-gradient(160deg,rgba(28,22,6,.97) 0%,rgba(18,14,4,.97) 100%)'
+        : 'linear-gradient(160deg,rgba(13,13,20,.97) 0%,rgba(9,9,16,.97) 100%)',
+      border: `1px solid ${isFeatured ? 'rgba(201,168,76,.35)' : group.bc}`,
+      boxShadow: isFeatured
+        ? `0 0 0 1px rgba(201,168,76,.12), 0 32px 64px rgba(0,0,0,.55), 0 0 80px ${group.glow}`
+        : `0 24px 48px rgba(0,0,0,.45)`,
+      transition: 'transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s',
+    }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-6px)';
+        (e.currentTarget as HTMLDivElement).style.boxShadow = isFeatured
+          ? `0 0 0 1px rgba(201,168,76,.2), 0 40px 80px rgba(0,0,0,.6), 0 0 100px ${group.glow}`
+          : `0 40px 80px rgba(0,0,0,.55), 0 0 60px ${group.glow}`;
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLDivElement).style.transform = 'none';
+        (e.currentTarget as HTMLDivElement).style.boxShadow = isFeatured
+          ? `0 0 0 1px rgba(201,168,76,.12), 0 32px 64px rgba(0,0,0,.55), 0 0 80px ${group.glow}`
+          : `0 24px 48px rgba(0,0,0,.45)`;
+      }}
     >
-      <div style={{ height:3,background:`linear-gradient(90deg,transparent,${group.color},transparent)` }}/>
-      {(group as any).featured&&<div style={{ position:'absolute',top:16,right:16,background:'linear-gradient(135deg,#c9a84c,#e8b84b)',color:'#0a0a0a',fontSize:9,fontWeight:900,letterSpacing:'.12em',textTransform:'uppercase',padding:'4px 10px',borderRadius:20 }}>BEST VALUE</div>}
-      <div style={{ padding:'24px 22px' }}>
-        <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:16 }}>
-          <div style={{ width:48,height:48,borderRadius:14,background:group.bg,border:`1px solid ${group.bc}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0,boxShadow:`0 0 20px ${group.glow}` }}>{group.emoji}</div>
-          <div><div style={{ fontSize:18,fontWeight:800,color:'#fff' }}>{group.name}</div><div style={{ fontSize:11,color:'var(--muted)',marginTop:2 }}>{group.desc}</div></div>
+      {/* Top accent bar */}
+      <div style={{ height: 2, background: `linear-gradient(90deg, transparent 0%, ${group.color} 40%, ${isFeatured ? '#e8b84b' : group.color} 60%, transparent 100%)` }} />
+
+      {/* Featured crown badge */}
+      {isFeatured && (
+        <div style={{ position: 'absolute', top: 18, right: 18, display: 'flex', alignItems: 'center', gap: 5, background: 'linear-gradient(135deg,#c9a84c,#e8b84b)', borderRadius: 20, padding: '4px 12px 4px 8px', boxShadow: '0 4px 16px rgba(201,168,76,.4)' }}>
+          <span style={{ fontSize: 11 }}>👑</span>
+          <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: '.14em', textTransform: 'uppercase', color: '#0a0a0a' }}>Best Value</span>
         </div>
-        <div style={{ display:'flex',flexDirection:'column',gap:6,marginBottom:20 }}>
-          {group.features.map(f=>(
-            <div key={f} style={{ display:'flex',alignItems:'center',gap:8,fontSize:12,color:'rgba(255,255,255,.6)' }}>
-              <span style={{ width:16,height:16,borderRadius:5,background:group.bg,border:`1px solid ${group.bc}`,display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:8,fontWeight:800,color:group.color,flexShrink:0 }}>✓</span>{f}
+      )}
+
+      <div style={{ padding: '28px 26px 26px' }}>
+
+        {/* ── Header ── */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 22 }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: 16, flexShrink: 0,
+            background: `radial-gradient(circle at 30% 30%, ${group.bg}, rgba(0,0,0,.3))`,
+            border: `1px solid ${group.bc}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 24, boxShadow: `0 0 24px ${group.glow}, inset 0 1px 0 rgba(255,255,255,.08)`,
+          }}>{group.emoji}</div>
+          <div style={{ flex: 1, paddingTop: 2 }}>
+            <div style={{ fontSize: 19, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', lineHeight: 1.2, marginBottom: 5 }}>{group.name}</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.42)', lineHeight: 1.5 }}>{group.desc}</div>
+          </div>
+        </div>
+
+        {/* ── Features ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 10px', marginBottom: 24 }}>
+          {group.features.map(f => (
+            <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11.5, color: 'rgba(255,255,255,.58)' }}>
+              <div style={{
+                width: 15, height: 15, borderRadius: 5, flexShrink: 0,
+                background: group.bg, border: `1px solid ${group.bc}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 7, fontWeight: 900, color: group.color,
+              }}>✓</div>
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f}</span>
             </div>
           ))}
         </div>
-          <div style={{ marginBottom:18 }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:10 }}>
-              <div>
-                <div style={{ fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.12em', fontWeight:800 }}>Plan Duration</div>
-                <div style={{ fontSize:12, color:'rgba(255,255,255,.56)', marginTop:3 }}>Choose the package that fits your play style</div>
-              </div>
-              <div style={{ padding:'6px 10px', borderRadius:999, background:'rgba(255,255,255,.04)', border:`1px solid ${group.bc}`, fontSize:11, fontWeight:800, color:group.color, boxShadow:`0 0 18px ${group.glow}` }}>
-                {plan.label}
-              </div>
-            </div>
 
-            <div style={{ position:'relative', padding:6, borderRadius:22, background:'linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.02))', border:`1px solid ${group.bc}`, boxShadow:`inset 0 1px 0 rgba(255,255,255,.05), 0 10px 24px rgba(0,0,0,.18)` }}>
-              <div style={{ position:'absolute', inset:6, width:`calc(${100 / group.plans.length}% - 0px)`, transform:`translateX(${sel * 100}%)`, borderRadius:16, background:`linear-gradient(135deg, ${group.color}, rgba(255,255,255,.12))`, opacity:.18, boxShadow:`0 0 26px ${group.glow}`, transition:'transform .24s ease' }} />
-              <div style={{ display:'grid', gridTemplateColumns:`repeat(${group.plans.length}, minmax(0, 1fr))`, gap:6, position:'relative' }}>
-                {group.plans.map((p,i)=>(
-                  <button
-                    key={p.id}
-                    onClick={()=>setSel(i)}
-                    style={{
-                      padding:'11px 10px',
-                      borderRadius:16,
-                      fontSize:12,
-                      fontWeight:800,
-                      cursor:'pointer',
-                      border:'1px solid transparent',
-                      background:sel===i?'rgba(255,255,255,.07)':'transparent',
-                      color:sel===i?group.color:'rgba(255,255,255,.55)',
-                      transition:'all .18s',
-                      fontFamily:'inherit',
-                      display:'flex',
-                      flexDirection:'column',
-                      alignItems:'center',
-                      gap:2,
-                      minHeight:58,
-                      justifyContent:'center',
-                    }}
-                  >
-                    <span>{p.label}</span>
-                    <span style={{ fontSize:10, fontWeight:700, color:sel===i?'#fff':'rgba(255,255,255,.34)' }}>${p.price}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',background:'rgba(255,255,255,.04)',border:`1px solid ${group.bc}`,borderRadius:14,padding:'14px 18px',marginBottom:14 }}>
-          <div><div style={{ fontSize:11,color:'var(--muted)',marginBottom:2 }}>Selected</div><div style={{ fontSize:13,fontWeight:700,color:group.color }}>{plan.label}</div></div>
-          <div style={{ textAlign:'right' }}><div style={{ fontSize:32,fontWeight:900,color:'#fff',letterSpacing:'-.03em',lineHeight:1 }}>${plan.price}</div><div style={{ fontSize:10,color:'var(--muted)',marginTop:2 }}>one time</div></div>
+        {/* ── Divider ── */}
+        <div style={{ height: 1, background: 'rgba(255,255,255,.06)', marginBottom: 22 }} />
+
+        {/* ── Plan selector label ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.32)', textTransform: 'uppercase', letterSpacing: '.12em' }}>Choose Plan</span>
+          {savePct > 0 && (
+            <span style={{ fontSize: 10, fontWeight: 800, color: '#4ade80', background: 'rgba(74,222,128,.1)', border: '1px solid rgba(74,222,128,.25)', borderRadius: 20, padding: '2px 9px', letterSpacing: '.04em' }}>
+              Save {savePct}%
+            </span>
+          )}
         </div>
-        <button onClick={()=>onBuy({...plan,keyauthPanel:plan.keyauthPanel,duration:`${plan.days} days`,name:`${group.name} — ${plan.label}`,description:group.desc,badgeType:(group as any).featured?'gold':group.id==='internal'?'green':'indigo',emoji:group.emoji})} disabled={!can}
-          style={{ width:'100%',padding:'13px',borderRadius:12,fontSize:14,fontWeight:800,cursor:can?'pointer':'not-allowed',border:'none',transition:'all .2s',fontFamily:'inherit',background:can?((group as any).featured?'linear-gradient(135deg,#c9a84c,#e8b84b)':group.bg):'rgba(255,255,255,.04)',color:can?((group as any).featured?'#0a0a0a':group.color):'var(--muted)',border:can?`1px solid ${group.bc}`:'1px solid rgba(255,255,255,.06)',boxShadow:can?`0 0 24px ${group.glow}`:'none' }}>
-          {can?`⚡ Buy ${plan.label} — $${plan.price}`:'Insufficient Balance'}
-        </button>
+
+        {/* ── Plan pill tabs ── */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${group.plans.length}, 1fr)`,
+          gap: 8,
+          marginBottom: 20,
+        }}>
+          {group.plans.map((p, i) => {
+            const active = sel === i;
+            const ppd = (p.price / p.days).toFixed(2);
+            return (
+              <button
+                key={p.id}
+                onClick={() => setSel(i)}
+                style={{
+                  position: 'relative',
+                  padding: '14px 8px 12px',
+                  borderRadius: 14,
+                  border: active ? `1.5px solid ${group.color}` : '1.5px solid rgba(255,255,255,.08)',
+                  background: active
+                    ? `radial-gradient(ellipse at top, ${group.bg} 0%, rgba(0,0,0,.35) 100%)`
+                    : 'rgba(255,255,255,.025)',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'all .2s cubic-bezier(.22,1,.36,1)',
+                  boxShadow: active ? `0 0 20px ${group.glow}, inset 0 1px 0 rgba(255,255,255,.06)` : 'none',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                }}
+              >
+                {/* Glow dot when active */}
+                {active && <div style={{ position: 'absolute', top: 8, right: 8, width: 6, height: 6, borderRadius: '50%', background: group.color, boxShadow: `0 0 8px ${group.color}` }} />}
+
+                <span style={{ fontSize: 13, fontWeight: 800, color: active ? group.color : 'rgba(255,255,255,.55)', letterSpacing: '-.01em' }}>
+                  {p.label}
+                </span>
+                <span style={{ fontSize: 18, fontWeight: 900, color: active ? '#fff' : 'rgba(255,255,255,.45)', letterSpacing: '-.03em', lineHeight: 1 }}>
+                  ${p.price}
+                </span>
+                <span style={{ fontSize: 9.5, color: active ? 'rgba(255,255,255,.45)' : 'rgba(255,255,255,.22)', fontWeight: 600 }}>
+                  ${ppd}/day
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Price summary row ── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'rgba(255,255,255,.03)', border: `1px solid rgba(255,255,255,.07)`,
+          borderRadius: 14, padding: '14px 18px', marginBottom: 16,
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', fontWeight: 600 }}>Access for</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: group.color }}>{plan.label} — {plan.days} day{plan.days > 1 ? 's' : ''}</span>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 38, fontWeight: 900, color: '#fff', letterSpacing: '-.04em', lineHeight: 1 }}>
+              ${plan.price}
+            </div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,.28)', marginTop: 2 }}>${perDay} per day</div>
+          </div>
+        </div>
+
+        {/* ── CTA Button (slide-up icon animation) ── */}
+        {can ? (
+          <button
+            onClick={() => onBuy({
+              ...plan,
+              keyauthPanel: plan.keyauthPanel,
+              duration: `${plan.days} days`,
+              name: `${group.name} — ${plan.label}`,
+              description: group.desc,
+              badgeType: isFeatured ? 'gold' : group.id === 'internal' ? 'green' : 'indigo',
+              emoji: group.emoji,
+            })}
+            className={`ppc-btn ppc-btn-${group.id}`}
+            data-tooltip={`$${plan.price}`}
+            style={{
+              '--btn-color':   isFeatured ? '#b8860b' : group.color,
+              '--btn-bg':      isFeatured
+                ? 'linear-gradient(135deg,#c9a84c,#e8b84b)'
+                : `linear-gradient(135deg,${group.color}28,${group.color}14)`,
+              '--btn-border':  isFeatured ? 'rgba(201,168,76,.7)' : group.bc,
+              '--btn-glow':    isFeatured ? 'rgba(201,168,76,.5)'  : group.glow,
+              '--btn-txt-color': isFeatured ? '#0a0a0a' : group.color,
+            } as React.CSSProperties}
+          >
+            <span className="ppc-btn-wrapper">
+              {/* Text layer — slides up on hover */}
+              <span className="ppc-btn-text">
+                Get {plan.label} — ${plan.price}
+              </span>
+              {/* Icon layer — slides in from below */}
+              <span className="ppc-btn-icon" aria-hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="5 12 12 5 19 12"/>
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                </svg>
+              </span>
+            </span>
+          </button>
+        ) : (
+          <div style={{
+            width: '100%', padding: '15px 20px', borderRadius: 14,
+            fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+            background: 'rgba(255,255,255,.03)', color: 'rgba(255,255,255,.2)',
+            border: '1px solid rgba(255,255,255,.06)', textAlign: 'center',
+            letterSpacing: '.02em',
+          }}>
+            Insufficient Balance
+          </div>
+        )}
+
       </div>
     </div>
   );
@@ -611,7 +822,7 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
 // ══════════════════════════════════════════════════════════════
 //  NEW Premium Add-Balance UI
 // ══════════════════════════════════════════════════════════════
-function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void }) {
+function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess: () => void; referralEmail: string }) {
   const { addBalance } = useAppStore();
   const [step, setStep] = useState<1|2|3>(1);
   const [amount, setAmount] = useState(10);
@@ -645,7 +856,7 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
     setSubmitting(true);
     const { error } = await safeQuery(() => supabase.from('transactions').insert({
       user_id:user.id, user_email:email.trim(), user_name:user.name,
-      amount:selAmount, method:methodId, transaction_id:txnId.trim(), status:'pending', screenshot_url:screenshotPreview || ''
+      amount:selAmount, method:methodId, transaction_id:txnId.trim(), status:'pending', screenshot_url:screenshotPreview || '', referral_email: referralEmail || ''
     }));
     if (error) {
       if (error.message==='timeout') toast.error('Request timed out.');
@@ -858,8 +1069,8 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                 </div>
               </div>
 
-              {selMethod.id==='paypal'&&<PayPalButton amount={selAmount} user={user} onSuccess={onSuccess}/>}
-              {selMethod.id==='truewallet'&&<TrueWalletRedeem user={user} onSuccess={onSuccess} expectedUsdAmount={selAmount}/>}
+              {selMethod.id==='paypal'&&<PayPalButton amount={selAmount} user={user} onSuccess={onSuccess} referralEmail={referralEmail}/>}
+              {selMethod.id==='truewallet'&&<TrueWalletRedeem user={user} onSuccess={onSuccess} expectedUsdAmount={selAmount} referralEmail={referralEmail}/>}
 
               <div style={{ padding:'13px 15px', borderRadius:16, background:'linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.02))', border:'1px solid rgba(255,255,255,.05)', display:'flex', gap:10, alignItems:'flex-start', marginTop: selMethod.id==='paypal'?12:0 }}>
                 <span style={{ fontSize:16 }}>💡</span>
@@ -901,13 +1112,13 @@ function AddBalanceUI({ user, onSuccess }: { user: any; onSuccess: () => void })
                   <div style={{ padding:'16px 18px', borderRadius:18, background:'linear-gradient(135deg,rgba(249,115,22,.14),rgba(236,72,153,.06))', border:'1px solid rgba(249,115,22,.18)' }}>
                     <div style={{ fontSize:13,fontWeight:700,color:'#fb923c',marginBottom:6 }}>Automatic Voucher Flow</div>
                     <p style={{ fontSize:12,color:'var(--muted)',margin:0,lineHeight:1.65 }}>
-                      Paste a TrueWallet gift link on the left. We redeem the actual THB amount, convert it to USD balance, and credit exactly what the voucher contained.
+                      Paste a TrueWallet gift link on the left. We redeem the actual THB amount, apply a 3% fee, convert the net amount to USD balance, and credit exactly that value.
                     </p>
                   </div>
                   <div style={{ padding:'16px 18px', borderRadius:18, background:'linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02))', border:'1px solid rgba(255,255,255,.06)' }}>
                     <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.34)', marginBottom:12 }}>How It Works</div>
                     <div style={{ display:'grid', gap:10 }}>
-                      {['Paste a valid TrueMoney gift link', 'System reads the real THB value from the voucher', 'Less than selected amount only credits the lower converted value'].map((text, index) => (
+                      {['Paste a valid TrueMoney gift link', 'System reads the real THB value and applies a 3% fee', 'Less than selected amount only credits the lower net converted value'].map((text, index) => (
                         <div key={text} style={{ display:'flex', alignItems:'center', gap:10 }}>
                           <div style={{ width:24, height:24, borderRadius:'50%', background:'linear-gradient(135deg,#f97316,#ec4899)', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:11, fontWeight:900, flexShrink:0 }}>{index + 1}</div>
                           <div style={{ fontSize:12, color:'rgba(255,255,255,.7)' }}>{text}</div>
@@ -1037,6 +1248,12 @@ export default function WalletPage() {
   const { t } = useTranslation();
   const { balance, deductBalance, refundBalance, addLicense, addBalance, user } = useAppStore();
   const [myTxns, setMyTxns] = useState<any[]>([]);
+  const [resellerWallet, setResellerWallet] = useState<any | null>(null);
+  const [resellerTransactions, setResellerTransactions] = useState<any[]>([]);
+  const [withdrawRequests, setWithdrawRequests] = useState<any[]>([]);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [activeReferral, setActiveReferral] = useState('');
   const [txnsLoad, setTxnsLoad] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState<{ product: any; keys: Array<{ key: string; panelId: string; panelName: string; expiresAt: string }> } | null>(null);
   const [confirmPending, setConfirmPending] = useState<any | null>(null);
@@ -1044,6 +1261,9 @@ export default function WalletPage() {
 
   const isAdmin   = user?.role === 'admin';
   const isSupport = user?.role === 'support';
+  const referralLink = user?.email ? buildReferralLink(user.email) : '';
+  const isFriday = new Date().getDay() === 5;
+  const normalizedUserEmail = normalizeResellerEmail(user?.email ?? '');
 
   const loadTxns = async () => {
     if (!user) return;
@@ -1053,9 +1273,49 @@ export default function WalletPage() {
     setTxnsLoad(false);
   };
 
+  const loadResellerData = async () => {
+    if (!user?.id || !user.email || isAdmin || isSupport) return;
+    await safeQuery(() => supabase.rpc('ensure_reseller_wallet', { p_user_id: user.id, p_email: user.email }));
+    const [{ data: walletData }, { data: resellerData }, { data: withdrawalData }] = await Promise.all([
+      safeQuery(() => supabase.from('reseller_wallets').select('*').eq('user_id', user.id).maybeSingle()),
+      safeQuery(() => supabase.from('reseller_transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false })),
+      safeQuery(() => supabase.from('withdrawal_requests').select('*').eq('user_id', user.id).order('created_at', { ascending: false })),
+    ]);
+    setResellerWallet(walletData ?? null);
+    setResellerTransactions(resellerData ?? []);
+    setWithdrawRequests(withdrawalData ?? []);
+  };
+
+  const handleWithdrawRequest = async () => {
+    if (!user?.id || !user.email) { toast.error('Please login first'); return; }
+    const amountValue = roundMoney(Number(withdrawAmount || resellerWallet?.balance || 0));
+    if (amountValue <= 0) { toast.error('Enter a valid withdrawal amount'); return; }
+    setWithdrawing(true);
+    const { error } = await safeQuery(() => supabase.rpc('request_reseller_withdrawal', {
+      p_user_id: user.id,
+      p_email: user.email,
+      p_amount: amountValue,
+    }));
+    setWithdrawing(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success('Withdrawal request submitted.');
+    setWithdrawAmount('');
+    loadResellerData();
+  };
+
+  useEffect(() => {
+    const captured = captureReferralFromUrl(user?.email);
+    const cleanReferral = normalizeResellerEmail(captured || getStoredReferralEmail());
+    setActiveReferral(cleanReferral && cleanReferral !== normalizedUserEmail ? cleanReferral : '');
+  }, [normalizedUserEmail]);
+
   useEffect(() => {
     if (!user||isAdmin||isSupport) return;
     loadTxns();
+    loadResellerData();
     const creditedKey = `1999x-credited-${user.id}`;
     const getCredited = (): Set<string> => { try { return new Set<string>(JSON.parse(localStorage.getItem(creditedKey)||'[]')); } catch { return new Set(); } };
     const addCredited = (id: string) => { const s=getCredited(); s.add(id); try { localStorage.setItem(creditedKey,JSON.stringify([...s])); } catch {} };
@@ -1079,7 +1339,12 @@ export default function WalletPage() {
     const poll = setInterval(check,12000);
     const onFocus = () => { if (!isChecking) check(); };
     window.addEventListener('focus',onFocus);
-    const ch = supabase.channel(`wallet-${user.id}`).on('postgres_changes',{event:'UPDATE',schema:'public',table:'transactions',filter:`user_id=eq.${user.id}`},()=>check()).subscribe();
+    const ch = supabase.channel(`wallet-${user.id}`)
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'transactions',filter:`user_id=eq.${user.id}`},()=>check())
+      .on('postgres_changes',{event:'*',schema:'public',table:'reseller_wallets',filter:`user_id=eq.${user.id}`},()=>loadResellerData())
+      .on('postgres_changes',{event:'*',schema:'public',table:'reseller_transactions',filter:`user_id=eq.${user.id}`},()=>loadResellerData())
+      .on('postgres_changes',{event:'*',schema:'public',table:'withdrawal_requests',filter:`user_id=eq.${user.id}`},()=>loadResellerData())
+      .subscribe();
     return () => { clearTimeout(initTimer); clearInterval(poll); window.removeEventListener('focus',onFocus); supabase.removeChannel(ch); };
   },[user?.id]);
 
@@ -1150,129 +1415,433 @@ export default function WalletPage() {
   return (
     <>
       <style>{`
-        .w-tab { padding:10px 18px; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer; border:none; background:transparent; color:rgba(255,255,255,.38); font-family:inherit; transition:all .2s; display:flex; align-items:center; gap:8px; }
-        .w-tab:hover { color:rgba(255,255,255,.75); background:rgba(255,255,255,.04); }
-        .w-tab.wt-on { color:#fff; background:rgba(139,92,246,.15); border:1px solid rgba(139,92,246,.25); box-shadow:0 0 18px rgba(109,40,217,.2); }
+        @keyframes w-slide-up   { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:none} }
+        @keyframes w-fade-in    { from{opacity:0} to{opacity:1} }
+        @keyframes w-bal-glow   { 0%,100%{text-shadow:0 0 40px rgba(139,92,246,.45)} 50%{text-shadow:0 0 70px rgba(139,92,246,.75),0 0 120px rgba(139,92,246,.3)} }
+        @keyframes w-shimmer    { 0%{left:-100%} 100%{left:160%} }
+
+        /* ── Tabs ── */
+        .w-tab {
+          padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 600;
+          cursor: pointer; border: 1px solid transparent; background: transparent;
+          color: rgba(255,255,255,.35); font-family: inherit;
+          transition: all .25s cubic-bezier(.22,1,.36,1);
+          display: flex; align-items: center; gap: 8px; white-space: nowrap;
+          letter-spacing: .01em;
+        }
+        .w-tab:hover {
+          color: rgba(255,255,255,.72);
+          background: rgba(255,255,255,.04);
+        }
+        .w-tab.wt-on {
+          color: #fff; font-weight: 700;
+          background: rgba(139,92,246,.14);
+          border-color: rgba(139,92,246,.28);
+          box-shadow: 0 0 22px rgba(109,40,217,.18), inset 0 1px 0 rgba(255,255,255,.06);
+        }
+
+        /* ── Hero card ── */
+        .w-hero {
+          position: relative; border-radius: 28px; overflow: hidden;
+          padding: 36px 40px;
+          background: linear-gradient(135deg,
+            rgba(15,10,30,.98) 0%,
+            rgba(8,8,20,.98) 50%,
+            rgba(5,12,8,.98) 100%);
+          border: 1px solid rgba(139,92,246,.18);
+          box-shadow:
+            0 0 0 1px rgba(255,255,255,.04) inset,
+            0 1px 0 rgba(255,255,255,.07) inset,
+            0 40px 80px rgba(0,0,0,.55),
+            0 0 100px rgba(109,40,217,.08);
+          animation: w-slide-up .5s cubic-bezier(.22,1,.36,1) both;
+        }
+        .w-hero-orb-l {
+          position: absolute; top: -80px; left: -60px;
+          width: 280px; height: 280px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(109,40,217,.22) 0%, transparent 70%);
+          pointer-events: none; filter: blur(2px);
+        }
+        .w-hero-orb-r {
+          position: absolute; bottom: -60px; right: -40px;
+          width: 220px; height: 220px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(16,232,152,.1) 0%, transparent 70%);
+          pointer-events: none;
+        }
+        .w-hero-line {
+          position: absolute; top: 0; left: 0; right: 0; height: 1px;
+          background: linear-gradient(90deg, transparent 0%, rgba(139,92,246,.5) 40%, rgba(16,232,152,.3) 70%, transparent 100%);
+          pointer-events: none;
+        }
+
+        /* Shimmer overlay on hero */
+        .w-hero::after {
+          content: '';
+          position: absolute; top: 0; bottom: 0;
+          width: 30%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,.025), transparent);
+          animation: w-shimmer 5s ease-in-out infinite;
+          pointer-events: none;
+        }
+
+        .w-balance-label {
+          font-size: 11px; font-weight: 700; letter-spacing: .18em;
+          text-transform: uppercase; color: rgba(255,255,255,.28); margin-bottom: 10px;
+        }
+        .w-balance-amount {
+          font-size: 64px; font-weight: 900; color: #fff;
+          letter-spacing: -.05em; line-height: 1;
+          animation: w-bal-glow 4s ease-in-out infinite;
+          margin-bottom: 14px;
+        }
+
+        /* CTA buttons */
+        .w-btn-primary {
+          display: flex; align-items: center; justify-content: center; gap: 9px;
+          padding: 14px 28px; border-radius: 14px;
+          background: linear-gradient(135deg,#8b5cf6 0%,#7c3aed 50%,#6d28d9 100%);
+          border: 1px solid rgba(139,92,246,.5);
+          cursor: pointer; color: #fff; font-size: 14px; font-weight: 700;
+          font-family: inherit; white-space: nowrap;
+          box-shadow: 0 0 32px rgba(109,40,217,.5), 0 4px 20px rgba(0,0,0,.35);
+          transition: all .25s cubic-bezier(.22,1,.36,1);
+          position: relative; overflow: hidden;
+        }
+        .w-btn-primary::before {
+          content: '';
+          position: absolute; top: 0; bottom: 0; left: -80%;
+          width: 50%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+          transition: left .4s ease;
+          pointer-events: none;
+        }
+        .w-btn-primary:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 0 48px rgba(109,40,217,.7), 0 8px 28px rgba(0,0,0,.4);
+          border-color: rgba(139,92,246,.7);
+        }
+        .w-btn-primary:hover::before { left: 160%; }
+        .w-btn-primary:active { transform: translateY(0) scale(.98); }
+
+        .w-btn-secondary {
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          padding: 12px 24px; border-radius: 14px;
+          background: rgba(255,255,255,.055);
+          border: 1px solid rgba(255,255,255,.1);
+          cursor: pointer; color: rgba(255,255,255,.65); font-size: 13px;
+          font-weight: 600; font-family: inherit; white-space: nowrap;
+          backdrop-filter: blur(8px);
+          transition: all .2s cubic-bezier(.22,1,.36,1);
+        }
+        .w-btn-secondary:hover {
+          background: rgba(255,255,255,.09);
+          border-color: rgba(255,255,255,.18);
+          color: #fff; transform: translateY(-1px);
+        }
+
+        /* ── History row ── */
+        .w-history-row {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 16px 20px; border-radius: 16px;
+          border: 1px solid transparent;
+          transition: all .2s;
+          gap: 12px;
+        }
+        .w-history-row:hover { background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.06); }
+
+        /* ── Stat mini-cards ── */
+        .w-stat {
+          flex: 1; padding: 18px 20px; border-radius: 18px;
+          background: rgba(255,255,255,.03);
+          border: 1px solid rgba(255,255,255,.07);
+          backdrop-filter: blur(12px);
+          transition: all .2s;
+          min-width: 0;
+        }
+        .w-stat:hover { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.11); }
+
+        /* ── Animated buy button ── */
+        .ppc-btn {
+          --tooltip-height: 32px;
+          --tooltip-width: 80px;
+          --gap: 14px;
+          position: relative;
+          width: 100%;
+          height: 52px;
+          border-radius: 14px;
+          border: 1px solid var(--btn-border);
+          background: var(--btn-bg);
+          cursor: pointer;
+          font-family: inherit;
+          overflow: hidden;
+          transition: box-shadow .28s cubic-bezier(.22,1,.36,1), transform .22s cubic-bezier(.22,1,.36,1), border-color .2s;
+          box-shadow: 0 8px 28px var(--btn-glow);
+        }
+        .ppc-btn::before {
+          position: absolute;
+          content: attr(data-tooltip);
+          width: var(--tooltip-width);
+          height: var(--tooltip-height);
+          background: rgba(255,255,255,.12);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(255,255,255,.18);
+          font-size: 13px;
+          font-weight: 800;
+          color: #fff;
+          border-radius: 10px;
+          line-height: var(--tooltip-height);
+          text-align: center;
+          bottom: calc(52px + var(--gap) + 8px);
+          left: calc(50% - var(--tooltip-width) / 2);
+          letter-spacing: .02em;
+          pointer-events: none;
+        }
+        .ppc-btn::after {
+          position: absolute;
+          content: '';
+          width: 0; height: 0;
+          border: 8px solid transparent;
+          border-top-color: rgba(255,255,255,.18);
+          left: calc(50% - 8px);
+          bottom: calc(52px + var(--gap) - 8px);
+          pointer-events: none;
+        }
+        .ppc-btn::before, .ppc-btn::after {
+          opacity: 0;
+          visibility: hidden;
+          transition: all .35s cubic-bezier(.22,1,.36,1);
+        }
+        .ppc-btn:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 18px 44px var(--btn-glow);
+          border-color: var(--btn-color);
+        }
+        .ppc-btn:hover::before {
+          opacity: 1; visibility: visible;
+          bottom: calc(52px + var(--gap));
+        }
+        .ppc-btn:hover::after {
+          opacity: 1; visibility: visible;
+          bottom: calc(52px + var(--gap) - 16px);
+        }
+        .ppc-btn:active { transform: translateY(-1px) scale(.98); }
+
+        .ppc-btn-wrapper {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+        .ppc-btn-text {
+          position: absolute;
+          top: 0; left: 0;
+          width: 100%; height: 100%;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 14px; font-weight: 800; letter-spacing: -.01em;
+          color: var(--btn-txt-color);
+          transition: top .42s cubic-bezier(.22,1,.36,1);
+          white-space: nowrap;
+          gap: 8px;
+        }
+        .ppc-btn-text::before { content: '⚡'; font-size: 15px; }
+        .ppc-btn-icon {
+          position: absolute;
+          top: 100%; left: 0;
+          width: 100%; height: 100%;
+          display: flex; align-items: center; justify-content: center;
+          color: var(--btn-txt-color);
+          transition: top .42s cubic-bezier(.22,1,.36,1);
+          filter: drop-shadow(0 0 8px var(--btn-color));
+        }
+        .ppc-btn-icon svg { width: 22px; height: 22px; stroke-width: 2.5px; }
+        .ppc-btn:hover .ppc-btn-text { top: -100%; }
+        .ppc-btn:hover .ppc-btn-icon { top: 0; }
       `}</style>
 
       {confirmPending&&<ConfirmModal product={{name:confirmPending.name||confirmPending.id,price:confirmPending.price,duration:`${confirmPending.days} days`,emoji:confirmPending.emoji}} onConfirm={()=>{const p=confirmPending;setConfirmPending(null);handleBuy(p);}} onCancel={()=>setConfirmPending(null)}/>}
       {purchaseSuccess&&<PurchaseSuccessModal data={purchaseSuccess} onClose={()=>setPurchaseSuccess(null)}/>}
 
-      <div style={{ display:'flex', flexDirection:'column', gap:22 }}>
+      <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
 
-        {/* ── Hero Balance Card ── */}
-        <div style={{ position:'relative', borderRadius:24, overflow:'hidden', padding:'28px 32px', background:'linear-gradient(135deg,rgba(109,40,217,.18) 0%,rgba(8,8,20,.95) 55%,rgba(16,232,152,.07) 100%)', border:'1px solid rgba(139,92,246,.2)', boxShadow:'0 0 80px rgba(109,40,217,.1),0 8px 40px rgba(0,0,0,.4)' }}>
-          <div style={{ position:'absolute',top:-50,right:-50,width:180,height:180,borderRadius:'50%',background:'radial-gradient(circle,rgba(109,40,217,.28) 0%,transparent 70%)',pointerEvents:'none' }}/>
-          <div style={{ position:'absolute',bottom:-40,left:20,width:140,height:140,borderRadius:'50%',background:'radial-gradient(circle,rgba(16,232,152,.1) 0%,transparent 70%)',pointerEvents:'none' }}/>
-          <div style={{ position:'relative', display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
+        {/* ══ HERO BALANCE CARD ══ */}
+        <div className="w-hero">
+          <div className="w-hero-line" />
+          <div className="w-hero-orb-l" />
+          <div className="w-hero-orb-r" />
+
+          <div style={{ position:'relative', display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:24 }}>
+            {/* Left — balance */}
             <div>
-              <div style={{ fontSize:11,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(255,255,255,.32)',marginBottom:10 }}>Available Balance</div>
-              <div style={{ fontSize:58,fontWeight:900,color:'#fff',letterSpacing:'-.04em',lineHeight:1,textShadow:'0 0 50px rgba(139,92,246,.5)',marginBottom:10 }}>${balance.toFixed(2)}</div>
-              <div style={{ display:'flex',alignItems:'center',gap:8 }}>
-                <div style={{ display:'flex',alignItems:'center',gap:5,padding:'4px 12px',borderRadius:20,background:'rgba(16,232,152,.1)',border:'1px solid rgba(16,232,152,.2)' }}>
-                  <div className="dot dot-green" style={{ width:5,height:5 }}/>
-                  <span style={{ fontSize:11,fontWeight:700,color:'var(--green)' }}>Active Account</span>
+              <div className="w-balance-label">Available Balance</div>
+              <div className="w-balance-amount">${balance.toFixed(2)}</div>
+
+              {/* Status badges */}
+              <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 13px', borderRadius:20, background:'rgba(16,232,152,.08)', border:'1px solid rgba(16,232,152,.18)' }}>
+                  <div className="dot dot-green" style={{ width:5, height:5 }} />
+                  <span style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>Active Account</span>
                 </div>
-                <span style={{ fontSize:11,color:'var(--dim)' }}>Deposits credited on approval</span>
+                <span style={{ fontSize:11, color:'rgba(255,255,255,.22)', letterSpacing:'.02em' }}>Deposits credited after admin approval</span>
               </div>
             </div>
-            <div style={{ display:'flex',flexDirection:'column',gap:10,alignSelf:'center' }}>
-              <button onClick={()=>setActiveTab('deposit')} style={{ display:'flex',alignItems:'center',gap:8,padding:'12px 22px',borderRadius:14,background:'linear-gradient(135deg,#8b5cf6,#6d28d9)',border:'none',cursor:'pointer',color:'#fff',fontSize:14,fontWeight:800,fontFamily:'inherit',boxShadow:'0 0 28px rgba(109,40,217,.55)',transition:'all .2s',whiteSpace:'nowrap' }}
-                onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.transform='translateY(-2px)';(e.currentTarget as HTMLButtonElement).style.boxShadow='0 0 40px rgba(109,40,217,.7)';}}
-                onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.transform='none';(e.currentTarget as HTMLButtonElement).style.boxShadow='0 0 28px rgba(109,40,217,.55)';}}>
-                <Wallet size={16}/> Add Funds
+
+            {/* Right — action buttons */}
+            <div style={{ display:'flex', flexDirection:'column', gap:10, alignSelf:'center', flexShrink:0 }}>
+              <button className="w-btn-primary" onClick={()=>setActiveTab('deposit')}>
+                <Wallet size={16} /> Add Funds
               </button>
-              <button onClick={()=>setActiveTab('products')} style={{ display:'flex',alignItems:'center',gap:8,padding:'10px 22px',borderRadius:14,background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',cursor:'pointer',color:'rgba(255,255,255,.7)',fontSize:13,fontWeight:600,fontFamily:'inherit',transition:'all .2s',whiteSpace:'nowrap' }}
-                onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.1)';}}
-                onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.06)';}}>
-                <ShoppingBag size={15}/> Buy Products
+              <button className="w-btn-secondary" onClick={()=>setActiveTab('products')}>
+                <ShoppingBag size={15} /> Buy Products
               </button>
             </div>
           </div>
+
+          {/* ── Mini stat strip ── */}
+          <div style={{ display:'flex', gap:10, marginTop:28, flexWrap:'wrap' }}>
+            {[
+              { label:'Total Deposited', value:`$${myTxns.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount),0).toFixed(2)}`, color:'rgba(139,92,246,.9)' },
+              { label:'Pending',         value:myTxns.filter(t=>t.status==='pending').length,  color:'rgba(251,191,36,.9)'  },
+              { label:'Transactions',    value:myTxns.length,                                   color:'rgba(56,189,248,.9)'  },
+            ].map(s=>(
+              <div key={s.label} className="w-stat">
+                <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,.3)', textTransform:'uppercase', letterSpacing:'.12em', marginBottom:6 }}>{s.label}</div>
+                <div style={{ fontSize:26, fontWeight:900, color:s.color, letterSpacing:'-.03em' }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* ── Tabs ── */}
-        <div style={{ display:'flex', alignItems:'center', gap:4, padding:'5px', background:'rgba(255,255,255,.03)', borderRadius:14, border:'1px solid rgba(255,255,255,.05)', width:'fit-content' }}>
+        {/* ══ TABS ══ */}
+        <div style={{ display:'flex', alignItems:'center', gap:3, padding:'4px', background:'rgba(255,255,255,.025)', borderRadius:15, border:'1px solid rgba(255,255,255,.06)', width:'fit-content', backdropFilter:'blur(12px)' }}>
           {([
-            { id:'products', icon:<ShoppingBag size={14}/>, label:'Products' },
-            { id:'deposit',  icon:<Wallet size={14}/>,     label:'Add Balance' },
-            { id:'history',  icon:<RefreshCw size={14}/>,  label:'History' },
+            { id:'products', icon:<ShoppingBag size={13}/>, label:'Products'    },
+            { id:'deposit',  icon:<Wallet      size={13}/>, label:'Add Balance' },
+            { id:'history',  icon:<RefreshCw   size={13}/>, label:'History'     },
           ] as const).map(tab=>(
             <button key={tab.id} className={`w-tab${activeTab===tab.id?' wt-on':''}`} onClick={()=>setActiveTab(tab.id)}>
               {tab.icon}{tab.label}
-              {tab.id==='history'&&myTxns.filter(t=>t.status==='pending').length>0&&(
-                <span style={{ background:'var(--amber)',color:'#000',fontSize:9,fontWeight:900,padding:'1px 6px',borderRadius:10,lineHeight:1.6 }}>{myTxns.filter(t=>t.status==='pending').length}</span>
+              {tab.id==='history' && myTxns.filter(t=>t.status==='pending').length > 0 && (
+                <span style={{ background:'linear-gradient(135deg,#f59e0b,#d97706)', color:'#000', fontSize:9, fontWeight:900, padding:'2px 7px', borderRadius:10, lineHeight:1.6 }}>
+                  {myTxns.filter(t=>t.status==='pending').length}
+                </span>
               )}
             </button>
           ))}
         </div>
 
-        {/* Products Tab */}
+        {/* ══ PRODUCTS TAB ══ */}
         {activeTab==='products'&&(
-          <div style={{ animation:'fu .4s cubic-bezier(.16,1,.3,1) both' }}>
-            <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:18 }}>
-              <div style={{ fontSize:18,fontWeight:800,color:'#fff' }}>Buy Products</div>
-              <div style={{ display:'flex',alignItems:'center',gap:6,padding:'4px 12px',borderRadius:20,background:'rgba(16,232,152,.08)',border:'1px solid rgba(16,232,152,.2)' }}>
-                <div className="dot dot-green" style={{ width:5,height:5 }}/>
-                <span style={{ fontSize:11,fontWeight:700,color:'var(--green)' }}>OB52 Undetected</span>
+          <div style={{ animation:'w-slide-up .4s cubic-bezier(.22,1,.36,1) both' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24, flexWrap:'wrap', gap:12 }}>
+              <div>
+                <div style={{ fontSize:22, fontWeight:900, color:'#fff', letterSpacing:'-.02em', marginBottom:4 }}>Choose Your Plan</div>
+                <div style={{ fontSize:13, color:'rgba(255,255,255,.38)' }}>Select a panel and duration — key delivered instantly after purchase</div>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:20, background:'rgba(16,232,152,.08)', border:'1px solid rgba(16,232,152,.2)' }}>
+                  <div className="dot dot-green" style={{ width:5, height:5 }}/>
+                  <span style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>OB52 Undetected</span>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:20, background:'rgba(56,189,248,.07)', border:'1px solid rgba(56,189,248,.18)' }}>
+                  <span style={{ fontSize:11, fontWeight:700, color:'var(--blue)' }}>⚡ Instant Key</span>
+                </div>
               </div>
             </div>
-            <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:16 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))', gap:20 }}>
               {PANEL_GROUPS.map(group=>(
                 <PanelProductCard key={group.id} group={group} balance={balance} onBuy={(p)=>setConfirmPending(p)}/>
+              ))}
+            </div>
+            <div style={{ marginTop:20, display:'flex', alignItems:'center', justifyContent:'center', gap:20, flexWrap:'wrap', padding:'14px 0', borderTop:'1px solid rgba(255,255,255,.05)' }}>
+              {['🔑 Key delivered instantly','🔒 Secured by KeyAuth','🔄 HWID resets included','💬 24/7 support'].map(item=>(
+                <span key={item} style={{ fontSize:11, color:'rgba(255,255,255,.28)', fontWeight:500 }}>{item}</span>
               ))}
             </div>
           </div>
         )}
 
-        {/* Deposit Tab */}
+        {/* ══ DEPOSIT TAB ══ */}
         {activeTab==='deposit'&&(
-          <div style={{ animation:'fu .4s cubic-bezier(.16,1,.3,1) both' }}>
-            <AddBalanceUI user={user} onSuccess={loadTxns}/>
+          <div style={{ animation:'w-slide-up .4s cubic-bezier(.22,1,.36,1) both' }}>
+            <AddBalanceUI user={user} onSuccess={loadTxns} referralEmail={activeReferral}/>
           </div>
         )}
 
-        {/* History Tab */}
+        {/* ══ HISTORY TAB ══ */}
         {activeTab==='history'&&(
-          <div style={{ animation:'fu .4s cubic-bezier(.16,1,.3,1) both' }}>
-            <div style={{ background:'rgba(255,255,255,.025)',border:'1px solid var(--border)',borderRadius:20,padding:'22px 24px' }}>
-              <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20 }}>
-                <div style={{ fontSize:16,fontWeight:700,color:'#fff' }}>Transaction History</div>
-                <button onClick={loadTxns} disabled={txnsLoad} style={{ background:'none',border:'none',cursor:'pointer',color:'var(--dim)',padding:6,borderRadius:8,display:'flex',alignItems:'center',gap:5,fontSize:12,fontFamily:'inherit',transition:'color .15s' }} onMouseEnter={e=>(e.currentTarget.style.color='var(--muted)')} onMouseLeave={e=>(e.currentTarget.style.color='var(--dim)')}>
-                  <RefreshCw size={13} className={txnsLoad?'animate-spin':''}/> Refresh
+          <div style={{ animation:'w-slide-up .4s cubic-bezier(.22,1,.36,1) both' }}>
+            <div style={{ borderRadius:24, overflow:'hidden', border:'1px solid rgba(255,255,255,.07)', background:'rgba(255,255,255,.018)', backdropFilter:'blur(18px)' }}>
+
+              {/* History header */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'22px 26px', borderBottom:'1px solid rgba(255,255,255,.06)' }}>
+                <div>
+                  <div style={{ fontSize:16, fontWeight:800, color:'#fff', marginBottom:2 }}>Transaction History</div>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>{myTxns.length} total · {myTxns.filter(t=>t.status==='approved').length} approved</div>
+                </div>
+                <button onClick={loadTxns} disabled={txnsLoad}
+                  style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:11, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.09)', cursor:'pointer', color:'rgba(255,255,255,.55)', fontFamily:'inherit', fontSize:12, fontWeight:600, transition:'all .18s' }}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.09)';(e.currentTarget as HTMLButtonElement).style.color='#fff';}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.05)';(e.currentTarget as HTMLButtonElement).style.color='rgba(255,255,255,.55)';}}>
+                  <RefreshCw size={12} className={txnsLoad?'animate-spin':''}/> Refresh
                 </button>
               </div>
-              {txnsLoad
-                ? <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'32px 0',color:'var(--muted)' }}><Loader2 size={15} className="animate-spin"/><span style={{fontSize:13}}>Loading...</span></div>
-                : myTxns.length===0
-                ? <div style={{ textAlign:'center',padding:'48px 0' }}>
-                    <div style={{ fontSize:36,marginBottom:12 }}>📭</div>
-                    <p style={{ fontSize:14,color:'var(--muted)',fontWeight:600,marginBottom:4 }}>No transactions yet</p>
-                    <p style={{ fontSize:12,color:'var(--dim)' }}>Add balance to see your history here</p>
-                  </div>
-                : <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
-                    {myTxns.map(tx=>{
-                      const m = PAYMENT_METHODS.find(p=>p.id===tx.method);
-                      const sc = tx.status==='approved'?'var(--green)':tx.status==='rejected'?'var(--red)':'var(--amber)';
-                      const sbg = tx.status==='approved'?'rgba(16,232,152,.06)':tx.status==='rejected'?'rgba(248,113,113,.06)':'rgba(251,191,36,.06)';
-                      const sbc = tx.status==='approved'?'rgba(16,232,152,.14)':tx.status==='rejected'?'rgba(248,113,113,.14)':'rgba(251,191,36,.14)';
-                      return (
-                        <div key={tx.id} style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 16px',background:sbg,border:`1px solid ${sbc}`,borderRadius:14 }}>
-                          <div style={{ display:'flex',alignItems:'center',gap:12 }}>
-                            <div style={{ width:38,height:38,borderRadius:10,background:'rgba(255,255,255,.05)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',flexShrink:0 }}>{m?.icon??<span style={{fontSize:16}}>💳</span>}</div>
-                            <div>
-                              <div style={{ fontSize:14,fontWeight:700,color:'#fff' }}>${tx.amount} <span style={{ fontSize:11,color:'var(--muted)',fontWeight:500 }}>via {m?.label??tx.method}</span></div>
-                              <div style={{ fontSize:11,color:'var(--dim)',marginTop:2 }}>{new Date(tx.created_at).toLocaleDateString()} · <code style={{ fontFamily:'monospace',fontSize:10 }}>{tx.transaction_id}</code></div>
+
+              {/* History body */}
+              <div style={{ padding:'10px 16px 16px' }}>
+                {txnsLoad
+                  ? <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'48px 0', color:'rgba(255,255,255,.3)' }}>
+                      <Loader2 size={16} className="animate-spin"/>
+                      <span style={{ fontSize:13 }}>Loading transactions…</span>
+                    </div>
+                  : myTxns.length===0
+                  ? <div style={{ textAlign:'center', padding:'56px 0' }}>
+                      <div style={{ fontSize:42, marginBottom:14, opacity:.5 }}>📭</div>
+                      <p style={{ fontSize:14, color:'rgba(255,255,255,.4)', fontWeight:700, marginBottom:5 }}>No transactions yet</p>
+                      <p style={{ fontSize:12, color:'rgba(255,255,255,.2)' }}>Add balance to see your history here</p>
+                    </div>
+                  : <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                      {myTxns.map(tx=>{
+                        const m   = PAYMENT_METHODS.find(p=>p.id===tx.method);
+                        const sc  = tx.status==='approved'?'#10e898':tx.status==='rejected'?'#f87171':'#fbbf24';
+                        const sbg = tx.status==='approved'?'rgba(16,232,152,.06)':tx.status==='rejected'?'rgba(248,113,113,.06)':'rgba(251,191,36,.06)';
+                        const sbc = tx.status==='approved'?'rgba(16,232,152,.18)':tx.status==='rejected'?'rgba(248,113,113,.18)':'rgba(251,191,36,.18)';
+                        const icon = tx.status==='approved'?'✓':tx.status==='rejected'?'✗':'⏳';
+                        const label = tx.status==='approved'?'Approved':tx.status==='rejected'?'Rejected':'Pending';
+                        return (
+                          <div key={tx.id} className="w-history-row">
+                            {/* Method icon */}
+                            <div style={{ width:42, height:42, borderRadius:12, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.08)', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', flexShrink:0 }}>
+                              {m?.icon ?? <span style={{ fontSize:18 }}>💳</span>}
+                            </div>
+                            {/* Details */}
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:2 }}>
+                                ${Number(tx.amount).toFixed(2)}
+                                <span style={{ fontSize:11, color:'rgba(255,255,255,.38)', fontWeight:500, marginLeft:6 }}>via {m?.label ?? tx.method}</span>
+                              </div>
+                              <div style={{ fontSize:11, color:'rgba(255,255,255,.25)', display:'flex', alignItems:'center', gap:8 }}>
+                                <span>{new Date(tx.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
+                                {tx.transaction_id && <><span>·</span><code style={{ fontFamily:'monospace', fontSize:10, color:'rgba(255,255,255,.2)' }}>{tx.transaction_id.slice(0,18)}{tx.transaction_id.length>18?'…':''}</code></>}
+                              </div>
+                            </div>
+                            {/* Status badge */}
+                            <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4, flexShrink:0 }}>
+                              <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'5px 13px', borderRadius:20, background:sbg, border:`1px solid ${sbc}`, fontSize:11, fontWeight:700, color:sc }}>
+                                {icon} {label}
+                              </span>
+                              <span style={{ fontSize:10, color:'rgba(255,255,255,.2)' }}>
+                                {new Date(tx.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}
+                              </span>
                             </div>
                           </div>
-                          <span style={{ display:'inline-flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:20,background:sbg,border:`1px solid ${sbc}`,fontSize:11,fontWeight:700,color:sc,flexShrink:0 }}>
-                            {tx.status==='approved'?'✓ Approved':tx.status==='rejected'?'✗ Rejected':'⏳ Pending'}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-              }
+                        );
+                      })}
+                    </div>
+                }
+              </div>
             </div>
           </div>
         )}

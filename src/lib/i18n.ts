@@ -156,6 +156,27 @@ const en = {
 
 type T = typeof en;
 
+function mergeDeep<TObj extends Record<string, any>>(base: TObj, patch: Partial<TObj>): TObj {
+  const out: Record<string, any> = { ...base };
+  for (const key of Object.keys(patch) as Array<keyof TObj>) {
+    const baseValue = base[key];
+    const patchValue = patch[key];
+    if (
+      baseValue &&
+      patchValue &&
+      typeof baseValue === 'object' &&
+      typeof patchValue === 'object' &&
+      !Array.isArray(baseValue) &&
+      !Array.isArray(patchValue)
+    ) {
+      out[key as string] = mergeDeep(baseValue, patchValue as any);
+    } else if (patchValue !== undefined) {
+      out[key as string] = patchValue;
+    }
+  }
+  return out as TObj;
+}
+
 // ── Arabic ────────────────────────────────────────────────────
 const ar: T = {
   nav: { home:'الرئيسية', license:'الترخيص', chat:'الدردشة', shop:'المتجر', bonus:'المكافآت', status:'الحالة', support:'الدعم', signOut:'خروج' },
@@ -224,7 +245,7 @@ const resources: Record<string, { translation: T }> = {
   th: { translation: th },
 };
 Object.entries(partials).forEach(([code, partial]) => {
-  resources[code] = { translation: { ...en, ...partial } as T };
+  resources[code] = { translation: mergeDeep(en, partial as Partial<T>) };
 });
 
 i18n

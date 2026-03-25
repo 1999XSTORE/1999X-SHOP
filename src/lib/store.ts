@@ -95,6 +95,8 @@ interface AppState {
   highlightChatMessage: (id: string) => void;
   resetHwid: (licenseId: string) => boolean;
   addLicense: (license: License) => void;
+  setLicenses: (licenses: License[]) => void;
+  updateLicense: (licenseId: string, updates: Partial<License>) => void;
 }
 
 const generateKey = () => {
@@ -409,6 +411,25 @@ export const useAppStore = create<AppState>()(
         const newLicenses = [license, ...state.licenses.filter(l => l.key !== license.key)];
         set({ licenses: newLicenses });
         // Save immediately — key is now permanently saved
+        if (state.user?.id) {
+          saveUserData(state.user.id, { licenses: newLicenses });
+        }
+      },
+
+      setLicenses: (licenses) => {
+        const state = get();
+        set({ licenses });
+        if (state.user?.id) {
+          saveUserData(state.user.id, { licenses });
+        }
+      },
+
+      updateLicense: (licenseId, updates) => {
+        const state = get();
+        const newLicenses = state.licenses.map((license) =>
+          license.id === licenseId ? { ...license, ...updates } : license
+        );
+        set({ licenses: newLicenses });
         if (state.user?.id) {
           saveUserData(state.user.id, { licenses: newLicenses });
         }

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Key, Copy, RefreshCw, Globe, Clock, Shield, Download, CheckCircle, Loader2, AlertCircle, Play, ChevronRight, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
+import type { License } from '@/lib/store';
 
 const SUPABASE_URL  = 'https://wkjqrjafogufqeasfeev.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
@@ -35,21 +36,83 @@ function getExpiry(info: any): string {
   return toISO(info?.subscriptions?.[0]?.expiry ?? info?.expiry ?? '0');
 }
 
+interface UserLicenseRow {
+  id: string;
+  user_id: string;
+  user_email: string;
+  product_id: string;
+  product_name: string;
+  license_key: string;
+  keyauth_username?: string | null;
+  hwid?: string | null;
+  last_login?: string | null;
+  expires_at: string;
+  status?: 'active' | 'expired' | null;
+  ip?: string | null;
+  device?: string | null;
+  hwid_resets_used?: number | null;
+  hwid_reset_month?: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+function isLicenseExpired(expiresAt?: string | null) {
+  return new Date(expiresAt ?? 0).getTime() <= Date.now();
+}
+
+function mapDbLicense(row: UserLicenseRow): License {
+  return {
+    id: row.id,
+    productId: row.product_id,
+    productName: row.product_name,
+    key: row.license_key,
+    keyauthUsername: row.keyauth_username ?? '',
+    hwid: row.hwid ?? '',
+    lastLogin: row.last_login ?? '',
+    expiresAt: row.expires_at,
+    status: isLicenseExpired(row.expires_at) ? 'expired' : 'active',
+    ip: row.ip ?? '',
+    device: row.device ?? '',
+    hwidResetsUsed: Number(row.hwid_resets_used ?? 0),
+    hwidResetMonth: Number(row.hwid_reset_month ?? new Date().getMonth()),
+  };
+}
+
+function toDbLicenseRow(license: License, user: { id: string; email: string }): Omit<UserLicenseRow, 'id'> {
+  return {
+    user_id: user.id,
+    user_email: user.email,
+    product_id: license.productId,
+    product_name: license.productName,
+    license_key: license.key,
+    keyauth_username: license.keyauthUsername ?? '',
+    hwid: license.hwid ?? '',
+    last_login: license.lastLogin || null,
+    expires_at: license.expiresAt,
+    status: isLicenseExpired(license.expiresAt) ? 'expired' : 'active',
+    ip: license.ip ?? '',
+    device: license.device ?? '',
+    hwid_resets_used: Number(license.hwidResetsUsed ?? 0),
+    hwid_reset_month: Number(license.hwidResetMonth ?? new Date().getMonth()),
+  };
+}
+
 function ExpiryCountdown({ expiresAt }: { expiresAt: string }) {
+  const { t: tr } = useTranslation();
   const [t, setT] = useState('');
   useEffect(() => {
     const up = () => {
       try {
         const diff = new Date(expiresAt).getTime() - Date.now();
-        if (diff <= 0) { setT('Expired'); return; }
+        if (diff <= 0) { setT(tr('common.expired')); return; }
         const d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000),
               m = Math.floor((diff % 3600000) / 60000), s = Math.floor((diff % 60000) / 1000);
         setT(d > 0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m ${s}s`);
-      } catch { setT('Unknown'); }
+      } catch { setT(tr('common.noData')); }
     };
     up(); const i = setInterval(up, 1000); return () => clearInterval(i);
-  }, [expiresAt]);
-  return <span style={{ color: t === 'Expired' ? 'var(--red)' : 'var(--green)' }}>{t || '...'}</span>;
+  }, [expiresAt, tr]);
+  return <span style={{ color: t === tr('common.expired') ? 'var(--red)' : 'var(--green)' }}>{t || '...'}</span>;
 }
 
 function HwidModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
@@ -62,14 +125,14 @@ function HwidModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: (
             <AlertCircle size={20} color="var(--amber)" />
           </div>
           <div>
-            <div style={{ fontSize:14,fontWeight:700,color:'#fff' }}>Reset HWID?</div>
-            <div style={{ fontSize:11,color:'var(--muted)' }}>This cannot be undone</div>
+            <div style={{ fontSize:14,fontWeight:700,color:'#fff' }}>{t('license.resetConfirm')}</div>
+            <div style={{ fontSize:11,color:'var(--muted)' }}>{t('license.cannotUndo')}</div>
           </div>
         </div>
-        <p style={{ fontSize:12,color:'var(--muted)',marginBottom:20,lineHeight:1.6 }}>Resetting HWID allows the license to be used on a different device. Limited to 2 resets per month.</p>
+        <p style={{ fontSize:12,color:'var(--muted)',marginBottom:20,lineHeight:1.6 }}>{t('license.resetNote')}</p>
         <div style={{ display:'flex',gap:10 }}>
-          <button onClick={onCancel} className="btn btn-ghost" style={{ flex:1 }}>Cancel</button>
-          <button onClick={onConfirm} className="btn btn-danger" style={{ flex:1 }}>Yes, Reset</button>
+          <button onClick={onCancel} className="btn btn-ghost" style={{ flex:1 }}>{t('common.cancel')}</button>
+          <button onClick={onConfirm} className="btn btn-danger" style={{ flex:1 }}>{t('license.yesReset')}</button>
         </div>
       </div>
     </div>
@@ -96,10 +159,10 @@ function SuccessCard({ productName, licKey, onDismiss }: { productName: string; 
         <div style={{ width:64,height:64,borderRadius:20,background:'rgba(16,232,152,.1)',border:'1px solid rgba(16,232,152,.2)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',boxShadow:'0 0 40px rgba(16,232,152,.2)' }}>
           <CheckCircle size={32} color="var(--green)" />
         </div>
-        <div style={{ fontSize:22,fontWeight:800,color:'#fff',marginBottom:6 }}>Purchase Successful</div>
-        <div style={{ fontSize:13,color:'var(--muted)',marginBottom:28 }}>Your {productName || 'license'} key is ready</div>
+        <div style={{ fontSize:22,fontWeight:800,color:'#fff',marginBottom:6 }}>{t('shop.purchaseSuccess')}</div>
+        <div style={{ fontSize:13,color:'var(--muted)',marginBottom:28 }}>{t('shop.keyReady')}</div>
         <div style={{ background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.09)',borderRadius:14,padding:'18px 16px',marginBottom:16,position:'relative',overflow:'hidden' }}>
-          <div style={{ fontSize:10,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:10 }}>License Key</div>
+          <div style={{ fontSize:10,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:10 }}>{t('license.title').replace('Activate ', '')}</div>
           <div style={{ position:'relative',display:'flex',alignItems:'center',justifyContent:'center',gap:10 }}>
             <code style={{ fontSize:13,fontFamily:'monospace',color:'#fff',letterSpacing:revealed?'2px':'0',filter:revealed?'none':'blur(8px)',transition:'filter .4s ease',flex:1,textAlign:'center',wordBreak:'break-all' }}>
               {displayKey || 'KEY-NOT-AVAILABLE'}
@@ -111,17 +174,17 @@ function SuccessCard({ productName, licKey, onDismiss }: { productName: string; 
           </div>
           {!revealed && (
             <div style={{ textAlign:'center',marginTop:8 }}>
-              <span style={{ fontSize:12,color:'var(--dim)' }}>Click eye icon to reveal</span>
+              <span style={{ fontSize:12,color:'var(--dim)' }}>{t('common.reveal')}</span>
             </div>
           )}
         </div>
         <div style={{ display:'flex',gap:10,marginBottom:20 }}>
           <button onClick={copy} className="btn btn-g" style={{ flex:1 }}>
-            {copied ? <><CheckCircle size={15} /> Copied!</> : <><Copy size={15} /> Copy Key</>}
+            {copied ? <><CheckCircle size={15} /> {t('common.copied')}</> : <><Copy size={15} /> {t('common.copy')}</>}
           </button>
-          <button onClick={onDismiss} className="btn btn-ghost" style={{ flex:1 }}>Done</button>
+          <button onClick={onDismiss} className="btn btn-ghost" style={{ flex:1 }}>{t('common.done')}</button>
         </div>
-        <p style={{ fontSize:11,color:'var(--dim)' }}>Keep this key safe. Don't share it with anyone.</p>
+        <p style={{ fontSize:11,color:'var(--dim)' }}>{t('shop.keysSaved')}</p>
       </div>
     </div>
   );
@@ -137,7 +200,7 @@ function LicenseInput({ value, onChange }: { value: string; onChange: (v: string
       <input
         value={value}
         onChange={e => onChange(e.target.value)}
-        placeholder="Paste your license key here"
+        placeholder={t('license.placeholder')}
         onKeyDown={e => { if (e.key === 'Enter') handleActivateRef.current?.(); }}
         className="inp inp-lg"
         style={{ paddingLeft:42,fontFamily:'monospace',letterSpacing:'1px' }}
@@ -330,8 +393,8 @@ export default function LicensesPage() {
   // Hooks must NEVER be inside try/catch — call them directly at top level
   const rawStore      = useAppStore();
   const licenses      = rawStore?.licenses   ?? [];
-  const resetHwid     = rawStore?.resetHwid  ?? (() => false);
-  const addLicense    = rawStore?.addLicense ?? (() => {});
+  const setLicenses   = rawStore?.setLicenses ?? (() => {});
+  const updateLicense = rawStore?.updateLicense ?? (() => {});
   const user          = rawStore?.user       ?? null;
 
   const [keyValue,    setKeyValue]    = useState('');
@@ -359,6 +422,72 @@ export default function LicensesPage() {
       return fallback;
     }
   };
+
+  useEffect(() => {
+    if (!user?.id) {
+      setLicenses([]);
+      return;
+    }
+
+    let alive = true;
+
+    const syncLicenses = async () => {
+      const nowIso = new Date().toISOString();
+
+      await supabase
+        .from('user_licenses')
+        .update({ status: 'expired' })
+        .eq('user_id', user.id)
+        .lt('expires_at', nowIso)
+        .neq('status', 'expired');
+
+      let rows: UserLicenseRow[] = [];
+      const { data, error } = await supabase
+        .from('user_licenses')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        rows = data as UserLicenseRow[];
+      }
+
+      if (!rows.length && licenses.length > 0) {
+        const seedRows = licenses.map((license) => toDbLicenseRow(license, { id: user.id, email: user.email }));
+        const { data: seededRows, error: seedError } = await supabase
+          .from('user_licenses')
+          .upsert(seedRows, { onConflict: 'user_id,license_key' })
+          .select('*');
+
+        if (!seedError && seededRows) {
+          rows = seededRows as UserLicenseRow[];
+        }
+      }
+
+      if (!alive) return;
+      const mapped = rows
+        .map(mapDbLicense)
+        .sort((a, b) => new Date(b.expiresAt).getTime() - new Date(a.expiresAt).getTime());
+
+      setLicenses(mapped);
+    };
+
+    syncLicenses();
+
+    const channel = supabase
+      .channel(`user_licenses_${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_licenses', filter: `user_id=eq.${user.id}` },
+        () => { syncLicenses(); }
+      )
+      .subscribe();
+
+    return () => {
+      alive = false;
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   const confirmResetHwid = async () => {
     if (!hwidTarget) return;
@@ -390,11 +519,26 @@ export default function LicensesPage() {
         return;
       }
 
-      if (resetHwid(hwidTarget.id)) {
+      const { error: syncError } = await supabase
+        .from('user_licenses')
+        .update({
+          hwid: '',
+          hwid_resets_used: resetsUsed + 1,
+          hwid_reset_month: currentMonth,
+        })
+        .eq('id', hwidTarget.id)
+        .eq('user_id', user?.id ?? '');
+
+      if (syncError) {
+        toast.error('HWID reset succeeded but license sync failed');
+      } else {
+        updateLicense(hwidTarget.id, {
+          hwid: '',
+          hwidResetsUsed: resetsUsed + 1,
+          hwidResetMonth: currentMonth,
+        });
         toast.success(data.message ?? 'HWID reset successfully');
         if(user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'hwid_reset', product:hwidTarget.productName, status:'success' });
-      } else {
-        toast.error('HWID reset was accepted but local state could not update');
       }
     } catch (error) {
       toast.error(await getFunctionErrorMessage(error) || 'Reset failed');
@@ -454,6 +598,7 @@ export default function LicensesPage() {
 
       let lastKey  = '';
       let lastName = '';
+      const activatedLicenses: License[] = [];
       const panelType = lagOk && intOk ? 'both' : lagOk ? 'lag' : 'internal';
 
       if (lagOk) {
@@ -465,7 +610,7 @@ export default function LicensesPage() {
           expiresAt: getExpiry(lagResult.info), status: 'active' as const,
           ip: lagResult.info?.ip ?? '', device: '', hwidResetsUsed: 0, hwidResetMonth: new Date().getMonth(),
         };
-        addLicense(lic);
+        activatedLicenses.push(lic);
         lastKey = trimmedKey; lastName = 'Fake Lag';
       }
 
@@ -478,8 +623,28 @@ export default function LicensesPage() {
           expiresAt: getExpiry(intResult.info), status: 'active' as const,
           ip: intResult.info?.ip ?? '', device: '', hwidResetsUsed: 0, hwidResetMonth: new Date().getMonth(),
         };
-        addLicense(lic);
+        activatedLicenses.push(lic);
         lastKey = trimmedKey + '_INTERNAL'; lastName = 'Internal';
+      }
+
+      if (activatedLicenses.length) {
+        const payload = activatedLicenses.map((license) => toDbLicenseRow(license, { id: user.id, email: user.email }));
+        const { data: savedRows, error: saveError } = await supabase
+          .from('user_licenses')
+          .upsert(payload, { onConflict: 'user_id,license_key' })
+          .select('*');
+
+        if (saveError) {
+          throw new Error(saveError.message || 'Failed to save activated key');
+        }
+
+        const savedLicenses = ((savedRows ?? []) as UserLicenseRow[]).map(mapDbLicense);
+        const mergedLicenses = [
+          ...savedLicenses,
+          ...licenses.filter((existing) => !savedLicenses.some((saved) => saved.key === existing.key)),
+        ].sort((a, b) => new Date(b.expiresAt).getTime() - new Date(a.expiresAt).getTime());
+
+        setLicenses(mergedLicenses);
       }
 
       // ── Step 3: Bind key to Gmail in Supabase ──
@@ -511,8 +676,7 @@ export default function LicensesPage() {
   handleActivateRef.current = handleActivate;
 
   // Safe filter — split active vs expired
-  const now = Date.now();
-  const isExpiredLic = (l: any) => new Date(l?.expiresAt ?? 0).getTime() < now;
+  const isExpiredLic = (l: any) => isLicenseExpired(l?.expiresAt);
 
   const lagActive   = (licenses || []).filter((l: any) => l?.productId === 'keyauth-lag' && !isExpiredLic(l));
   const lagExpired  = (licenses || []).filter((l: any) => l?.productId === 'keyauth-lag' && isExpiredLic(l));
