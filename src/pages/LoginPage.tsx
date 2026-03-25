@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Globe, Loader2, Zap, Shield, ChevronDown } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 

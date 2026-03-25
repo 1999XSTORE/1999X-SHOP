@@ -129,7 +129,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
         @keyframes mob-in { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
 
         /* pill */
-        .nav-pill { position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:50; width:calc(100% - 24px); max-width:1100px; animation:nav-in .4s ease both; }
+        .nav-pill { position:fixed; top:14px; left:0; right:0; z-index:50; width:100%; max-width:none; animation:nav-in .4s ease both; pointer-events:none; }
 
         /* glass radio */
         .glass-radio-group { display:flex; position:relative; background:rgba(255,255,255,.045); border-radius:15px; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); overflow:visible; width:fit-content; padding:3px; gap:1px; }
@@ -182,12 +182,12 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
 
       {/* ══ TOP PILL ══ */}
       <div className="nav-pill">
-        <div style={{ position:'relative', display:'grid', gridTemplateColumns:'1fr auto 1fr', alignItems:'center', padding:'6px 8px', borderRadius:22, background:'rgba(6,6,16,0.92)', backdropFilter:'blur(32px)', WebkitBackdropFilter:'blur(32px)', border:'1px solid rgba(255,255,255,0.07)', boxShadow:'0 8px 48px rgba(0,0,0,.65)', minHeight:52 }}>
+        <div style={{ position:'relative', width:'100%', minHeight:52, padding:'0 24px' }}>
 
-          <div />
+          <div style={{ width:1, height:1, opacity:0, pointerEvents:'none' }} />
 
           {/* Center: Nav — auto column = always exactly centered */}
-          <div className="desk-nav" style={{ display:'flex', alignItems:'center', justifyContent:'center', minWidth:0 }}>
+          <div className="desk-nav" style={{ position:'absolute', left:'50%', top:'50%', transform:'translate(-50%, -50%)', display:'flex', alignItems:'center', justifyContent:'center', minWidth:0, pointerEvents:'auto' }}>
             <div className="glass-radio-group">
               <div className="glass-glider" style={{ transform:`translateX(${activeNavIndex * 100}%)` }} />
               {navItems.map(item => (
@@ -202,7 +202,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
           </div>
 
           {/* Right: Controls — always end-aligned */}
-          <div style={{ display:'flex', alignItems:'center', gap:3, justifyContent:'flex-end', justifySelf:'end', minWidth:0 }}>
+          <div style={{ position:'absolute', right:24, top:'50%', transform:'translateY(-50%)', display:'flex', alignItems:'center', gap:3, justifyContent:'flex-end', minWidth:0, pointerEvents:'auto', padding:'6px 8px', borderRadius:22, background:'rgba(6,6,16,0.92)', backdropFilter:'blur(32px)', WebkitBackdropFilter:'blur(32px)', border:'1px solid rgba(255,255,255,0.07)', boxShadow:'0 8px 48px rgba(0,0,0,.65)' }}>
             <button onClick={() => handleNav('/wallet')} className="balance-pill"><Wallet size={12}/>${balance.toFixed(2)}</button>
 
             {/* Language */}
