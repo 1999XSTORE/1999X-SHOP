@@ -133,10 +133,6 @@ export default function Index() {
   useEffect(() => {
     if (!user?.id || !user.email) return;
     captureReferralFromUrl(user.email);
-    void supabase.rpc('ensure_reseller_wallet', {
-      p_user_id: user.id,
-      p_email: user.email,
-    });
   }, [user?.id, user?.email]);
 
   const handleLogout = async () => {

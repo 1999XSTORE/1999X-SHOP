@@ -183,7 +183,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
 
       {/* ══ TOP PILL ══ */}
       <div className="nav-pill">
-        <div style={{ display:'grid', gridTemplateColumns:'1fr auto 1fr', alignItems:'center', padding:'6px 8px', borderRadius:22, background:'rgba(6,6,16,0.92)', backdropFilter:'blur(32px)', WebkitBackdropFilter:'blur(32px)', border:'1px solid rgba(255,255,255,0.07)', boxShadow:'0 8px 48px rgba(0,0,0,.65)', minHeight:52 }}>
+        <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'6px 8px', borderRadius:22, background:'rgba(6,6,16,0.92)', backdropFilter:'blur(32px)', WebkitBackdropFilter:'blur(32px)', border:'1px solid rgba(255,255,255,0.07)', boxShadow:'0 8px 48px rgba(0,0,0,.65)', minHeight:52 }}>
 
           {/* Left: Logo */}
           <div style={{ display:'flex', alignItems:'center', gap:6, justifySelf:'start' }}>
@@ -195,8 +195,8 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
           </div>
 
           {/* Center: Nav — auto column = always exactly centered */}
-          <div className="desk-nav" style={{ display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <div className="glass-radio-group">
+          <div className="desk-nav" style={{ position:'absolute', left:'50%', top:'50%', transform:'translate(-50%, -50%)', display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
+            <div className="glass-radio-group" style={{ pointerEvents:'auto' }}>
               <div className="glass-glider" style={{ transform:`translateX(${activeNavIndex * 100}%)` }} />
               {navItems.map(item => (
                 <button key={item.key} onClick={() => handleNav(item.path)} className={cn('nav-link', currentPath===item.path && 'active')}>

@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const voucher = String(body.voucher ?? '').trim();
     const expectedUsdAmount = Number(body.expectedUsdAmount ?? 0);
+    const referralEmail = String(body.referralEmail ?? '').trim().toLowerCase();
 
     if (!voucher) return json({ success: false, message: 'Voucher link is required' }, 400);
     if (!isTrueWalletVoucherLink(voucher)) {
@@ -128,7 +129,7 @@ Deno.serve(async (req) => {
       `truewallet-${voucherHash.slice(0, 16)}`
     );
 
-    const { error: transactionError } = await admin
+    const { data: transactionRow, error: transactionError } = await admin
       .from('transactions')
       .insert({
         user_id: user.id,
@@ -138,11 +139,21 @@ Deno.serve(async (req) => {
         method: 'truewallet',
         transaction_id: transactionId,
         status: 'approved',
+        referral_email: referralEmail,
         note: `Auto-approved via TrueWallet gift link redeem (${amountThb.toFixed(2)} THB @ ${exchangeRate} THB/USD, 3% fee applied)`,
-      });
+      })
+      .select('id')
+      .single();
 
     if (transactionError) {
       return json({ success: false, message: transactionError.message }, 500);
+    }
+
+    if (transactionRow?.id) {
+      const { error: resellerError } = await admin.rpc('apply_reseller_credit', { p_transaction_id: transactionRow.id });
+      if (resellerError) {
+        return json({ success: false, message: resellerError.message }, 500);
+      }
     }
 
     const { data: orderRow, error: orderError } = await admin
