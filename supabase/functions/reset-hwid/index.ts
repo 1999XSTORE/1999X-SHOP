@@ -23,11 +23,11 @@ Deno.serve(async (req) => {
     const username = String(body.username ?? '').trim();
     const panelType = String(body.panel_type ?? '').trim().toLowerCase() === 'lag' ? 'lag' : 'internal';
 
-    if (!username) return json({ success: false, message: 'KeyAuth username is required' }, 400);
+    if (!username) return json({ success: false, message: 'KeyAuth username is required' });
 
     const sellerKey = getSellerKey(panelType);
     if (!sellerKey) {
-      return json({ success: false, message: `Seller key not configured for ${panelType}` }, 500);
+      return json({ success: false, message: `Seller key not configured for ${panelType}` });
     }
 
     const url = new URL('https://keyauth.win/api/seller/');
@@ -43,11 +43,11 @@ Deno.serve(async (req) => {
       if (response.ok && parsed?.success === true) {
         return json({ success: true, message: parsed.message ?? 'HWID reset successfully' });
       }
-      return json({ success: false, message: parsed?.message ?? text ?? 'HWID reset failed' }, response.ok ? 400 : response.status);
+      return json({ success: false, message: parsed?.message ?? text ?? 'HWID reset failed' });
     } catch {
-      return json({ success: false, message: text || 'Unexpected seller API response' }, 500);
+      return json({ success: false, message: text || 'Unexpected seller API response' });
     }
   } catch (error) {
-    return json({ success: false, message: String(error) }, 500);
+    return json({ success: false, message: String(error) });
   }
 });

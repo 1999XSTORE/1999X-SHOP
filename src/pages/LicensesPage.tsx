@@ -347,6 +347,19 @@ export default function LicensesPage() {
     try { navigator.clipboard.writeText(k); toast.success('Copied!'); } catch {}
   };
 
+  const getFunctionErrorMessage = async (error: any) => {
+    if (!error) return '';
+    const fallback = error.message ?? '';
+    try {
+      const response = error.context;
+      if (!response || typeof response.json !== 'function') return fallback;
+      const body = await response.json();
+      return body?.message ?? fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
   const confirmResetHwid = async () => {
     if (!hwidTarget) return;
     try {
@@ -372,7 +385,7 @@ export default function LicensesPage() {
       });
 
       if (error || !data?.success) {
-        toast.error(data?.message ?? error?.message ?? 'HWID reset failed');
+        toast.error(data?.message ?? await getFunctionErrorMessage(error) ?? 'HWID reset failed');
         setHwidTarget(null);
         return;
       }
@@ -383,8 +396,8 @@ export default function LicensesPage() {
       } else {
         toast.error('HWID reset was accepted but local state could not update');
       }
-    } catch {
-      toast.error('Reset failed');
+    } catch (error) {
+      toast.error(await getFunctionErrorMessage(error) || 'Reset failed');
     }
     setHwidTarget(null);
   };

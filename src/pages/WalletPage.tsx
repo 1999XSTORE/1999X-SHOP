@@ -551,11 +551,50 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
             </div>
           ))}
         </div>
-        <div style={{ display:'flex',gap:6,marginBottom:18,flexWrap:'wrap' }}>
-          {group.plans.map((p,i)=>(
-            <button key={p.id} onClick={()=>setSel(i)} style={{ padding:'7px 14px',borderRadius:20,fontSize:12,fontWeight:700,cursor:'pointer',border:`1px solid ${sel===i?group.color:'rgba(255,255,255,.1)'}`,background:sel===i?group.bg:'rgba(255,255,255,.03)',color:sel===i?group.color:'var(--muted)',transition:'all .15s',fontFamily:'inherit',boxShadow:sel===i?`0 0 12px ${group.glow}`:'none' }}>{p.label}</button>
-          ))}
-        </div>
+          <div style={{ marginBottom:18 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:10 }}>
+              <div>
+                <div style={{ fontSize:10, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.12em', fontWeight:800 }}>Plan Duration</div>
+                <div style={{ fontSize:12, color:'rgba(255,255,255,.56)', marginTop:3 }}>Choose the package that fits your play style</div>
+              </div>
+              <div style={{ padding:'6px 10px', borderRadius:999, background:'rgba(255,255,255,.04)', border:`1px solid ${group.bc}`, fontSize:11, fontWeight:800, color:group.color, boxShadow:`0 0 18px ${group.glow}` }}>
+                {plan.label}
+              </div>
+            </div>
+
+            <div style={{ position:'relative', padding:6, borderRadius:22, background:'linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.02))', border:`1px solid ${group.bc}`, boxShadow:`inset 0 1px 0 rgba(255,255,255,.05), 0 10px 24px rgba(0,0,0,.18)` }}>
+              <div style={{ position:'absolute', inset:6, width:`calc(${100 / group.plans.length}% - 0px)`, transform:`translateX(${sel * 100}%)`, borderRadius:16, background:`linear-gradient(135deg, ${group.color}, rgba(255,255,255,.12))`, opacity:.18, boxShadow:`0 0 26px ${group.glow}`, transition:'transform .24s ease' }} />
+              <div style={{ display:'grid', gridTemplateColumns:`repeat(${group.plans.length}, minmax(0, 1fr))`, gap:6, position:'relative' }}>
+                {group.plans.map((p,i)=>(
+                  <button
+                    key={p.id}
+                    onClick={()=>setSel(i)}
+                    style={{
+                      padding:'11px 10px',
+                      borderRadius:16,
+                      fontSize:12,
+                      fontWeight:800,
+                      cursor:'pointer',
+                      border:'1px solid transparent',
+                      background:sel===i?'rgba(255,255,255,.07)':'transparent',
+                      color:sel===i?group.color:'rgba(255,255,255,.55)',
+                      transition:'all .18s',
+                      fontFamily:'inherit',
+                      display:'flex',
+                      flexDirection:'column',
+                      alignItems:'center',
+                      gap:2,
+                      minHeight:58,
+                      justifyContent:'center',
+                    }}
+                  >
+                    <span>{p.label}</span>
+                    <span style={{ fontSize:10, fontWeight:700, color:sel===i?'#fff':'rgba(255,255,255,.34)' }}>${p.price}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',background:'rgba(255,255,255,.04)',border:`1px solid ${group.bc}`,borderRadius:14,padding:'14px 18px',marginBottom:14 }}>
           <div><div style={{ fontSize:11,color:'var(--muted)',marginBottom:2 }}>Selected</div><div style={{ fontSize:13,fontWeight:700,color:group.color }}>{plan.label}</div></div>
           <div style={{ textAlign:'right' }}><div style={{ fontSize:32,fontWeight:900,color:'#fff',letterSpacing:'-.03em',lineHeight:1 }}>${plan.price}</div><div style={{ fontSize:10,color:'var(--muted)',marginTop:2 }}>one time</div></div>

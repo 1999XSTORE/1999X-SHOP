@@ -15,6 +15,7 @@ import BonusPage from '@/pages/BonusPage';
 import AnnouncementsPage from '@/pages/AnnouncementsPage';
 import AdminActivityPage from '@/pages/AdminActivityPage';
 import SafePageContent from '@/components/layout/SafePageContent';
+import { toast } from 'sonner';
 
 const pageComponents: Record<string, React.FC> = {
   '/':              DashboardPage,
@@ -53,7 +54,7 @@ async function fetchRole(email: string): Promise<'admin' | 'support' | 'user'> {
 }
 
 export default function Index() {
-  const { isAuthenticated, user, login, logout } = useAppStore();
+  const { isAuthenticated, user, login, logout, addBalance } = useAppStore();
 
   // ── Restore last page from sessionStorage ─────────────────
   const [currentPath, setCurrentPath] = useState(getSavedPath);
@@ -133,41 +134,146 @@ export default function Index() {
     }
   };
 
+  useEffect(() => {
+    if (!user || user.role === 'admin' || user.role === 'support') return;
+
+    const creditedKey = `1999x-credited-${user.id}`;
+    const rejectedKey = `1999x-rejected-${user.id}`;
+
+    const readIds = (key: string): Set<string> => {
+      try { return new Set<string>(JSON.parse(localStorage.getItem(key) || '[]')); }
+      catch { return new Set<string>(); }
+    };
+
+    const writeId = (key: string, id: string) => {
+      const ids = readIds(key);
+      if (ids.has(id)) return;
+      ids.add(id);
+      try { localStorage.setItem(key, JSON.stringify([...ids])); } catch {}
+    };
+
+    let checking = false;
+    let disposed = false;
+
+    const syncBalance = async () => {
+      if (checking || disposed) return;
+      checking = true;
+      try {
+        const { data, error } = await safeQuery(
+          () => supabase.from('transactions').select('id, amount, status').eq('user_id', user.id)
+        );
+        if (error || !data || disposed) return;
+
+        for (const tx of data as Array<{ id: string; amount: number; status: string }>) {
+          if (tx.status === 'approved') {
+            const credited = readIds(creditedKey);
+            if (!credited.has(tx.id)) {
+              addBalance(Number(tx.amount) || 0);
+              writeId(creditedKey, tx.id);
+              toast.success(`Payment approved! $${Number(tx.amount || 0).toFixed(2)} added!`);
+              logActivity({
+                userId: user.id,
+                userEmail: user.email,
+                userName: user.name,
+                action: 'balance_add',
+                amount: Number(tx.amount) || 0,
+                status: 'success',
+                meta: { transaction_id: tx.id, source: 'global_balance_sync' },
+              });
+            }
+          }
+
+          if (tx.status === 'rejected') {
+            const rejected = readIds(rejectedKey);
+            if (!rejected.has(tx.id)) {
+              writeId(rejectedKey, tx.id);
+              toast.error(`Payment of $${Number(tx.amount || 0).toFixed(2)} was rejected.`);
+            }
+          }
+        }
+      } finally {
+        checking = false;
+      }
+    };
+
+    void syncBalance();
+
+    const onFocus = () => { void syncBalance(); };
+    window.addEventListener('focus', onFocus);
+
+    const channel = supabase
+      .channel(`balance-sync-${user.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'transactions',
+        filter: `user_id=eq.${user.id}`,
+      }, () => { void syncBalance(); })
+      .subscribe();
+
+    return () => {
+      disposed = true;
+      window.removeEventListener('focus', onFocus);
+      supabase.removeChannel(channel);
+    };
+  }, [addBalance, user?.id, user?.role]);
+
   // ── Loading screen — only shown if NOT already authenticated ──
   // If Zustand has isAuthenticated=true, skip straight to app
   if (!authReady) {
     return (
       <div style={{ minHeight:'100svh', background:'radial-gradient(circle at 20% 20%, rgba(109,40,217,.18), transparent 28%), radial-gradient(circle at 80% 75%, rgba(16,232,152,.12), transparent 24%), #05060b', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
         <style>{`
-          @keyframes bullet-travel { 0%{transform:translateX(-180px) translateY(-10px) scale(.7);} 45%{transform:translateX(0) translateY(0) scale(1);} 100%{transform:translateX(30px) translateY(2px) scale(.92);} }
-          @keyframes flash-hit { 0%,42%{opacity:0;} 48%{opacity:1;} 100%{opacity:0;} }
-          @keyframes skull-shatter { 0%,42%{transform:scale(1) rotate(0deg); filter:drop-shadow(0 0 20px rgba(139,92,246,.35));} 55%{transform:scale(1.12) rotate(-3deg);} 100%{transform:scale(.92) rotate(4deg); filter:drop-shadow(0 0 34px rgba(16,232,152,.28));} }
-          @keyframes shard-burst { 0%,42%{opacity:0; transform:translate(0,0) scale(.4);} 55%{opacity:1;} 100%{opacity:0; transform:translate(var(--tx), var(--ty)) scale(1);} }
+          @keyframes word-spin {
+            10% { transform: translateY(-102%); }
+            25% { transform: translateY(-100%); }
+            35% { transform: translateY(-202%); }
+            50% { transform: translateY(-200%); }
+            60% { transform: translateY(-302%); }
+            75% { transform: translateY(-300%); }
+            85% { transform: translateY(-402%); }
+            100% { transform: translateY(-400%); }
+          }
           @keyframes load-bar { from{width:0;} to{width:100%;} }
+          @keyframes soft-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+          }
         `}</style>
 
         <div style={{ position:'relative', zIndex:2, width:'min(92vw, 760px)', display:'flex', flexDirection:'column', alignItems:'center' }}>
-          <div style={{ position:'relative', width:'100%', aspectRatio:'16 / 9', borderRadius:30, border:'1px solid rgba(255,255,255,.08)', background:'linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01))', boxShadow:'0 30px 90px rgba(0,0,0,.6)', overflow:'hidden' }}>
-            <div style={{ position:'absolute', inset:0, background:'radial-gradient(circle at center, rgba(139,92,246,.1), transparent 45%)' }} />
-            <div style={{ position:'absolute', left:'18%', top:'44%', width:110, height:20, borderRadius:999, background:'linear-gradient(90deg,#e5f6ff,#9be7ff)', boxShadow:'0 0 32px rgba(155,231,255,.8)', animation:'bullet-travel 2s cubic-bezier(.2,.8,.2,1) both' }} />
-            <div style={{ position:'absolute', left:'50%', top:'50%', width:24, height:24, borderRadius:'50%', background:'radial-gradient(circle, rgba(255,255,255,.95), rgba(139,92,246,.5), transparent 70%)', transform:'translate(-50%,-50%)', animation:'flash-hit 2s ease-out both' }} />
-            <div style={{ position:'absolute', left:'50%', top:'49%', transform:'translate(-50%,-50%)', width:220, height:240, animation:'skull-shatter 2s ease-out both' }}>
-              <div style={{ position:'absolute', inset:0, clipPath:'polygon(50% 0%, 78% 12%, 92% 38%, 88% 66%, 68% 90%, 50% 100%, 32% 90%, 12% 66%, 8% 38%, 22% 12%)', background:'linear-gradient(135deg, rgba(16,232,152,.28), rgba(139,92,246,.35) 55%, rgba(255,255,255,.08))', border:'1px solid rgba(255,255,255,.12)' }} />
-              <div style={{ position:'absolute', left:48, top:76, width:42, height:42, borderRadius:'50%', background:'rgba(5,6,11,.88)', boxShadow:'0 0 18px rgba(16,232,152,.28)' }} />
-              <div style={{ position:'absolute', right:48, top:76, width:42, height:42, borderRadius:'50%', background:'rgba(5,6,11,.88)', boxShadow:'0 0 18px rgba(139,92,246,.35)' }} />
-              <div style={{ position:'absolute', left:'50%', top:126, transform:'translateX(-50%)', width:28, height:34, clipPath:'polygon(50% 0%, 100% 100%, 0% 100%)', background:'rgba(5,6,11,.9)' }} />
-              <div style={{ position:'absolute', left:46, right:46, bottom:44, height:24, borderTop:'1px solid rgba(255,255,255,.12)' }} />
-            </div>
-            {[
-              ['-90px','-70px'], ['110px','-58px'], ['-120px','58px'], ['90px','82px'], ['24px','-110px'], ['-14px','124px'],
-            ].map(([tx, ty], i) => (
-              <div key={i} style={{ '--tx': tx, '--ty': ty } as any}>
-                <div style={{ position:'absolute', left:'50%', top:'50%', width:18, height:18, background:i % 2 === 0 ? 'rgba(139,92,246,.75)' : 'rgba(16,232,152,.72)', clipPath:'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)', animation:'shard-burst 2s ease-out both', animationDelay:`${0.02 * i}s` }} />
+          <div style={{ position:'relative', width:'100%', maxWidth:560, borderRadius:32, border:'1px solid rgba(255,255,255,.08)', background:'linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015))', boxShadow:'0 30px 90px rgba(0,0,0,.6)', overflow:'hidden', padding:'42px 28px' }}>
+            <div style={{ position:'absolute', inset:0, background:'radial-gradient(circle at 30% 20%, rgba(139,92,246,.14), transparent 34%), radial-gradient(circle at 75% 80%, rgba(16,232,152,.1), transparent 30%)' }} />
+            <div style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center', gap:24, animation:'soft-float 3.4s ease-in-out infinite' }}>
+              <div style={{ width:78, height:78, borderRadius:24, background:'linear-gradient(135deg, rgba(139,92,246,.22), rgba(16,232,152,.14))', border:'1px solid rgba(255,255,255,.12)', boxShadow:'0 0 40px rgba(139,92,246,.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ fontSize:26, fontWeight:900, color:'#fff', letterSpacing:'.08em' }}>1999X</div>
               </div>
-            ))}
-          </div>
-          <div style={{ marginTop:22, fontSize:13, letterSpacing:'.18em', textTransform:'uppercase', color:'rgba(255,255,255,.65)', textAlign:'center', fontWeight:800 }}>
-            1999X SHOP - BUY FREE FIRE PANELS
+
+              <div style={{ textAlign:'center' }}>
+                <div style={{ fontSize:14, letterSpacing:'.18em', textTransform:'uppercase', color:'rgba(255,255,255,.45)', fontWeight:800, marginBottom:8 }}>
+                  1999X SHOP - BUY FREE FIRE PANELS
+                </div>
+                <div style={{ fontSize:29, fontWeight:900, color:'#fff', lineHeight:1.2 }}>
+                  Preparing your panel access
+                </div>
+              </div>
+
+              <div style={{ '--bg-color': '#0d0f17' } as React.CSSProperties}>
+                <div style={{ background:'rgba(10,12,18,.88)', padding:'1rem 1.6rem', borderRadius:'1.25rem', border:'1px solid rgba(255,255,255,.08)', boxShadow:'0 0 32px rgba(139,92,246,.12)' }}>
+                  <div style={{ color:'rgb(145, 145, 160)', fontFamily:'Poppins, sans-serif', fontWeight:600, fontSize:25, boxSizing:'content-box', height:40, padding:'10px 10px', display:'flex', borderRadius:8 }}>
+                    <p style={{ margin:0 }}>loading</p>
+                    <div style={{ overflow:'hidden', position:'relative', marginLeft:6 }}>
+                      <div style={{ position:'absolute', inset:0, background:'linear-gradient(var(--bg-color) 10%, transparent 30%, transparent 70%, var(--bg-color) 90%)', zIndex:20 }} />
+                      {['aimbot', 'headshot', 'free', 'fire', '1999X'].map((word) => (
+                        <span key={word} style={{ display:'block', height:'100%', paddingLeft:6, color:'#956afa', animation:'word-spin 4s infinite', fontWeight:800 }}>
+                          {word}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
           <div style={{ width:220, height:3, borderRadius:999, background:'rgba(255,255,255,.08)', overflow:'hidden', marginTop:16 }}>
             <div style={{ width:'100%', height:'100%', background:'linear-gradient(90deg,#8b5cf6,#10e898)', boxShadow:'0 0 16px rgba(139,92,246,.5)', animation:'load-bar 2s linear both' }} />

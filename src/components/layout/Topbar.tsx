@@ -49,6 +49,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
   const [annUnread,   setAnnUnread]   = useState(0);
   const profileRef = useRef<HTMLDivElement>(null);
   const langRef    = useRef<HTMLDivElement>(null);
+  const activeNavIndex = Math.max(0, navItems.findIndex((item) => item.path === currentPath));
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -131,21 +132,61 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
           border: 1px solid rgba(255,255,255,0.08);
           box-shadow: 0 8px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.03) inset;
         }
-        .nav-link {
-          padding: 7px 11px; border-radius: 13px; font-size: 12.5px;
-          font-weight: 500; cursor: pointer; border: none; background: transparent;
-          color: rgba(255,255,255,0.45); transition: all 0.18s ease;
-          font-family: inherit; white-space: nowrap;
-          display: flex; align-items: center; gap: 5px;
+        .glass-radio-group {
+          --bg: rgba(255, 255, 255, 0.06);
+          --text: #e5e5e5;
+          display: flex;
           position: relative;
+          background: var(--bg);
+          border-radius: 1rem;
+          backdrop-filter: blur(12px);
+          box-shadow:
+            inset 1px 1px 4px rgba(255, 255, 255, 0.12),
+            inset -1px -1px 6px rgba(0, 0, 0, 0.28),
+            0 4px 12px rgba(0, 0, 0, 0.15);
+          overflow: hidden;
+          width: fit-content;
+          padding: 4px;
         }
-        .nav-link:hover { color: rgba(255,255,255,0.9); background: rgba(255,255,255,0.06); }
+        .glass-glider {
+          position: absolute;
+          top: 4px;
+          bottom: 4px;
+          width: calc((100% - 8px) / 6);
+          border-radius: 0.9rem;
+          z-index: 1;
+          transition:
+            transform 0.5s cubic-bezier(0.37, 1.95, 0.66, 0.56),
+            background 0.4s ease-in-out,
+            box-shadow 0.4s ease-in-out;
+          background: linear-gradient(135deg, rgba(124, 58, 237, 0.5), rgba(34, 197, 94, 0.28));
+          box-shadow:
+            0 0 18px rgba(139, 92, 246, 0.35),
+            0 0 10px rgba(220, 252, 231, 0.08) inset;
+        }
+        .nav-link {
+          min-width: 92px;
+          padding: 11px 14px;
+          border-radius: 14px;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          border: none;
+          background: transparent;
+          color: var(--text);
+          transition: color 0.3s ease-in-out;
+          font-family: inherit;
+          white-space: nowrap;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          position: relative;
+          z-index: 2;
+        }
+        .nav-link:hover { color: #fff; }
         .nav-link.active {
           color: #fff;
-          background: rgba(139,92,246,0.18);
-          border: 1px solid rgba(139,92,246,0.28);
-          box-shadow: 0 0 18px rgba(109,40,217,0.22);
-          font-weight: 600;
         }
         .nav-link .nav-ic { opacity: 0.55; transition: opacity 0.18s; }
         .nav-link:hover .nav-ic, .nav-link.active .nav-ic { opacity: 1; }
@@ -230,7 +271,12 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
           <div style={{ width:1, height:20, background:'rgba(255,255,255,0.07)', flexShrink:0, margin:'0 2px' }} />
 
           {/* Desktop nav */}
-          <div className="hidden lg:flex items-center gap-0.5 flex-1 justify-center">
+          <div className="hidden lg:flex items-center flex-1 justify-center">
+            <div className="glass-radio-group">
+              <div
+                className="glass-glider"
+                style={{ transform: `translateX(${activeNavIndex * 100}%)` }}
+              />
             {navItems.map(item => (
               <button key={item.key} onClick={() => handleNav(item.path)}
                 className={cn('nav-link', currentPath === item.path && 'active')}>
@@ -244,6 +290,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                 )}
               </button>
             ))}
+            </div>
           </div>
 
           {/* Right controls */}

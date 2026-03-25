@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppStore } from '@/lib/store';
-import { Send, Trash2, Edit2, Reply, X, Crown, Shield, Copy, Smile, Hash, Lock, Users } from 'lucide-react';
+import { Trash2, Edit2, Reply, X, Crown, Shield, Copy, Smile, Hash, Lock, Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { logActivity, notifyAll, notifyUser, sendNotificationEmail } from '@/lib/activity';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +26,10 @@ interface OnlineUser {
   userName: string;
   userAvatar: string;
   userRole: string;
+}
+
+function canSeeMessage(msg: Msg, currentUserId: string) {
+  return !msg.is_private || msg.user_id === currentUserId || msg.private_target_user_id === currentUserId;
 }
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -87,7 +91,7 @@ function Message({ msg, isOwn, isMod, currentUserId, onReply, onDelete, onEdit, 
   const replyMsg = msg.reply_to ? allMsgs.find(m => m.id === msg.reply_to) : null;
 
   const isPrivate = !!msg.is_private;
-  const canSeePrivate = !isPrivate || msg.user_id === currentUserId || msg.private_target_user_id === currentUserId;
+  const canSeePrivate = canSeeMessage(msg, currentUserId);
   if (isPrivate && !canSeePrivate) return null;
 
   const isAdminMsg   = msg.user_role === 'admin';
@@ -226,6 +230,10 @@ export default function ChatPage() {
     if (!parent) return null;
     return parent.private_target_user_id ?? parent.user_id ?? null;
   }, []);
+  const filterVisibleMessages = useCallback((rows: Msg[]) => {
+    if (!user?.id) return [];
+    return rows.filter((row) => canSeeMessage(row, user.id));
+  }, [user?.id]);
 
   // Responsive detection
   useEffect(() => {
@@ -240,19 +248,31 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
+    if (!user?.id) return;
     supabase.from('chat_messages').select('*').order('created_at',{ascending:true}).limit(100)
-      .then(({data}) => { if(data) setMessages(data); setLoading(false); });
-  }, []);
+      .then(({data}) => { if(data) setMessages(filterVisibleMessages(data as Msg[])); setLoading(false); });
+  }, [filterVisibleMessages, user?.id]);
 
   useEffect(() => {
     if (!user) return;
     const ch = supabase.channel('chat_v2',{config:{presence:{key:user.id}}});
 
     ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages'},({new:m})=>{
-      setMessages(p=>{ if(p.find(x=>x.id===(m as Msg).id)) return p; return [...p,m as Msg]; });
+      const next = m as Msg;
+      if (!canSeeMessage(next, user.id)) return;
+      setMessages(p=>{ if(p.find(x=>x.id===next.id)) return p; return [...p,next]; });
     })
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'chat_messages'},({new:m})=>{
-      setMessages(p=>p.map(x=>x.id===(m as Msg).id?m as Msg:x));
+      const next = m as Msg;
+      if (!canSeeMessage(next, user.id)) {
+        setMessages(p => p.filter(x => x.id !== next.id));
+        return;
+      }
+      setMessages(p=>{
+        const existing = p.find(x => x.id === next.id);
+        if (!existing) return [...p, next];
+        return p.map(x=>x.id===next.id?next:x);
+      });
     })
     .on('postgres_changes',{event:'DELETE',schema:'public',table:'chat_messages'},({old:m})=>{
       // Guard: REPLICA IDENTITY FULL ensures id is present; always filter only the targeted id
@@ -355,6 +375,66 @@ export default function ChatPage() {
         .chat-scroll::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.14);}
         .chat-input{resize:none;background:transparent;border:none;outline:none;color:#fff;font-family:inherit;font-size:14px;width:100%;max-height:100px;line-height:1.5;}
         .chat-input::placeholder{color:rgba(255,255,255,.22);}
+        .chat-send-btn{
+          font-family:inherit;
+          font-size:13px;
+          font-weight:800;
+          background:linear-gradient(135deg,#8b5cf6,#6d28d9);
+          color:white;
+          padding:.72em 1.05em;
+          display:flex;
+          align-items:center;
+          border:none;
+          border-radius:16px;
+          overflow:hidden;
+          transition:all .2s;
+          cursor:pointer;
+          box-shadow:0 0 24px rgba(109,40,217,.35);
+          flex-shrink:0;
+          min-width:104px;
+          justify-content:center;
+        }
+        .chat-send-btn .chat-send-label{
+          display:block;
+          margin-left:.35em;
+          transition:all .3s ease-in-out;
+          white-space:nowrap;
+        }
+        .chat-send-btn .chat-send-icon{
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          transform-origin:center center;
+          transition:transform .3s ease-in-out;
+        }
+        .chat-send-btn:hover .chat-send-icon-wrap{
+          animation:fly-1 .6s ease-in-out infinite alternate;
+        }
+        .chat-send-btn:hover .chat-send-icon{
+          transform:translateX(1.05em) rotate(45deg) scale(1.08);
+        }
+        .chat-send-btn:hover .chat-send-label{
+          transform:translateX(4.4em);
+        }
+        .chat-send-btn:active{
+          transform:scale(.95);
+        }
+        .chat-send-btn:disabled{
+          cursor:not-allowed;
+          opacity:.38;
+          box-shadow:none;
+        }
+        .chat-send-btn:disabled:hover .chat-send-icon-wrap{
+          animation:none;
+        }
+        .chat-send-btn:disabled:hover .chat-send-icon,
+        .chat-send-btn:disabled:hover .chat-send-label{
+          transform:none;
+        }
+        @keyframes fly-1{
+          from{transform:translateY(.1em);}
+          to{transform:translateY(-.1em);}
+        }
         @media(max-width:767px){
           .chat-sidebar-panel{display:none!important;}
           .chat-sidebar-panel.visible{display:flex!important;}
@@ -499,9 +579,21 @@ export default function ChatPage() {
                   disabled={!user}
                 />
               </div>
-              <button onClick={handleSend} disabled={!input.trim()||!user}
-                style={{ padding:'7px 9px', borderRadius:9, border:'none', cursor:input.trim()&&user?'pointer':'not-allowed', background:input.trim()&&user?(isPrivateInput?'linear-gradient(135deg,#7c3aed,#6d28d9)':'linear-gradient(135deg,#8b5cf6,#6d28d9)'):'rgba(255,255,255,.05)', color:'#fff', display:'flex', alignItems:'center', flexShrink:0, transition:'all .15s', opacity:input.trim()&&user?1:0.35, boxShadow:input.trim()&&user?'0 0 18px rgba(109,40,217,.4)':'none' }}>
-                <Send size={14}/>
+              <button
+                onClick={handleSend}
+                disabled={!input.trim()||!user}
+                className="chat-send-btn"
+                style={isPrivateInput ? { background:'linear-gradient(135deg,#7c3aed,#6d28d9)' } : undefined}
+              >
+                <div className="chat-send-icon-wrap">
+                  <div className="chat-send-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                      <path fill="none" d="M0 0h24v24H0z"></path>
+                      <path d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z"></path>
+                    </svg>
+                  </div>
+                </div>
+                <span className="chat-send-label">Send</span>
               </button>
             </div>
           </div>
