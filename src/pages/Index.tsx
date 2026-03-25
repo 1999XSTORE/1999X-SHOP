@@ -1,33 +1,34 @@
-import { useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { safeQuery } from '@/lib/safeFetch';
 import { logActivity } from '@/lib/activity';
 import AppLayout from '@/components/layout/AppLayout';
 import LoginPage from '@/pages/LoginPage';
-import DashboardPage from '@/pages/DashboardPage';
-import LicensesPage from '@/pages/LicensesPage';
-import ChatPage from '@/pages/ChatPage';
-import SupportPage from '@/pages/SupportPage';
-import PanelStatusPage from '@/pages/PanelStatusPage';
-import WalletPage from '@/pages/WalletPage';
-import BonusPage from '@/pages/BonusPage';
-import AnnouncementsPage from '@/pages/AnnouncementsPage';
-import AdminActivityPage from '@/pages/AdminActivityPage';
 import SafePageContent from '@/components/layout/SafePageContent';
 import { toast } from 'sonner';
 import { captureReferralFromUrl } from '@/lib/reseller';
 
-const pageComponents: Record<string, React.FC> = {
-  '/':              DashboardPage,
-  '/licenses':      LicensesPage,
-  '/chat':          ChatPage,
-  '/support':       SupportPage,
-  '/panel-status':  PanelStatusPage,
-  '/wallet':        WalletPage,
-  '/bonus':         BonusPage,
-  '/announcements':    AnnouncementsPage,
-  '/admin-activity':   AdminActivityPage,
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const LicensesPage = lazy(() => import('@/pages/LicensesPage'));
+const ChatPage = lazy(() => import('@/pages/ChatPage'));
+const SupportPage = lazy(() => import('@/pages/SupportPage'));
+const PanelStatusPage = lazy(() => import('@/pages/PanelStatusPage'));
+const WalletPage = lazy(() => import('@/pages/WalletPage'));
+const BonusPage = lazy(() => import('@/pages/BonusPage'));
+const AnnouncementsPage = lazy(() => import('@/pages/AnnouncementsPage'));
+const AdminActivityPage = lazy(() => import('@/pages/AdminActivityPage'));
+
+const pageComponents: Record<string, React.LazyExoticComponent<React.ComponentType<any>>> = {
+  '/':                DashboardPage,
+  '/licenses':        LicensesPage,
+  '/chat':            ChatPage,
+  '/support':         SupportPage,
+  '/panel-status':    PanelStatusPage,
+  '/wallet':          WalletPage,
+  '/bonus':           BonusPage,
+  '/announcements':   AnnouncementsPage,
+  '/admin-activity':  AdminActivityPage,
 };
 
 
@@ -45,6 +46,17 @@ function getSavedPath(): string {
 }
 function savePath(p: string) {
   try { sessionStorage.setItem(PATH_KEY, p); } catch {}
+}
+
+function PageLoader() {
+  return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'40vh' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'14px 18px', borderRadius:16, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.08)' }}>
+        <div style={{ width:14, height:14, borderRadius:'50%', border:'2px solid rgba(255,255,255,.18)', borderTopColor:'#8b5cf6', animation:'spin 0.9s linear infinite' }} />
+        <span style={{ fontSize:13, color:'rgba(255,255,255,.58)', fontWeight:600 }}>Loading page...</span>
+      </div>
+    </div>
+  );
 }
 
 async function fetchRole(email: string): Promise<'admin' | 'support' | 'user'> {
@@ -440,7 +452,9 @@ export default function Index() {
   return (
     <AppLayout currentPath={currentPath} onNavigate={navigate} onLogout={handleLogout}>
       <SafePageContent>
-        <PageComponent />
+        <Suspense fallback={<PageLoader />}>
+          <PageComponent />
+        </Suspense>
       </SafePageContent>
     </AppLayout>
   );
