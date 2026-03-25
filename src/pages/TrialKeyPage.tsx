@@ -4,8 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { Clock, Key, Copy, Eye, EyeOff, CheckCircle, Loader2, Shield, Zap, RefreshCw, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-const SUPABASE_URL  = 'https://wkjqrjafogufqeasfeev.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndranFyamFmb2d1ZnFlYXNmZWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMDMzMzIsImV4cCI6MjA4OTU3OTMzMn0.bqFi929jjbhlj6WVMxrnE6aGSZR42KtPFax4APc0Hok';
+const SUPABASE_URL  = 'https://awjouzwzdkrevvnlenvn.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3am91end6ZGtyZXZ2bmxlbnZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTg4MjEsImV4cCI6MjA5MDAzNDgyMX0._I_I-WA_8-YqDfaRzKiVgpEAhkH9faxlEIV6e766A0M';
 
 const TRIAL_DURATION_MS = 60 * 60 * 1000; // 1 hour
 

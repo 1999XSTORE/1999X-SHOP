@@ -1,7 +1,7 @@
 [project]
 # Your Supabase project ref (found in Project Settings → General)
 # e.g. abcdefghijklmnop
-project_ref = "YOUR_PROJECT_REF"
+project_ref = "awjouzwzdkrevvnlenvn"
 
 [functions.keyauth-stats]
 verify_jwt = false

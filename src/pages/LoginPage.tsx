@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Globe, Loader2, Zap, Shield, ChevronDown } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -21,13 +21,37 @@ export default function LoginPage() {
   const [loading, setLoading]   = useState(false);
   const { t } = useTranslation();
   const cur = LANGS.find(l => l.code === i18n.language) || LANGS[0];
+  const loginTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    const resetLoading = () => {
+      if (document.visibilityState === 'visible') setLoading(false);
+    };
+    document.addEventListener('visibilitychange', resetLoading);
+    window.addEventListener('focus', resetLoading);
+    return () => {
+      document.removeEventListener('visibilitychange', resetLoading);
+      window.removeEventListener('focus', resetLoading);
+      if (loginTimer.current) window.clearTimeout(loginTimer.current);
+    };
+  }, []);
 
   const go = async () => {
+    if (loading) return;
     setLoading(true);
+    if (loginTimer.current) window.clearTimeout(loginTimer.current);
+    loginTimer.current = window.setTimeout(() => {
+      setLoading(false);
+      toast.error('Google login is taking too long. Please try again.');
+    }, 12000);
     const { error } = await supabase.auth.signInWithOAuth({
       provider:'google', options:{ redirectTo: window.location.origin }
     });
-    if (error) { toast.error(error.message); setLoading(false); }
+    if (error) {
+      if (loginTimer.current) window.clearTimeout(loginTimer.current);
+      toast.error(error.message);
+      setLoading(false);
+    }
   };
 
   return (
