@@ -376,8 +376,8 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             <div style={{ width:1, height:20, background:'rgba(255,255,255,0.07)', flexShrink:0 }} />
           </div>
 
-          {/* ── CENTER: Nav tabs — no flex, sits exactly in the middle ── */}
-          <div className="hidden lg:block">
+          {/* ── CENTER: Nav tabs — perfectly centered via flex:1 on both sides ── */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center' }}>
             <div className="glass-radio-group">
               <div
                 className="glass-glider"
@@ -402,7 +402,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
           {/* ── RIGHT: Controls — flex:1 + justify-content:end ── */}
           <div style={{ flex: 1, display:'flex', alignItems:'center', gap:3, justifyContent:'flex-end' }}>
 
-            <button onClick={() => handleNav('/wallet')} className="balance-pill hidden sm:flex">
+            <button onClick={() => handleNav('/wallet')} className="balance-pill" style={{ display:'flex' }}>
               <Wallet size={12} />${balance.toFixed(2)}
             </button>
 
@@ -484,7 +484,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
               )}
             </div>
 
-            <button onClick={() => setMobileOpen(!mobileOpen)} className="nav-btn lg:hidden">
+            <button onClick={() => setMobileOpen(!mobileOpen)} className="nav-btn" style={{ display:'flex' }}>
               {mobileOpen ? <X size={16}/> : <Menu size={16}/>}
             </button>
           </div>
