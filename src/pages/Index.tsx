@@ -19,18 +19,6 @@ const BonusPage = lazy(() => import('@/pages/BonusPage'));
 const AnnouncementsPage = lazy(() => import('@/pages/AnnouncementsPage'));
 const AdminActivityPage = lazy(() => import('@/pages/AdminActivityPage'));
 
-const preloadAppPages = () => {
-  void import('@/pages/DashboardPage');
-  void import('@/pages/WalletPage');
-  void import('@/pages/LicensesPage');
-  void import('@/pages/ChatPage');
-  void import('@/pages/BonusPage');
-  void import('@/pages/PanelStatusPage');
-  void import('@/pages/AnnouncementsPage');
-  void import('@/pages/SupportPage');
-  void import('@/pages/AdminActivityPage');
-};
-
 const pageComponents: Record<string, React.LazyExoticComponent<React.ComponentType<any>>> = {
   '/':                DashboardPage,
   '/licenses':        LicensesPage,
@@ -158,14 +146,6 @@ export default function Index() {
     if (!user?.id || !user.email) return;
     captureReferralFromUrl(user.email);
   }, [user?.id, user?.email]);
-
-  useEffect(() => {
-    if (!authReady || !isAuthenticated) return;
-    const timer = window.setTimeout(() => {
-      preloadAppPages();
-    }, 1200);
-    return () => window.clearTimeout(timer);
-  }, [authReady, isAuthenticated]);
 
   const handleLogout = async () => {
     intentionalLogout.current = true;

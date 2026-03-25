@@ -324,22 +324,26 @@ function AdminPanel() {
   const [filter,setFilter]     = useState<'pending'|'approved'|'rejected'|'all'>('pending');
   const [search,setSearch]     = useState('');
   const [zoomImg,setZoomImg]   = useState<string|null>(null);
-  const intv = useRef<any>(null);
 
   const load = async () => {
     setL(true);
-    let q = supabase.from('transactions').select('*').order('created_at',{ ascending:false });
+    let q = supabase
+      .from('transactions')
+      .select('id,user_id,user_email,user_name,amount,method,transaction_id,status,screenshot_url,note,created_at,updated_at')
+      .order('created_at',{ ascending:false })
+      .limit(search.trim() ? 50 : filter === 'pending' ? 40 : 25);
     if (search.trim()) q = (q as any).or(`user_email.ilike.%${search.trim()}%,user_name.ilike.%${search.trim()}%,transaction_id.ilike.%${search.trim()}%`);
+    else if (filter !== 'all') q = (q as any).eq('status', filter);
     const { data, error } = await safeQuery(() => q);
     if (!error && data) setTxns(data);
     setL(false);
   };
   useEffect(() => {
-    load(); intv.current = setInterval(load, 20000);
+    load();
     const ch = supabase.channel('admin-txns').on('postgres_changes',{ event:'*', schema:'public', table:'transactions' },load).subscribe();
-    return () => { clearInterval(intv.current); supabase.removeChannel(ch); };
+    return () => { supabase.removeChannel(ch); };
   },[]);
-  useEffect(() => { load(); }, [search]);
+  useEffect(() => { load(); }, [search, filter]);
 
   const approve = async (tx: any) => {
     const { error } = await safeQuery(() => supabase.from('transactions').update({ status:'approved', updated_at:new Date().toISOString() }).eq('id',tx.id));
@@ -1262,7 +1266,7 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
 // ══════════════════════════════════════════════════════════════
 export default function WalletPage() {
   const { t } = useTranslation();
-  const { balance, deductBalance, refundBalance, addLicense, addBalance, user } = useAppStore();
+  const { balance, deductBalance, refundBalance, addLicense, user } = useAppStore();
   const [myTxns, setMyTxns] = useState<any[]>([]);
   const [isReseller, setIsReseller] = useState(false);
   const [resellerWallet, setResellerWallet] = useState<any | null>(null);
@@ -1278,6 +1282,7 @@ export default function WalletPage() {
   const [purchaseSuccess, setPurchaseSuccess] = useState<{ product: any; keys: Array<{ key: string; panelId: string; panelName: string; expiresAt: string }> } | null>(null);
   const [confirmPending, setConfirmPending] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<'products'|'deposit'|'history'>('products');
+  const resellerAccessChecked = useRef(false);
 
   const isAdmin   = user?.role === 'admin';
   const isSupport = user?.role === 'support';
@@ -1285,40 +1290,65 @@ export default function WalletPage() {
   const referralLink = isReseller && (referralCode || user?.email) ? buildReferralLink(referralCode || user.email) : '';
   const isFriday = new Date().getDay() === 5;
 
+  useEffect(() => {
+    resellerAccessChecked.current = false;
+    setIsReseller(false);
+    setResellerWallet(null);
+    setResellerTransactions([]);
+    setWithdrawRequests([]);
+  }, [user?.id]);
+
   const loadTxns = async () => {
     if (!user) return;
     setTxnsLoad(true);
-    const { data } = await safeQuery(() => supabase.from('transactions').select('*').eq('user_id',user.id).order('created_at',{ascending:false}));
+    const { data } = await safeQuery(() =>
+      supabase
+        .from('transactions')
+        .select('id,user_id,user_email,user_name,amount,method,transaction_id,status,screenshot_url,note,created_at,updated_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(40)
+    );
     setMyTxns(data ?? []);
     setTxnsLoad(false);
   };
 
   const loadResellerData = async () => {
     if (!user?.id || !user.email || isAdmin || isSupport) return;
-    const { data: accessRow } = await safeQuery(() =>
-      supabase.from('reseller_accounts').select('email,is_active,referral_code').eq('email', user.email.toLowerCase()).eq('is_active', true).maybeSingle()
-    );
-    const allowed = !!accessRow;
-    setIsReseller(allowed);
-    if (!allowed) {
-      setResellerWallet(null);
-      setResellerTransactions([]);
-      setWithdrawRequests([]);
-      setReferralCode('');
-      setReferralInput('');
+    if (!resellerAccessChecked.current) {
+      const { data: accessRow } = await safeQuery(() =>
+        supabase
+          .from('reseller_accounts')
+          .select('email,is_active,referral_code')
+          .eq('email', user.email.toLowerCase())
+          .eq('is_active', true)
+          .maybeSingle()
+      );
+      const allowed = !!accessRow;
+      setIsReseller(allowed);
+      resellerAccessChecked.current = true;
+      if (!allowed) {
+        setResellerWallet(null);
+        setResellerTransactions([]);
+        setWithdrawRequests([]);
+        setReferralCode('');
+        setReferralInput('');
+        return;
+      }
+
+      const defaultCode = sanitizeReferralCode(accessRow?.referral_code || user.email.split('@')[0] || '');
+      setReferralCode(defaultCode);
+      setReferralInput(defaultCode);
+
+      await safeQuery(() => supabase.rpc('ensure_reseller_wallet', { p_user_id: user.id, p_email: user.email }));
+    } else if (!isReseller) {
       return;
     }
 
-    const defaultCode = sanitizeReferralCode(accessRow?.referral_code || user.email.split('@')[0] || '');
-    setReferralCode(defaultCode);
-    setReferralInput(defaultCode);
-
-    await safeQuery(() => supabase.rpc('ensure_reseller_wallet', { p_user_id: user.id, p_email: user.email }));
-
     const [{ data: walletData }, { data: resellerData }, { data: withdrawalData }] = await Promise.all([
-      safeQuery(() => supabase.from('reseller_wallets').select('*').eq('user_id', user.id).maybeSingle()),
-      safeQuery(() => supabase.from('reseller_transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false })),
-      safeQuery(() => supabase.from('withdrawal_requests').select('*').eq('user_id', user.id).order('created_at', { ascending: false })),
+      safeQuery(() => supabase.from('reseller_wallets').select('user_id,email,balance,total_earned,updated_at').eq('user_id', user.id).maybeSingle()),
+      safeQuery(() => supabase.from('reseller_transactions').select('id,amount,fee,net_amount,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20)),
+      safeQuery(() => supabase.from('withdrawal_requests').select('id,amount,status,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10)),
     ]);
 
     setResellerWallet(walletData ?? null);
@@ -1393,40 +1423,25 @@ export default function WalletPage() {
   };
 
   useEffect(() => {
-    if (!user||isAdmin||isSupport) return;
+    if (!user || isAdmin || isSupport) return;
     loadTxns();
     loadResellerData();
-    const creditedKey = `1999x-credited-${user.id}`;
-    const getCredited = (): Set<string> => { try { return new Set<string>(JSON.parse(localStorage.getItem(creditedKey)||'[]')); } catch { return new Set(); } };
-    const addCredited = (id: string) => { const s=getCredited(); s.add(id); try { localStorage.setItem(creditedKey,JSON.stringify([...s])); } catch {} };
-    const isCredited  = (id: string) => getCredited().has(id);
-    let isChecking = false;
-    const check = async () => {
-      if (isChecking) return;
-      isChecking = true;
-      try {
-        const { data, error } = await safeQuery(() => supabase.from('transactions').select('id,amount,status').eq('user_id',user.id));
-        if (error||!data) return;
-        for (const tx of data as any[]) {
-          if (tx.status==='approved'&&!isCredited(tx.id)) { addCredited(tx.id); addBalance(Number(tx.amount)); toast.success(`🎉 Payment approved! $${tx.amount} added!`); if(user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'balance_add', amount:Number(tx.amount), status:'success', meta:{method:tx.method} }); }
-          if (tx.status==='rejected'&&!isCredited(tx.id+'_r')) { addCredited(tx.id+'_r'); toast.error(`Payment of $${tx.amount} was rejected.`); }
-        }
-        const { data:full } = await safeQuery(() => supabase.from('transactions').select('*').eq('user_id',user.id).order('created_at',{ascending:false}));
-        if (full) setMyTxns(full);
-      } finally { isChecking=false; }
+    const onFocus = () => {
+      void loadTxns();
+      void loadResellerData();
     };
-    const initTimer = setTimeout(check,2000);
-    const poll = setInterval(check,12000);
-    const onFocus = () => { if (!isChecking) check(); };
-    window.addEventListener('focus',onFocus);
+    window.addEventListener('focus', onFocus);
     const ch = supabase.channel(`wallet-${user.id}`)
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'transactions',filter:`user_id=eq.${user.id}`},()=>check())
-      .on('postgres_changes',{event:'*',schema:'public',table:'reseller_wallets',filter:`user_id=eq.${user.id}`},()=>loadResellerData())
-      .on('postgres_changes',{event:'*',schema:'public',table:'reseller_transactions',filter:`user_id=eq.${user.id}`},()=>loadResellerData())
-      .on('postgres_changes',{event:'*',schema:'public',table:'withdrawal_requests',filter:`user_id=eq.${user.id}`},()=>loadResellerData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` }, () => loadTxns())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reseller_wallets', filter: `user_id=eq.${user.id}` }, () => loadResellerData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reseller_transactions', filter: `user_id=eq.${user.id}` }, () => loadResellerData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'withdrawal_requests', filter: `user_id=eq.${user.id}` }, () => loadResellerData())
       .subscribe();
-    return () => { clearTimeout(initTimer); clearInterval(poll); window.removeEventListener('focus',onFocus); supabase.removeChannel(ch); };
-  },[user?.id]);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      supabase.removeChannel(ch);
+    };
+  }, [user?.id, isAdmin, isSupport, isReseller]);
 
   const handleBuy = async (product: any) => {
     if (balance < product.price) { toast.error('Insufficient balance. Add funds first.'); return; }
@@ -2051,6 +2066,8 @@ export default function WalletPage() {
     </>
   );
 }
+
+
 
 
 
