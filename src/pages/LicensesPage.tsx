@@ -14,10 +14,13 @@ const DOWNLOAD_URL  = 'https://www.asuswebstorage.com/navigate/a/#/s/4E1D05A8155
 const TUTORIAL_URL  = 'https://youtu.be/vwUYk589SzU';
 
 async function validatePanel(key: string, panelType: 'lag' | 'internal') {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/validate-key`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON}`, 'apikey': SUPABASE_ANON },
+      signal: controller.signal,
       body: JSON.stringify({ key, panel_type: panelType }),
     });
     const data = await res.json();
@@ -25,7 +28,8 @@ async function validatePanel(key: string, panelType: 'lag' | 'internal') {
     const nested = data[panelType === 'lag' ? 'lag' : 'internal'];
     if (nested && typeof nested.success === 'boolean') return { success: nested.success, message: nested.message ?? '', info: nested.info ?? null };
     return { success: false, message: 'Unexpected response', info: null };
-  } catch (e) { return { success: false, message: `Network error: ${String(e)}`, info: null }; }
+  } catch (e: any) { return { success: false, message: e?.name === 'AbortError' ? 'Validation timed out. Please try again.' : `Network error: ${String(e)}`, info: null }; }
+  finally { clearTimeout(timeout); }
 }
 
 function toISO(unixSec: any): string {
@@ -561,16 +565,19 @@ export default function LicensesPage() {
       // Use edge function to bypass RLS (anon key can't read other users' bindings)
       let existingBinding: { user_email: string } | null = null;
       try {
+        const bindController = new AbortController();
+        const bindTimeout = setTimeout(() => bindController.abort(), 10000);
         const bindRes = await fetch(`${SUPABASE_URL}/functions/v1/check-key-binding`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON}`, 'apikey': SUPABASE_ANON },
+          signal: bindController.signal,
           body: JSON.stringify({ key: trimmedKey, user_email: user.email }),
         });
+        clearTimeout(bindTimeout);
         const bindData = await bindRes.json();
         if (bindData.blocked) {
           setErrorMsg(`❌ This key is already bound to another Google account. Each key can only be used by one Gmail account.`);
           toast.error('Key is bound to another account');
-          setLoading(false);
           return;
         }
         if (bindData.existing_email) {
@@ -592,7 +599,6 @@ export default function LicensesPage() {
         const useful = [lagResult.message, intResult.message].find(m => m && !noise.some(n => m.includes(n)));
         setErrorMsg(useful || 'Invalid license key');
         toast.error('Activation failed');
-        setLoading(false);
         return;
       }
 
@@ -669,8 +675,9 @@ export default function LicensesPage() {
     } catch (e) {
       setErrorMsg(`Error: ${String(e)}`);
       toast.error('Something went wrong');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   handleActivateRef.current = handleActivate;

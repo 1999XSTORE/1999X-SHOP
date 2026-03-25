@@ -18,4 +18,23 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    sourcemap: false,
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('@supabase')) return 'supabase';
+          if (id.includes('react-router') || id.includes('@remix-run')) return 'router';
+          if (id.includes('@tanstack/react-query')) return 'query';
+          if (id.includes('recharts')) return 'charts';
+          if (id.includes('i18next') || id.includes('react-i18next')) return 'i18n';
+          if (id.includes('lucide-react')) return 'icons';
+          if (id.includes('@radix-ui')) return 'radix';
+          if (id.includes('react') || id.includes('react-dom')) return 'react-vendor';
+        },
+      },
+    },
+  },
 }));

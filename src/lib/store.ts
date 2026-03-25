@@ -82,6 +82,7 @@ interface AppState {
 
   login: (user: User) => void;
   logout: () => void;
+  setBalance: (amount: number) => void;
   addBalance: (amount: number) => void;
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
   purchaseProduct: (product: Product) => License | null;
@@ -307,6 +308,15 @@ export const useAppStore = create<AppState>()(
           transactions:    [],
           licenses:        [],
         });
+      },
+
+      setBalance: (amount) => {
+        const state = get();
+        const normalized = Math.max(0, Number(amount) || 0);
+        set({ balance: normalized });
+        if (state.user?.id) {
+          saveUserData(state.user.id, { balance: normalized });
+        }
       },
 
       addBalance: (amount) => {

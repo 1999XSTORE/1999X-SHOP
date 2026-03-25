@@ -19,6 +19,13 @@ const BonusPage = lazy(() => import('@/pages/BonusPage'));
 const AnnouncementsPage = lazy(() => import('@/pages/AnnouncementsPage'));
 const AdminActivityPage = lazy(() => import('@/pages/AdminActivityPage'));
 
+const preloadCommonPages = () => {
+  void import('@/pages/WalletPage');
+  void import('@/pages/LicensesPage');
+  void import('@/pages/ChatPage');
+  void import('@/pages/DashboardPage');
+};
+
 const pageComponents: Record<string, React.LazyExoticComponent<React.ComponentType<any>>> = {
   '/':                DashboardPage,
   '/licenses':        LicensesPage,
@@ -69,7 +76,7 @@ async function fetchRole(email: string): Promise<'admin' | 'support' | 'user'> {
 }
 
 export default function Index() {
-  const { isAuthenticated, user, login, logout, addBalance } = useAppStore();
+  const { isAuthenticated, user, login, logout, setBalance } = useAppStore();
 
   // ── Restore last page from sessionStorage ─────────────────
   const [currentPath, setCurrentPath] = useState(getSavedPath);
@@ -147,6 +154,23 @@ export default function Index() {
     captureReferralFromUrl(user.email);
   }, [user?.id, user?.email]);
 
+  useEffect(() => {
+    if (!authReady || !isAuthenticated) return;
+    const schedule = (cb: () => void) => {
+      const win = window as Window & { requestIdleCallback?: (callback: () => void) => number };
+      if (typeof win.requestIdleCallback === 'function') return win.requestIdleCallback(cb);
+      return window.setTimeout(cb, 600);
+    };
+    const cancel = (id: number) => {
+      const win = window as Window & { cancelIdleCallback?: (handle: number) => void };
+      if (typeof win.cancelIdleCallback === 'function') win.cancelIdleCallback(id);
+      else window.clearTimeout(id);
+    };
+
+    const id = schedule(preloadCommonPages);
+    return () => cancel(id);
+  }, [authReady, isAuthenticated]);
+
   const handleLogout = async () => {
     intentionalLogout.current = true;
     savePath('/'); // reset saved path on logout
@@ -186,11 +210,17 @@ export default function Index() {
         );
         if (error || !data || disposed) return;
 
-        for (const tx of data as Array<{ id: string; amount: number; status: string }>) {
+        const rows = data as Array<{ id: string; amount: number; status: string }>;
+        const approvedTotal = rows
+          .filter((tx) => tx.status === 'approved')
+          .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+
+        setBalance(approvedTotal);
+
+        for (const tx of rows) {
           if (tx.status === 'approved') {
             const credited = readIds(creditedKey);
             if (!credited.has(tx.id)) {
-              addBalance(Number(tx.amount) || 0);
               writeId(creditedKey, tx.id);
               toast.success(`Payment approved! $${Number(tx.amount || 0).toFixed(2)} added!`);
               logActivity({
@@ -238,7 +268,7 @@ export default function Index() {
       window.removeEventListener('focus', onFocus);
       supabase.removeChannel(channel);
     };
-  }, [addBalance, user?.id, user?.role]);
+  }, [setBalance, user?.id, user?.role]);
 
   // ── Loading screen — only shown if NOT already authenticated ──
   // If Zustand has isAuthenticated=true, skip straight to app
