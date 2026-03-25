@@ -152,6 +152,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             0 8px 48px rgba(0,0,0,.65),
             0 0 0 1px rgba(255,255,255,.03) inset,
             0 1px 0 rgba(255,255,255,.06) inset;
+          min-height: 52px;
         }
         .nav-inner-left  { display:flex; align-items:center; gap:4px; flex-shrink:0; }
         /* Absolutely centered — always at exact 50% of the bar */
@@ -165,6 +166,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
         }
         .nav-inner-center > * { pointer-events: auto; }
         .nav-inner-right { display:flex; align-items:center; gap:3px; margin-left:auto; flex-shrink:0; }
+        @media (max-width: 1023px) { .nav-inner-center { display: none; } }
 
         /* ── Desktop radio group ── */
         .glass-radio-group {
@@ -369,7 +371,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
 
           {/* ── Center: Nav tabs (always centered) ── */}
           <div className="nav-inner-center">
-            <div className="glass-radio-group hidden lg:flex">
+            <div className="glass-radio-group">
               <div
                 className="glass-glider"
                 style={{ transform: `translateX(${activeNavIndex * 100}%)` }}
