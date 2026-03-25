@@ -345,10 +345,22 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
       `}</style>
 
       <div className="nav-pill">
-        <div className="nav-inner">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr auto 1fr',
+          alignItems: 'center',
+          padding: '6px 8px',
+          borderRadius: 22,
+          background: 'rgba(6,6,16,0.92)',
+          backdropFilter: 'blur(32px)',
+          WebkitBackdropFilter: 'blur(32px)',
+          border: '1px solid rgba(255,255,255,0.07)',
+          boxShadow: '0 8px 48px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.03) inset, 0 1px 0 rgba(255,255,255,.06) inset',
+          minHeight: 52,
+        }}>
 
-          {/* ── Left: Logo ── */}
-          <div className="nav-inner-left">
+          {/* ── LEFT: Logo ── */}
+          <div style={{ display:'flex', alignItems:'center', gap:4, justifySelf:'start' }}>
             <button onClick={() => handleNav('/')} style={{ display:'flex', alignItems:'center', background:'none', border:'none', cursor:'pointer', padding:'4px 6px', borderRadius:12 }}>
               <img
                 src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1"
@@ -361,11 +373,11 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                 }}
               />
             </button>
-            <div style={{ width:1, height:20, background:'rgba(255,255,255,0.07)', flexShrink:0 }} />
+            <div style={{ width:1, height:20, background:'rgba(255,255,255,0.07)' }} />
           </div>
 
-          {/* ── Center: Nav tabs (always centered) ── */}
-          <div className="nav-inner-center">
+          {/* ── CENTER: Nav tabs — always perfectly centered ── */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center' }}>
             <div className="glass-radio-group">
               <div
                 className="glass-glider"
@@ -387,8 +399,8 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             </div>
           </div>
 
-          {/* ── Right: Balance + Lang + Profile + Mobile menu ── */}
-          <div className="nav-inner-right">
+          {/* ── RIGHT: Balance + Lang + Profile + Mobile menu ── */}
+          <div style={{ display:'flex', alignItems:'center', gap:3, justifySelf:'end' }}>
 
             <button onClick={() => handleNav('/wallet')} className="balance-pill hidden sm:flex">
               <Wallet size={12} />${balance.toFixed(2)}
