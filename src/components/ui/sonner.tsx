@@ -10,34 +10,32 @@ export function Toaster({ ...props }: ToasterProps) {
       position="bottom-right"
       expand={false}
       richColors={false}
-      closeButton={false}
+      closeButton={true}
       duration={3500}
       toastOptions={{
         style: {
-          background: 'rgba(12, 12, 22, 0.95)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '14px',
-          padding: '12px 16px',
-          boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset',
+          border: 'none',
+          borderRadius: '999px',
+          padding: '12px 14px',
+          boxShadow: '0 0 10px rgba(0,0,0,0.2)',
           color: '#fff',
-          fontSize: '13px',
+          fontSize: '14px',
           fontWeight: '500',
-          fontFamily: 'inherit',
+          fontFamily: 'system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Open Sans","Helvetica Neue",sans-serif',
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
-          minWidth: '280px',
-          maxWidth: '380px',
+          justifyContent: 'flex-start',
+          gap: '8px',
+          minWidth: '320px',
+          maxWidth: '320px',
         },
         classNames: {
-          toast: 'toast-premium',
-          success: 'toast-success',
-          error: 'toast-error',
-          warning: 'toast-warning',
-          info: 'toast-info',
-          loading: 'toast-loading',
+          toast: 'toast-pill',
+          success: 'toast-pill-success',
+          error: 'toast-pill-error',
+          warning: 'toast-pill-warning',
+          info: 'toast-pill-info',
+          loading: 'toast-pill-info',
         },
       }}
       {...props}
