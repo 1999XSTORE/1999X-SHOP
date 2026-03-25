@@ -141,9 +141,9 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
           animation: nav-fade-in .45s cubic-bezier(.22,1,.36,1) both;
         }
         .nav-inner {
-          display: flex;
+          display: grid;
+          grid-template-columns: 1fr auto 1fr;
           align-items: center;
-          position: relative;
           padding: 6px 8px; border-radius: 22px;
           background: rgba(6,6,16,0.92);
           backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
@@ -154,18 +154,13 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
             0 1px 0 rgba(255,255,255,.06) inset;
           min-height: 52px;
         }
-        .nav-inner-left  { display:flex; align-items:center; gap:4px; flex-shrink:0; }
-        /* Absolutely centered — always at exact 50% of the bar */
+        .nav-inner-left  { display:flex; align-items:center; gap:4px; flex-shrink:0; justify-self:start; }
         .nav-inner-center {
-          position: absolute;
-          left: 50%;
-          transform: translateX(-50%);
           display: flex;
           align-items: center;
-          pointer-events: none;
+          justify-content: center;
         }
-        .nav-inner-center > * { pointer-events: auto; }
-        .nav-inner-right { display:flex; align-items:center; gap:3px; margin-left:auto; flex-shrink:0; }
+        .nav-inner-right { display:flex; align-items:center; gap:3px; justify-self:end; }
         @media (max-width: 1023px) { .nav-inner-center { display: none; } }
 
         /* ── Desktop radio group ── */
