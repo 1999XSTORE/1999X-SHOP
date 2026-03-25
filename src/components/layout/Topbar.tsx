@@ -346,8 +346,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
 
       <div className="nav-pill">
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr auto 1fr',
+          display: 'flex',
           alignItems: 'center',
           padding: '6px 8px',
           borderRadius: 22,
@@ -357,7 +356,140 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
           border: '1px solid rgba(255,255,255,0.07)',
           boxShadow: '0 8px 48px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.03) inset, 0 1px 0 rgba(255,255,255,.06) inset',
           minHeight: 52,
+          gap: 8,
         }}>
+
+          {/* ── LEFT: Logo — flex:1 so it balances the right side ── */}
+          <div style={{ flex: 1, display:'flex', alignItems:'center', gap:4 }}>
+            <button onClick={() => handleNav('/')} style={{ display:'flex', alignItems:'center', background:'none', border:'none', cursor:'pointer', padding:'4px 6px', borderRadius:12 }}>
+              <img
+                src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?raw=1"
+                alt="1999X" className="logo-img"
+                onError={e => {
+                  const t2 = e.target as HTMLImageElement; t2.style.display='none';
+                  const s = document.createElement('span'); s.textContent='1999X';
+                  s.style.cssText='font-size:15px;font-weight:900;color:#fff;letter-spacing:-.02em';
+                  t2.parentNode?.appendChild(s);
+                }}
+              />
+            </button>
+            <div style={{ width:1, height:20, background:'rgba(255,255,255,0.07)', flexShrink:0 }} />
+          </div>
+
+          {/* ── CENTER: Nav tabs — no flex, sits exactly in the middle ── */}
+          <div className="hidden lg:block">
+            <div className="glass-radio-group">
+              <div
+                className="glass-glider"
+                style={{ transform: `translateX(${activeNavIndex * 100}%)` }}
+              />
+              {navItems.map(item => (
+                <button key={item.key} onClick={() => handleNav(item.path)}
+                  className={cn('nav-link', currentPath === item.path && 'active')}>
+                  <item.Icon size={13} className="nav-ic" />
+                  {t(item.tKey)}
+                  {item.path === '/chat' && chatUnread > 0 && (
+                    <span className="nav-badge">{chatUnread > 9 ? '9+' : chatUnread}</span>
+                  )}
+                  {item.path === '/panel-status' && annUnread > 0 && (
+                    <span className="nav-badge">{annUnread > 9 ? '9+' : annUnread}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── RIGHT: Controls — flex:1 + justify-content:end ── */}
+          <div style={{ flex: 1, display:'flex', alignItems:'center', gap:3, justifyContent:'flex-end' }}>
+
+            <button onClick={() => handleNav('/wallet')} className="balance-pill hidden sm:flex">
+              <Wallet size={12} />${balance.toFixed(2)}
+            </button>
+
+            {/* Language */}
+            <div style={{ position:'relative' }} ref={langRef}>
+              <button onClick={() => setLangOpen(!langOpen)} className="nav-btn" title="Language">
+                <Globe size={14} />
+              </button>
+              {langOpen && (
+                <div className="dropdown" style={{ minWidth:170 }}>
+                  <div style={{ padding:'6px 12px 8px', borderBottom:'1px solid rgba(255,255,255,.06)', marginBottom:4 }}>
+                    <span style={{ fontSize:10,fontWeight:700,color:'rgba(255,255,255,.3)',textTransform:'uppercase',letterSpacing:'.1em' }}>Language</span>
+                  </div>
+                  <div style={{ maxHeight:200, overflowY:'auto' }}>
+                    {LANGUAGES.map(lang => (
+                      <button key={lang.code} onClick={() => { i18n.changeLanguage(lang.code); setLangOpen(false); }}
+                        className="dropdown-item"
+                        style={{ color: lang.code===i18n.language?'#fde68a':undefined, fontWeight: lang.code===i18n.language?600:undefined }}>
+                        <span style={{ fontSize:16 }}>{lang.flag}</span>
+                        <span>{lang.label}</span>
+                        {lang.code===i18n.language && <span style={{ marginLeft:'auto',fontSize:10,color:'#f59e0b' }}>✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Profile */}
+            <div style={{ position:'relative' }} ref={profileRef}>
+              <button onClick={() => setProfileOpen(!profileOpen)}
+                style={{ display:'flex',alignItems:'center',gap:7,padding:'5px 9px 5px 5px',borderRadius:15,border:'1px solid rgba(255,255,255,.08)',background:profileOpen?'rgba(255,255,255,.08)':'rgba(255,255,255,.04)',cursor:'pointer',transition:'all .15s' }}
+                onMouseEnter={e=>(e.currentTarget.style.background='rgba(255,255,255,.08)')}
+                onMouseLeave={e=>(e.currentTarget.style.background=profileOpen?'rgba(255,255,255,.08)':'rgba(255,255,255,.04)')}>
+                <div style={{ position:'relative' }}>
+                  {user?.avatar
+                    ? <img src={user.avatar} alt={user.name} className="avatar-ring" style={{ width:26,height:26,objectFit:'cover' }}/>
+                    : <div style={{ width:26,height:26,borderRadius:'50%',background:'linear-gradient(135deg,#8b5cf6,#6d28d9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,color:'#fff' }}>{user?.name?.charAt(0)||'U'}</div>
+                  }
+                  {user?.role==='admin'   && <div style={{ position:'absolute',top:-3,right:-3,width:13,height:13,borderRadius:'50%',background:'#ef4444',border:'2px solid var(--bg)',display:'flex',alignItems:'center',justifyContent:'center' }}><Crown  size={6} color="#fff"/></div>}
+                  {user?.role==='support' && <div style={{ position:'absolute',top:-3,right:-3,width:13,height:13,borderRadius:'50%',background:'#3b82f6',border:'2px solid var(--bg)',display:'flex',alignItems:'center',justifyContent:'center' }}><Shield size={6} color="#fff"/></div>}
+                </div>
+                <span style={{ fontSize:12,fontWeight:600,color:'rgba(255,255,255,.8)',maxWidth:70,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+                  {user?.name?.split(' ')[0]||'User'}
+                </span>
+              </button>
+
+              {profileOpen && (
+                <div className="dropdown">
+                  {user && (
+                    <div style={{ padding:'10px 12px 12px',borderBottom:'1px solid rgba(255,255,255,.06)',marginBottom:4 }}>
+                      <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                        {user.avatar
+                          ? <img src={user.avatar} alt={user.name} style={{ width:34,height:34,borderRadius:'50%',objectFit:'cover' }}/>
+                          : <div style={{ width:34,height:34,borderRadius:'50%',background:'linear-gradient(135deg,#8b5cf6,#6d28d9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,color:'#fff' }}>{user.name.charAt(0)}</div>
+                        }
+                        <div style={{ flex:1,minWidth:0 }}>
+                          <div style={{ fontSize:13,fontWeight:700,color:'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{user.name}</div>
+                          <div style={{ fontSize:11,fontWeight:600,color:user.role==='admin'?'#f87171':user.role==='support'?'#60a5fa':'rgba(255,255,255,.35)',marginTop:1 }}>
+                            {user.role==='admin'?'👑 Administrator':user.role==='support'?'🛡 Support Staff':user.email}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {user?.role === 'admin' && (
+                    <>
+                      <button onClick={() => { handleNav('/admin-activity'); setProfileOpen(false); }} className="dropdown-item">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        Activity Logs
+                      </button>
+                      <div style={{ height:1,background:'rgba(255,255,255,.06)',margin:'4px 0' }}/>
+                    </>
+                  )}
+                  <button onClick={() => { onLogout(); setProfileOpen(false); }} className="dropdown-item" style={{ color:'#f87171' }}>
+                    <LogOut size={14} /> {t('nav.signOut')}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button onClick={() => setMobileOpen(!mobileOpen)} className="nav-btn lg:hidden">
+              {mobileOpen ? <X size={16}/> : <Menu size={16}/>}
+            </button>
+          </div>
+        </div>
+      </div>
 
           {/* ── LEFT: Logo ── */}
           <div style={{ display:'flex', alignItems:'center', gap:4, justifySelf:'start' }}>
