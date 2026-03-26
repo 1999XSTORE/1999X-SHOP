@@ -558,7 +558,7 @@ export default function ChatPage() {
             </div>
 
             {/* Input row */}
-            <div style={{ display:'flex', gap:8, alignItems:'flex-end', background:isPrivateInput?'rgba(139,92,246,.06)':'rgba(255,255,255,.04)', border:isPrivateInput?'1px solid rgba(139,92,246,.22)':'1px solid rgba(255,255,255,.07)', borderRadius:12, padding:'8px 10px', transition:'all .2s', boxShadow:isPrivateInput?'0 0 16px rgba(139,92,246,.08)':'none' }}>
+            <form onSubmit={e=>{e.preventDefault(); void handleSend();}} style={{ display:'flex', gap:8, alignItems:'flex-end', background:isPrivateInput?'rgba(139,92,246,.06)':'rgba(255,255,255,.04)', border:isPrivateInput?'1px solid rgba(139,92,246,.22)':'1px solid rgba(255,255,255,.07)', borderRadius:12, padding:'8px 10px', transition:'all .2s', boxShadow:isPrivateInput?'0 0 16px rgba(139,92,246,.08)':'none' }}>
               <Avatar src={user?.avatar} name={user?.name||'?'} role={user?.role} size={26}/>
                 <div style={{ flex:1, minWidth:0 }}>
                 {replyTo && shouldCreatePrivateReply(replyTo) && (
@@ -577,6 +577,7 @@ export default function ChatPage() {
                   className="chat-input"
                   value={input}
                   rows={1}
+                  enterKeyHint="send"
                   onChange={e=>{
                     setInput(e.target.value);
                     broadcastTyping();
@@ -591,7 +592,7 @@ export default function ChatPage() {
                 />
               </div>
               <button
-                onClick={handleSend}
+                type="submit"
                 disabled={!input.trim()||!user}
                 className="chat-send-btn"
                 style={isPrivateInput ? { background:'linear-gradient(135deg,#7c3aed,#6d28d9)' } : undefined}
@@ -606,7 +607,7 @@ export default function ChatPage() {
                 </div>
                 <span className="chat-send-label">Send</span>
               </button>
-            </div>
+            </form>
           </div>
         </div>
 

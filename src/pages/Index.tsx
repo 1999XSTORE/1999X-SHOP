@@ -252,200 +252,88 @@ export default function Index() {
   // If Zustand has isAuthenticated=true, skip straight to app
   if (!authReady) {
     return (
-      <div style={{ minHeight:'100svh', background:'#000', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
+      <div style={{ minHeight:'100svh', background:'#080809', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
         <style>{`
-          .ld-loader {
+          /* Bottom glow matching site bg */
+          .ld-bg-glow {
             position: absolute;
-            top: 50%;
-            margin-left: -50px;
-            left: 50%;
-            animation: speeder 0.4s linear infinite;
+            bottom: -100px; left: 50%; transform: translateX(-50%);
+            width: 600px; height: 300px; border-radius: 50%;
+            background: radial-gradient(ellipse, rgba(70,45,200,0.18) 0%, transparent 70%);
+            pointer-events: none; filter: blur(2px);
           }
-          .ld-loader > span {
-            height: 5px;
-            width: 35px;
-            background: #fff;
-            position: absolute;
-            top: -19px;
-            left: 60px;
-            border-radius: 2px 10px 1px 0;
+
+          /* Uiverse petal loader */
+          .ld-loader-wrap {
+            position: relative;
+            width: 100px; height: 100px;
+            filter: drop-shadow(0 0 18px rgba(92,61,153,0.45));
           }
-          .ld-base span {
-            position: absolute;
-            width: 0;
-            height: 0;
-            border-top: 6px solid transparent;
-            border-right: 100px solid #fff;
-            border-bottom: 6px solid transparent;
+          .ld-petal-one {
+            position: absolute; top: 0; left: 0;
+            animation: flowe-one 1s linear infinite;
           }
-          .ld-base span:before {
-            content: "";
-            height: 22px;
-            width: 22px;
-            border-radius: 50%;
-            background: #fff;
-            position: absolute;
-            right: -110px;
-            top: -16px;
+          .ld-petal-two {
+            position: absolute; top: 0; left: 0;
+            opacity: 0;
+            transform: scale(0) translateY(-200px) translateX(-100px);
+            animation: flowe-two 1s linear infinite;
+            animation-delay: 0.33s;
           }
-          .ld-base span:after {
-            content: "";
-            position: absolute;
-            width: 0;
-            height: 0;
-            border-top: 0 solid transparent;
-            border-right: 55px solid #fff;
-            border-bottom: 16px solid transparent;
-            top: -16px;
-            right: -98px;
+          .ld-petal-three {
+            position: absolute; top: 0; left: 0;
+            opacity: 0;
+            transform: scale(0) translateY(-200px) translateX(100px);
+            animation: flowe-three 1s linear infinite;
+            animation-delay: 0.66s;
           }
-          .ld-face {
-            position: absolute;
-            height: 12px;
-            width: 20px;
-            background: #fff;
-            border-radius: 20px 20px 0 0;
-            transform: rotate(-40deg);
-            right: -125px;
-            top: -15px;
+          @keyframes flowe-one {
+            0%   { transform: scale(0.5) translateY(-200px); opacity: 0; }
+            25%  { transform: scale(0.75) translateY(-100px); opacity: 1; }
+            50%  { transform: scale(1) translateY(0px); opacity: 1; }
+            75%  { transform: scale(0.5) translateY(50px); opacity: 1; }
+            100% { transform: scale(0) translateY(100px); opacity: 0; }
           }
-          .ld-face:after {
-            content: "";
-            height: 12px;
-            width: 12px;
-            background: #fff;
-            right: 4px;
-            top: 7px;
-            position: absolute;
-            transform: rotate(40deg);
-            transform-origin: 50% 50%;
-            border-radius: 0 0 0 2px;
+          @keyframes flowe-two {
+            0%   { transform: scale(0.5) rotateZ(-10deg) translateY(-200px) translateX(-100px); opacity: 0; }
+            25%  { transform: scale(1) rotateZ(-5deg) translateY(-100px) translateX(-50px); opacity: 1; }
+            50%  { transform: scale(1) rotateZ(0deg) translateY(0px) translateX(-25px); opacity: 1; }
+            75%  { transform: scale(0.5) rotateZ(5deg) translateY(50px) translateX(0px); opacity: 1; }
+            100% { transform: scale(0) rotateZ(10deg) translateY(100px) translateX(25px); opacity: 0; }
           }
-          .ld-loader > span > span:nth-child(1),
-          .ld-loader > span > span:nth-child(2),
-          .ld-loader > span > span:nth-child(3),
-          .ld-loader > span > span:nth-child(4) {
-            width: 30px;
-            height: 1px;
-            background: #fff;
-            position: absolute;
-            animation: fazer1 0.2s linear infinite;
-          }
-          .ld-loader > span > span:nth-child(2) {
-            top: 3px;
-            animation: fazer2 0.4s linear infinite;
-          }
-          .ld-loader > span > span:nth-child(3) {
-            top: 1px;
-            animation: fazer3 0.4s linear infinite;
-            animation-delay: -1s;
-          }
-          .ld-loader > span > span:nth-child(4) {
-            top: 4px;
-            animation: fazer4 1s linear infinite;
-            animation-delay: -1s;
-          }
-          @keyframes fazer1 {
-            0%   { left: 0; }
-            100% { left: -80px; opacity: 0; }
-          }
-          @keyframes fazer2 {
-            0%   { left: 0; }
-            100% { left: -100px; opacity: 0; }
-          }
-          @keyframes fazer3 {
-            0%   { left: 0; }
-            100% { left: -50px; opacity: 0; }
-          }
-          @keyframes fazer4 {
-            0%   { left: 0; }
-            100% { left: -150px; opacity: 0; }
-          }
-          @keyframes speeder {
-            0%   { transform: translate(2px, 1px)   rotate(0deg);  }
-            10%  { transform: translate(-1px, -3px) rotate(-1deg); }
-            20%  { transform: translate(-2px, 0px)  rotate(1deg);  }
-            30%  { transform: translate(1px, 2px)   rotate(0deg);  }
-            40%  { transform: translate(1px, -1px)  rotate(1deg);  }
-            50%  { transform: translate(-1px, 3px)  rotate(-1deg); }
-            60%  { transform: translate(-1px, 1px)  rotate(0deg);  }
-            70%  { transform: translate(3px, 1px)   rotate(-1deg); }
-            80%  { transform: translate(-2px, -1px) rotate(1deg);  }
-            90%  { transform: translate(2px, 1px)   rotate(0deg);  }
-            100% { transform: translate(1px, -2px)  rotate(-1deg); }
-          }
-          .ld-longfazers {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-          }
-          .ld-longfazers span {
-            position: absolute;
-            height: 2px;
-            width: 20%;
-            background: #fff;
-          }
-          .ld-longfazers span:nth-child(1) {
-            top: 20%;
-            animation: lf 0.6s linear infinite;
-            animation-delay: -5s;
-          }
-          .ld-longfazers span:nth-child(2) {
-            top: 40%;
-            animation: lf2 0.8s linear infinite;
-            animation-delay: -1s;
-          }
-          .ld-longfazers span:nth-child(3) {
-            top: 60%;
-            animation: lf3 0.6s linear infinite;
-          }
-          .ld-longfazers span:nth-child(4) {
-            top: 80%;
-            animation: lf4 0.5s linear infinite;
-            animation-delay: -3s;
-          }
-          @keyframes lf {
-            0%   { left: 200%; }
-            100% { left: -200%; opacity: 0; }
-          }
-          @keyframes lf2 {
-            0%   { left: 200%; }
-            100% { left: -200%; opacity: 0; }
-          }
-          @keyframes lf3 {
-            0%   { left: 200%; }
-            100% { left: -100%; opacity: 0; }
-          }
-          @keyframes lf4 {
-            0%   { left: 200%; }
-            100% { left: -100%; opacity: 0; }
+          @keyframes flowe-three {
+            0%   { transform: scale(0.5) rotateZ(10deg) translateY(-200px) translateX(100px); opacity: 0; }
+            25%  { transform: scale(1) rotateZ(5deg) translateY(-100px) translateX(50px); opacity: 1; }
+            50%  { transform: scale(1) rotateZ(0deg) translateY(0px) translateX(25px); opacity: 1; }
+            75%  { transform: scale(0.5) rotateZ(-5deg) translateY(50px) translateX(0px); opacity: 1; }
+            100% { transform: scale(0) rotateZ(-10deg) translateY(100px) translateX(-25px); opacity: 0; }
           }
           @keyframes ld-fade-in {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(8px); }
             to   { opacity: 1; transform: translateY(0); }
           }
         `}</style>
 
-        {/* Speeder loader */}
-        <div style={{ position:'relative', width:300, height:120 }}>
-          <div className="ld-longfazers">
-            <span /><span /><span /><span />
-          </div>
-          <div className="ld-loader">
-            <span className="ld-base">
-              <span />
-            </span>
-            <span>
-              <span /><span /><span /><span />
-            </span>
-            <div className="ld-face" />
-          </div>
+        <div className="ld-bg-glow" />
+
+        {/* Petal loader */}
+        <div className="ld-loader-wrap">
+          {/* Petal SVG — three instances */}
+          {[{cls:'ld-petal-one'},{cls:'ld-petal-two'},{cls:'ld-petal-three'}].map(({cls})=>(
+            <div key={cls} className={cls}>
+              <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g>
+                  <path d="M50 10 C30 10, 10 30, 10 50 C10 70, 30 90, 50 90 C50 90, 50 70, 50 50 C50 30, 50 10, 50 10Z" fill="#7c3aed"/>
+                  <path d="M50 10 C70 10, 90 30, 90 50 C90 70, 70 90, 50 90 C50 90, 50 70, 50 50 C50 30, 50 10, 50 10Z" fill="#a78bfa" opacity="0.6"/>
+                </g>
+              </svg>
+            </div>
+          ))}
         </div>
 
-        {/* Branding below */}
-        <div style={{ marginTop:72, textAlign:'center', animation:'ld-fade-in .7s ease both', animationDelay:'.2s' }}>
-          <img src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?rlkey=b1a3nx3wav2jnd7ooce0qmhfp&st=n25kfxvg&raw=1" alt="1999X" style={{ height:52, objectFit:'contain', marginBottom:6, filter:'drop-shadow(0 0 20px rgba(139,92,246,.55))' }}/>
-          <div style={{ fontSize:12, letterSpacing:'.2em', textTransform:'uppercase', color:'rgba(255,255,255,.35)', fontWeight:600 }}>
+        {/* Logo + text */}
+        <div style={{ marginTop:48, textAlign:'center', animation:'ld-fade-in .6s ease both', animationDelay:'.15s', display:'flex', flexDirection:'column', alignItems:'center', gap:14 }}>
+          <div style={{ fontSize:11, letterSpacing:'.25em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', fontWeight:700 }}>
             Loading your panel…
           </div>
         </div>

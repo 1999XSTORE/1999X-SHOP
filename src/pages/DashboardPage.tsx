@@ -366,13 +366,17 @@ export default function DashboardPage() {
   const [bonusCooldown, setBonusCooldown] = useState('');
   const [canClaimBonus, setCanClaimBonus] = useState(false);
   const [claimingBonus, setClaimingBonus] = useState(false);
+  const [bonusLoaded, setBonusLoaded] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
+    setBonusLoaded(false);
     fetchBonusRow(user.id).then((row) => {
-      if (!row) return;
-      setBonusPoints(row.bonus_points ?? 0);
-      setLastBonusClaim(row.last_claim_time ?? null);
+      if (row) {
+        setBonusPoints(row.bonus_points ?? 0);
+        setLastBonusClaim(row.last_claim_time ?? null);
+      }
+      setBonusLoaded(true);
     });
   }, [user?.id]);
 
@@ -401,9 +405,20 @@ export default function DashboardPage() {
   }, [lastBonusClaim]);
 
   const handleClaimBonus = async () => {
-    if (!user || !canClaimBonus || claimingBonus) return;
+    if (!user || !canClaimBonus || claimingBonus || !bonusLoaded) return;
     setClaimingBonus(true);
+    // Always re-fetch from DB to prevent double-claim on race condition
     const latest = await fetchBonusRow(user.id);
+    if (latest?.last_claim_time) {
+      const diff = BONUS_COOLDOWN - (Date.now() - new Date(latest.last_claim_time).getTime());
+      if (diff > 0) {
+        setLastBonusClaim(latest.last_claim_time);
+        setCanClaimBonus(false);
+        setClaimingBonus(false);
+        toast.error('Already claimed recently. Please wait.');
+        return;
+      }
+    }
     const nextPoints = (latest?.bonus_points ?? bonusPoints) + 10;
     const claimTime = new Date().toISOString();
     const { error } = await upsertBonusRow(user.id, user.email, nextPoints, claimTime);
@@ -595,7 +610,11 @@ export default function DashboardPage() {
               <span style={{ fontSize:28, fontWeight:900, color:'#fbbf24', letterSpacing:'-.03em' }}>{bonusPoints}</span>
               <span style={{ fontSize:11, color:'rgba(255,255,255,.3)', fontWeight:500 }}>{t('bonus.title')}</span>
             </div>
-            {canClaimBonus
+            {!bonusLoaded
+              ? <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'rgba(255,255,255,.25)' }}>
+                  <Loader2 size={11} className="animate-spin" /> Loading…
+                </div>
+              : canClaimBonus
               ? <button className="btn btn-sm" style={{ background:'linear-gradient(135deg,#fbbf24,#f59e0b)', color:'#3a1a00', fontWeight:800, border:'none', boxShadow:'0 0 20px rgba(245,158,11,.4)', padding:'9px 18px', borderRadius:11, fontSize:13 }}
                   onClick={handleClaimBonus} disabled={claimingBonus}>
                   {claimingBonus ? <><Loader2 size={12} className="animate-spin" /> Claiming…</> : t('dashboard.claimNow')}
