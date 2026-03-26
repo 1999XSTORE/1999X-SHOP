@@ -730,14 +730,7 @@ export default function ResellerPage() {
                 <div style={{ padding:'8px 16px',borderRadius:99,background:'rgba(139,92,246,.1)',border:'1px solid rgba(139,92,246,.22)',fontSize:12,fontWeight:700,color:'#a78bfa' }}>
                   {planConfig?.displayFee}
                 </div>
-                <div style={{ padding:'8px 16px',borderRadius:99,background:'rgba(251,191,36,.1)',border:'1px solid rgba(251,191,36,.22)',fontSize:12,fontWeight:700,color:'#fbbf24' }}>
-                  Shop balance: ${balance.toFixed(2)}
-                </div>
               </div>
-            </div>
-
-            <div style={{ padding:'12px 16px',borderRadius:14,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)',fontSize:12,color:'rgba(255,255,255,.5)' }}>
-              The reseller dashboard balance is your referral earnings wallet. Your subscription cost is deducted from your main shop balance shown above and in the top bar.
             </div>
 
             {/* ── Stats row ── */}
