@@ -4,6 +4,7 @@ import { Check, ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { getCatalogProductText } from '@/lib/productText';
 
 const badgeStyles = {
   green: { bg: 'bg-emerald/10 border-emerald/30', text: 'text-emerald', dot: 'bg-emerald shadow-[0_0_6px] shadow-emerald' },
@@ -33,10 +34,11 @@ export default function ProductCard({ product, index }: { product: Product; inde
   const { balance, purchaseProduct } = useAppStore();
   const [purchasing, setPurchasing] = useState(false);
   const badge = badgeStyles[product.badgeType];
+  const copy = getCatalogProductText(t, product);
 
   const handlePurchase = () => {
     if (balance < product.price) {
-      toast.error(t('products.insufficient'));
+      toast.error(t('shop.insufficientBalance'));
       return;
     }
     setPurchasing(true);
@@ -72,7 +74,7 @@ export default function ProductCard({ product, index }: { product: Product; inde
         {/* Badge */}
         <div className={cn('absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase backdrop-blur-xl border', badge.bg, badge.text)}>
           <span className={cn('w-[5px] h-[5px] rounded-full animate-[pulse-dot_2s_ease-in-out_infinite]', badge.dot)} />
-          {product.badge}
+          {copy.badge}
         </div>
         {/* Gradient overlay */}
         <div className={cn('absolute bottom-0 left-0 right-0 h-20 pointer-events-none',
@@ -84,12 +86,12 @@ export default function ProductCard({ product, index }: { product: Product; inde
 
       {/* Body */}
       <div className="p-[18px]">
-        <h3 className="text-base font-bold text-foreground mb-1.5 tracking-tight">{product.name}</h3>
-        <p className="text-[11.5px] text-muted-foreground leading-relaxed mb-4">{product.description}</p>
+        <h3 className="text-base font-bold text-foreground mb-1.5 tracking-tight">{copy.name}</h3>
+        <p className="text-[11.5px] text-muted-foreground leading-relaxed mb-4">{copy.description}</p>
 
         {/* Features */}
         <ul className="space-y-1.5 mb-4">
-          {product.features.map((f) => (
+          {copy.features.map((f) => (
             <li key={f} className="flex items-center gap-2 text-[11px] font-medium text-secondary-foreground">
               <span className={cn('w-3.5 h-3.5 rounded flex items-center justify-center text-[7px] font-extrabold', tickColor[product.badgeType])}>
                 <Check className="w-2.5 h-2.5" />
@@ -104,11 +106,11 @@ export default function ProductCard({ product, index }: { product: Product; inde
 
         {/* Price */}
         <div className="flex items-baseline gap-1.5 mb-3.5">
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">From</span>
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{t('products.from')}</span>
           <span className={cn('text-[26px] font-extrabold tracking-tight leading-none', priceColor[product.badgeType])}>
             ${product.price}
           </span>
-          <span className="text-[11px] text-muted-foreground">/{product.duration}</span>
+          <span className="text-[11px] text-muted-foreground">/{copy.duration}</span>
         </div>
 
         {/* Buy button */}
@@ -122,11 +124,11 @@ export default function ProductCard({ product, index }: { product: Product; inde
           )}
         >
           {purchasing ? (
-            <span className="animate-pulse">Processing...</span>
+            <span className="animate-pulse">{t('products.processing')}</span>
           ) : (
             <>
               <ShoppingCart className="w-3.5 h-3.5" />
-              {t('products.buy')}
+              {t('shop.buy')}
             </>
           )}
         </button>

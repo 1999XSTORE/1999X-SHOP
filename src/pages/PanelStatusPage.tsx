@@ -6,6 +6,7 @@ import { useAppStore } from '@/lib/store';
 import { CheckCircle, Sparkles, Wrench, RefreshCw, Users, Zap, Globe, Plus, Trash2, Send, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { canManageAnnouncements } from '@/lib/roles';
 
 const TYPE_CFG = {
   update:      { Icon: Sparkles, c:'var(--green)',  bg:'rgba(16,232,152,.07)',  bc:'rgba(16,232,152,.16)',  badge:'badge-green'  },
@@ -27,7 +28,7 @@ interface DBAnn { id:string; title:string; content:string; type:'update'|'mainte
 export default function PanelStatusPage() {
   const { t }           = useTranslation();
   const { user, systemStatus } = useAppStore();
-  const isMod           = user?.role === 'admin' || user?.role === 'support';
+  const isMod           = canManageAnnouncements(user?.role);
   const isOnline        = systemStatus === 'online';
 
   const [lag,     setLag]     = useState(OFFLINE);

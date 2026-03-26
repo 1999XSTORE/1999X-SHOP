@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppStore } from '@/lib/store';
-import { Trash2, Edit2, Reply, X, Crown, Shield, Copy, Smile, Hash, Lock, Users } from 'lucide-react';
+import { Trash2, Edit2, Reply, X, Crown, Shield, Copy, Smile, Hash, Lock, Users, Handshake, Headset } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { logActivity, notifyAll, notifyUser, sendNotificationEmail } from '@/lib/activity';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { canModerateChat, extractMentionedRole, normalizeRole, ROLE_META, ROLE_ORDER, type AppRole } from '@/lib/roles';
 
 // ── Types ────────────────────────────────────────────────────
 interface Msg {
@@ -19,6 +20,7 @@ interface Msg {
   reply_to?: string | null;
   is_private?: boolean;
   private_target_user_id?: string | null;
+  target_role?: AppRole | null;
 }
 
 interface OnlineUser {
@@ -28,8 +30,12 @@ interface OnlineUser {
   userRole: string;
 }
 
-function canSeeMessage(msg: Msg, currentUserId: string) {
-  return !msg.is_private || msg.user_id === currentUserId || msg.private_target_user_id === currentUserId;
+function canSeeMessage(msg: Msg, currentUserId: string, currentRole: AppRole) {
+  if (currentRole === 'owner') return true;
+  if (msg.user_id === currentUserId) return true;
+  if (msg.is_private) return msg.private_target_user_id === currentUserId;
+  if (msg.target_role) return currentRole === msg.target_role;
+  return true;
 }
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -47,8 +53,10 @@ function timeAgo(dateStr: string): string {
 
 function Avatar({ src, name, size = 34, role }: { src?: string; name: string; size?: number; role?: string }) {
   const colors: Record<string, string> = {
+    owner:   'linear-gradient(135deg,#f59e0b,#d97706)',
     admin:   'linear-gradient(135deg,#ef4444,#b91c1c)',
     support: 'linear-gradient(135deg,#3b82f6,#1d4ed8)',
+    reseller:'linear-gradient(135deg,#10b981,#059669)',
     user:    'linear-gradient(135deg,#8b5cf6,#6d28d9)',
   };
   const bg = colors[role ?? 'user'] ?? colors.user;
@@ -64,24 +72,22 @@ function Avatar({ src, name, size = 34, role }: { src?: string; name: string; si
 }
 
 function RoleBadge({ role }: { role: string }) {
-  if (role === 'admin') return (
-    <span style={{ display:'inline-flex',alignItems:'center',gap:2,fontSize:8,fontWeight:800,padding:'2px 5px',borderRadius:20,background:'rgba(239,68,68,.12)',color:'#f87171',border:'1px solid rgba(239,68,68,.25)',letterSpacing:'.04em' }}>
-      <Crown size={7}/> ADMIN
+  const normalized = normalizeRole(role);
+  if (normalized === 'user') return null;
+  const meta = ROLE_META[normalized];
+  const Icon = normalized === 'owner' ? Crown : normalized === 'admin' ? Shield : normalized === 'support' ? Headset : Handshake;
+  return (
+    <span style={{ display:'inline-flex',alignItems:'center',gap:3,fontSize:8,fontWeight:900,padding:'2px 7px',borderRadius:20,background:meta.bg,color:meta.color,border:`1px solid ${meta.border}`,letterSpacing:'.06em',boxShadow:`0 0 12px ${meta.glow}` }}>
+      <Icon size={7}/> {meta.shortLabel}
     </span>
   );
-  if (role === 'support') return (
-    <span style={{ display:'inline-flex',alignItems:'center',gap:2,fontSize:8,fontWeight:800,padding:'2px 5px',borderRadius:20,background:'rgba(59,130,246,.12)',color:'#60a5fa',border:'1px solid rgba(59,130,246,.25)',letterSpacing:'.04em' }}>
-      <Shield size={7}/> SUPPORT
-    </span>
-  );
-  return null;
 }
 
 const REACTIONS = ['👍','❤️','🔥','😂','😮','😢'];
 
 // ── Message Component ────────────────────────────────────────
-function Message({ msg, isOwn, isMod, currentUserId, onReply, onDelete, onEdit, allMsgs, compact }: {
-  msg: Msg; isOwn: boolean; isMod: boolean; currentUserId: string;
+function Message({ msg, isOwn, isMod, currentUserId, currentUserRole, onReply, onDelete, onEdit, allMsgs, compact }: {
+  msg: Msg; isOwn: boolean; isMod: boolean; currentUserId: string; currentUserRole: AppRole;
   onReply: (m: Msg) => void; onDelete: (id: string) => void; onEdit: (m: Msg) => void;
   allMsgs: Msg[]; compact?: boolean;
 }) {
@@ -90,17 +96,17 @@ function Message({ msg, isOwn, isMod, currentUserId, onReply, onDelete, onEdit, 
   const [showEmoji, setShowEmoji] = useState(false);
   const [reactions, setReactions] = useState<Record<string, string[]>>({});
   const replyMsg = msg.reply_to ? allMsgs.find(m => m.id === msg.reply_to) : null;
+  const msgRole = normalizeRole(msg.user_role);
 
   const isPrivate = !!msg.is_private;
-  const canSeePrivate = canSeeMessage(msg, currentUserId);
-  if (isPrivate && !canSeePrivate) return null;
+  const canSeePrivate = canSeeMessage(msg, currentUserId, currentUserRole);
+  if ((isPrivate || msg.target_role) && !canSeePrivate) return null;
 
-  const isAdminMsg   = msg.user_role === 'admin';
-  const isSupportMsg = msg.user_role === 'support';
+  const roleMeta = ROLE_META[msgRole];
   const displayMessage = msg.image_url && msg.message === 'Image' ? '' : msg.message;
 
-  const msgBg = isPrivate ? 'rgba(139,92,246,.08)' : isAdminMsg ? 'rgba(239,68,68,.04)' : isSupportMsg ? 'rgba(59,130,246,.04)' : hovered ? 'rgba(255,255,255,.02)' : 'transparent';
-  const msgBorder = isPrivate ? '1px solid rgba(139,92,246,.18)' : 'none';
+  const msgBg = isPrivate || msg.target_role ? roleMeta.bg : hovered ? 'rgba(255,255,255,.02)' : 'transparent';
+  const msgBorder = isPrivate || msg.target_role ? `1px solid ${roleMeta.border}` : 'none';
 
   const copy = () => { navigator.clipboard.writeText(msg.message); toast.success(t('common.copied')); };
   const addReaction = (emoji: string) => {
@@ -125,10 +131,15 @@ function Message({ msg, isOwn, isMod, currentUserId, onReply, onDelete, onEdit, 
       <div style={{ flex:1, minWidth:0 }}>
         {/* Header */}
         <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:2, flexWrap:'wrap' }}>
-          <span style={{ fontSize:compact?12:13, fontWeight:700, color:isAdminMsg?'#f87171':isSupportMsg?'#60a5fa':'#fff', lineHeight:1.2 }}>
+          <span style={{ fontSize:compact?12:13, fontWeight:700, color:msgRole === 'user' ? '#fff' : roleMeta.color, lineHeight:1.2, textShadow:msgRole === 'user' ? 'none' : `0 0 12px ${roleMeta.glow}` }}>
             {msg.user_name}
           </span>
           <RoleBadge role={msg.user_role}/>
+          {msg.target_role && (
+            <span style={{ display:'inline-flex',alignItems:'center',gap:2,fontSize:8,fontWeight:800,padding:'2px 6px',borderRadius:20,background:ROLE_META[msg.target_role].bg,color:ROLE_META[msg.target_role].color,border:`1px solid ${ROLE_META[msg.target_role].border}`,boxShadow:`0 0 10px ${ROLE_META[msg.target_role].glow}` }}>
+              <Lock size={7}/> @{msg.target_role}
+            </span>
+          )}
           {isPrivate && (
             <span style={{ display:'inline-flex',alignItems:'center',gap:2,fontSize:8,fontWeight:700,padding:'2px 5px',borderRadius:20,background:'rgba(139,92,246,.1)',color:'var(--purple)',border:'1px solid rgba(139,92,246,.2)' }}>
               <Lock size={7}/> {t('chat.privateSupport')}
@@ -148,8 +159,8 @@ function Message({ msg, isOwn, isMod, currentUserId, onReply, onDelete, onEdit, 
         {/* Text */}
         {displayMessage && (
           <p style={{ fontSize:compact?13:13.5, color:'rgba(255,255,255,.82)', lineHeight:1.5, wordBreak:'break-word', whiteSpace:'pre-wrap', margin:0 }}>
-            {displayMessage.split(/(@admin|@support)/g).map((part, i) =>
-              part==='@admin'||part==='@support'
+            {displayMessage.split(/(@owner|@admin|@support|@reseller)/gi).map((part, i) =>
+              /^@(owner|admin|support|reseller)$/i.test(part)
                 ? <span key={i} style={{ color:'var(--purple)',fontWeight:700,background:'rgba(139,92,246,.1)',padding:'1px 4px',borderRadius:4 }}>{part}</span>
                 : part
             )}
@@ -206,6 +217,7 @@ function TypingDots() {
 export default function ChatPage() {
   const { user } = useAppStore();
   const { t } = useTranslation();
+  const currentRole = normalizeRole(user?.role);
   const [messages,    setMessages]    = useState<Msg[]>([]);
   const [input,       setInput]       = useState('');
   const [editId,      setEditId]      = useState<string|null>(null);
@@ -223,21 +235,21 @@ export default function ChatPage() {
   const lastSent    = useRef(0);
   const channelRef  = useRef<any>(null);
 
-  const isMod = user?.role==='admin' || user?.role==='support';
-  const isMentionMessage = useCallback((txt: string) => /(^|\s)@(admin|support)\b/i.test(txt), []);
+  const isMod = canModerateChat(currentRole);
+  const isMentionMessage = useCallback((txt: string) => extractMentionedRole(txt) !== null, []);
   const shouldCreatePrivateReply = useCallback((parent: Msg | null) => {
     if (!user || !parent) return false;
     if (parent.is_private) return true;
-    return (user.role === 'admin' || user.role === 'support') && parent.user_role === 'user' && isMentionMessage(parent.message);
-  }, [isMentionMessage, user]);
+    return canModerateChat(currentRole) && normalizeRole(parent.user_role) === 'user' && isMentionMessage(parent.message);
+  }, [currentRole, isMentionMessage, user]);
   const getPrivateTargetId = useCallback((parent: Msg | null) => {
     if (!parent) return null;
     return parent.private_target_user_id ?? parent.user_id ?? null;
   }, []);
   const filterVisibleMessages = useCallback((rows: Msg[]) => {
     if (!user?.id) return [];
-    return rows.filter((row) => canSeeMessage(row, user.id));
-  }, [user?.id]);
+    return rows.filter((row) => canSeeMessage(row, user.id, currentRole));
+  }, [currentRole, user?.id]);
 
   const readFileAsDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -270,12 +282,12 @@ export default function ChatPage() {
 
     ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages'},({new:m})=>{
       const next = m as Msg;
-      if (!canSeeMessage(next, user.id)) return;
+      if (!canSeeMessage(next, user.id, currentRole)) return;
       setMessages(p=>{ if(p.find(x=>x.id===next.id)) return p; return [...p,next]; });
     })
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'chat_messages'},({new:m})=>{
       const next = m as Msg;
-      if (!canSeeMessage(next, user.id)) {
+      if (!canSeeMessage(next, user.id, currentRole)) {
         setMessages(p => p.filter(x => x.id !== next.id));
         return;
       }
@@ -313,7 +325,7 @@ export default function ChatPage() {
     });
     channelRef.current=ch;
     return ()=>{ supabase.removeChannel(ch); };
-  }, [user?.id]);
+  }, [currentRole, user?.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({behavior:'smooth'});
@@ -329,14 +341,15 @@ export default function ChatPage() {
     if(!txt||!user) return;
     if(Date.now()-lastSent.current<1000){toast.error(t('common.tryAgain'));return;}
     lastSent.current=Date.now();
-    const isPrivate = shouldCreatePrivateReply(replyTo);
+    const targetRole = replyTo?.target_role ?? extractMentionedRole(txt);
+    const isPrivate = !targetRole && shouldCreatePrivateReply(replyTo);
     const privateTargetId = isPrivate ? getPrivateTargetId(replyTo) : null;
     setInput('');setReplyTo(null);
     if (inputRef.current) { inputRef.current.style.height='auto'; }
     const tempId=`temp_${Date.now()}`;
-    const optimistic:Msg={id:tempId,user_id:user.id,user_email:user.email,user_name:user.name,user_avatar:user.avatar||'',user_role:user.role||'user',message:txt,created_at:new Date().toISOString(),reply_to:replyTo?.id||null,is_private:isPrivate,private_target_user_id:privateTargetId};
+    const optimistic:Msg={id:tempId,user_id:user.id,user_email:user.email,user_name:user.name,user_avatar:user.avatar||'',user_role:currentRole,message:txt,created_at:new Date().toISOString(),reply_to:replyTo?.id||null,is_private:isPrivate,private_target_user_id:privateTargetId,target_role:targetRole};
     setMessages(p=>[...p,optimistic]);
-    const {data,error}=await supabase.from('chat_messages').insert({user_id:user.id,user_email:user.email,user_name:user.name,user_avatar:user.avatar||'',user_role:user.role||'user',message:txt,reply_to:replyTo?.id||null,is_private:isPrivate,private_target_user_id:privateTargetId}).select().single();
+    const {data,error}=await supabase.from('chat_messages').insert({user_id:user.id,user_email:user.email,user_name:user.name,user_avatar:user.avatar||'',user_role:currentRole,message:txt,reply_to:replyTo?.id||null,is_private:isPrivate,private_target_user_id:privateTargetId,target_role:targetRole}).select().single();
     if(error){toast.error(error.message || t('common.error'));setMessages(p=>p.filter(m=>m.id!==tempId));setInput(txt);}
     else if(data){
       setMessages(p=>p.map(m=>m.id===tempId?data:m));
@@ -346,11 +359,11 @@ export default function ChatPage() {
         logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'private_reply', status:'success', meta:{ preview:txt.slice(0,60), target_user_id:privateTargetId } });
       }
       // Log activity (skip private messages to avoid spamming logs)
-      if(!isPrivate && user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'message_sent', status:'success', meta:{ preview:txt.slice(0,40) } });
+      if(!isPrivate && user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'message_sent', status:'success', meta:{ preview:txt.slice(0,40), target_role:targetRole } });
       // Notify all users of new chat message (small badge increment)
-      if(!isPrivate) notifyAll({ type:'chat', title:`New chat from ${user?.name?.split(' ')[0]}: ${txt.slice(0,50)}`, body:'', linkPath:'/chat' });
+      if(!isPrivate && !targetRole) notifyAll({ type:'chat', title:`New chat from ${user?.name?.split(' ')[0]}: ${txt.slice(0,50)}`, body:'', linkPath:'/chat' });
     }
-  },[input,user,replyTo,shouldCreatePrivateReply,getPrivateTargetId,t]);
+  },[currentRole, input, user, replyTo, shouldCreatePrivateReply, getPrivateTargetId, t]);
 
   const handleDelete = async (id: string) => {
     // Optimistic: remove immediately from local state, realtime confirms for other users
@@ -369,10 +382,10 @@ export default function ChatPage() {
     setEditId(null);setEditText('');
   };
 
-  const roleOrder:Record<string,number>={admin:0,support:1,user:2};
+  const roleOrder:Record<string,number> = Object.fromEntries(ROLE_ORDER.map((role, index) => [role, index]));
   const sortedOnline=[...onlineUsers].sort((a,b)=>(roleOrder[a.userRole]??2)-(roleOrder[b.userRole]??2));
   const typingList=Object.values(typingUsers);
-  const isPrivateInput=input.includes('@admin')||input.includes('@support');
+  const isPrivateInput=extractMentionedRole(input) !== null;
 
   return (
     <>
@@ -506,6 +519,7 @@ export default function ChatPage() {
                   <Message
                     msg={msg} isOwn={msg.user_id===user?.id} isMod={isMod}
                     currentUserId={user?.id??''}
+                    currentUserRole={currentRole}
                     onReply={setReplyTo} onDelete={handleDelete}
                     onEdit={m=>{setEditId(m.id);setEditText(m.message);}}
                     allMsgs={messages} compact={isMobile}
@@ -544,8 +558,10 @@ export default function ChatPage() {
             <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:7, flexWrap:'wrap' }}>
               <span style={{ fontSize:9,color:'rgba(255,255,255,.18)',fontWeight:500 }}>Tip:</span>
               {[
+                {tag:'@owner',label:'Owner',c:'#fbbf24',bg:'rgba(251,191,36,.08)',bc:'rgba(251,191,36,.18)'},
+                {tag:'@admin',label:'Admin',c:'rgba(248,113,113,.9)',bg:'rgba(239,68,68,.08)',bc:'rgba(239,68,68,.18)'},
                 {tag:'@support',label:'Support',c:'rgba(96,165,250,.9)',bg:'rgba(59,130,246,.08)',bc:'rgba(59,130,246,.18)'},
-                {tag:'@admin',  label:'Admin',  c:'rgba(248,113,113,.9)',bg:'rgba(239,68,68,.08)', bc:'rgba(239,68,68,.18)'},
+                {tag:'@reseller',label:'Reseller',c:'rgba(52,211,153,.95)',bg:'rgba(52,211,153,.08)',bc:'rgba(52,211,153,.18)'},
               ].map(({tag,label,c,bg,bc})=>(
                 <button key={tag} onClick={()=>{setInput(p=>p?p+' '+tag+' ':tag+' ');inputRef.current?.focus();}}
                   style={{ display:'inline-flex',alignItems:'center',gap:4,padding:'2px 8px',borderRadius:20,background:bg,border:`1px solid ${bc}`,cursor:'pointer',fontFamily:'inherit',transition:'opacity .15s' }}
@@ -569,7 +585,7 @@ export default function ChatPage() {
                 )}
                 {!replyTo && isPrivateInput && (
                   <div style={{ display:'flex',alignItems:'center',gap:4,marginBottom:4 }}>
-                    <span style={{ fontSize:9,fontWeight:700,color:'var(--muted)' }}>Mentions stay public. Staff replies become private only in reply threads.</span>
+                    <span style={{ fontSize:9,fontWeight:700,color:'var(--muted)' }}>Role mentions are only visible to that role and the owner.</span>
                   </div>
                 )}
                 <textarea
@@ -621,11 +637,11 @@ export default function ChatPage() {
               </div>
             </div>
             <div className="chat-scroll" style={{ flex:1,overflowY:'auto',padding:'8px' }}>
-              {(['admin','support','user'] as const).map(role=>{
+              {(['owner','admin','support','reseller','user'] as const).map(role=>{
                 const group=sortedOnline.filter(u=>(u.userRole||'user')===role);
                 if(!group.length) return null;
-                const roleLabel=role==='admin'?'Admin':role==='support'?'Support':'Members';
-                const roleColor=role==='admin'?'#f87171':role==='support'?'#60a5fa':'var(--muted)';
+                const roleLabel=role==='user'?'Members':ROLE_META[role].label;
+                const roleColor=ROLE_META[role].color;
                 return (
                   <div key={role} style={{ marginBottom:12 }}>
                     <div style={{ fontSize:9,fontWeight:700,color:roleColor,textTransform:'uppercase',letterSpacing:'.1em',padding:'0 5px',marginBottom:5 }}>
@@ -640,7 +656,7 @@ export default function ChatPage() {
                           <div style={{ position:'absolute',bottom:0,right:0,width:7,height:7,borderRadius:'50%',background:'var(--green)',border:'2px solid var(--bg)',boxShadow:'0 0 5px var(--green)' }}/>
                         </div>
                         <div style={{ flex:1,minWidth:0 }}>
-                          <div style={{ fontSize:11,fontWeight:600,color:role==='admin'?'#f87171':role==='support'?'#60a5fa':'rgba(255,255,255,.72)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+                          <div style={{ fontSize:11,fontWeight:600,color:role==='user'?'rgba(255,255,255,.72)':roleColor,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
                             {u.userName}
                           </div>
                         </div>

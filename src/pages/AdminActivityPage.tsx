@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/lib/store';
 import { Activity, AlertTriangle, RefreshCw, Search } from 'lucide-react';
+import { canAccessActivity } from '@/lib/roles';
 
 interface Log {
   id: string;
@@ -51,7 +52,7 @@ function getDetail(log: Log) {
 
 export default function AdminActivityPage() {
   const { user } = useAppStore();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = canAccessActivity(user?.role);
   const [logs, setLogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

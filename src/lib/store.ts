@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { AppRole } from '@/lib/roles';
 
 export interface User {
   id: string;
   email: string;
   name: string;
   avatar: string;
-  role: 'user' | 'admin' | 'support';
+  role: AppRole;
 }
 
 export interface Transaction {
@@ -52,7 +53,7 @@ export interface ChatMessage {
   userId: string;
   userName: string;
   userAvatar: string;
-  userRole: 'user' | 'admin' | 'support';
+  userRole: AppRole;
   message: string;
   timestamp: string;
   highlighted?: boolean;
@@ -82,6 +83,7 @@ interface AppState {
 
   login: (user: User) => void;
   logout: () => void;
+  setUserRole: (role: AppRole) => void;
   setBalance: (amount: number) => void;
   addBalance: (amount: number) => void;
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
@@ -286,6 +288,10 @@ export const useAppStore = create<AppState>()(
           lastBonusClaim:   saved.lastBonusClaim,
         });
       },
+
+      setUserRole: (role) => set((state) => ({
+        user: state.user ? { ...state.user, role } : null,
+      })),
 
       logout: () => {
         // Save current data before clearing the screen

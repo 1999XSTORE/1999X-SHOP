@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils';
 import { captureReferralFromUrl, getStoredReferralEmail, normalizeReferralValue, normalizeResellerEmail, clearStoredReferralEmail } from '@/lib/reseller';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { canApprovePayments, isOwner } from '@/lib/roles';
+import { getCatalogProductText, getLicenseDisplayName, getWalletPanelText, getWalletPlanLabel } from '@/lib/productText';
 
 const SUPABASE_URL  = 'https://awjouzwzdkrevvnlenvn.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3am91end6ZGtyZXZ2bmxlbnZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTg4MjEsImV4cCI6MjA5MDAzNDgyMX0._I_I-WA_8-YqDfaRzKiVgpEAhkH9faxlEIV6e766A0M';
@@ -491,6 +493,7 @@ function AdminPanel() {
 }
 // ── Purchase Success Modal (logic unchanged) ─────────────────
 function PurchaseSuccessModal({ data, onClose }: { data: { product: any; keys: Array<{ key: string; panelId: string; panelName: string; expiresAt: string }> }; onClose: () => void }) {
+  const { t } = useTranslation();
   const [revealed,setRevealed] = useState<Record<number,boolean>>({});
   const [copied,setCopied] = useState<Record<number,boolean>>({});
   const copyKey = (k: string, i: number) => { navigator.clipboard.writeText(k); setCopied(p=>({...p,[i]:true})); setTimeout(()=>setCopied(p=>({...p,[i]:false})),2000); };
@@ -498,25 +501,25 @@ function PurchaseSuccessModal({ data, onClose }: { data: { product: any; keys: A
     <div style={{ position:'fixed',inset:0,zIndex:70,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.85)',backdropFilter:'blur(14px)',padding:16 }} onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="g si" style={{ width:'100%',maxWidth:440,padding:'32px 28px',textAlign:'center',boxShadow:'0 0 80px rgba(16,232,152,.12),0 32px 80px rgba(0,0,0,.7)',borderColor:'rgba(16,232,152,.22)',overflowY:'auto',maxHeight:'90vh' }}>
         <div style={{ width:64,height:64,borderRadius:20,background:'rgba(16,232,152,.1)',border:'1px solid rgba(16,232,152,.2)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 18px',boxShadow:'0 0 40px rgba(16,232,152,.2)' }}><CheckCircle size={32} color="var(--green)"/></div>
-        <div style={{ fontSize:22,fontWeight:800,color:'#fff',marginBottom:5 }}>Purchase Successful!</div>
-        <div style={{ fontSize:13,color:'var(--muted)',marginBottom:22 }}>Your {data.product.name} license is ready</div>
+        <div style={{ fontSize:22,fontWeight:800,color:'#fff',marginBottom:5 }}>{t('shop.purchaseSuccess')}</div>
+        <div style={{ fontSize:13,color:'var(--muted)',marginBottom:22 }}>{t('shop.keyReady')}</div>
         {data.keys.map((k,i)=>(
           <div key={i} style={{ background:'rgba(255,255,255,.03)',border:'1px solid rgba(139,92,246,.2)',borderRadius:14,padding:16,marginBottom:12,textAlign:'left' }}>
-            <div style={{ fontSize:10,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:8 }}>{k.panelName} License Key</div>
+            <div style={{ fontSize:10,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:8 }}>{getLicenseDisplayName(t, k.panelId, k.panelName)} {t('license.title').replace('Activate ', '')}</div>
             <div style={{ position:'relative',background:'rgba(255,255,255,.03)',border:'1px solid var(--border)',borderRadius:10,padding:'12px 14px',marginBottom:10,display:'flex',alignItems:'center',gap:10 }}>
               <code style={{ flex:1,fontSize:13,fontFamily:'monospace',color:'#fff',letterSpacing:'2px',filter:revealed[i]?'none':'blur(7px)',transition:'filter .4s',wordBreak:'break-all' }}>{k.key}</code>
               <button onClick={()=>setRevealed(p=>({...p,[i]:!p[i]}))} style={{ background:'rgba(255,255,255,.06)',border:'1px solid var(--border)',borderRadius:7,padding:'5px 8px',cursor:'pointer',color:'var(--muted)',flexShrink:0 }}>{revealed[i]?<EyeOff size={14}/>:<Eye size={14}/>}</button>
             </div>
-            {!revealed[i]&&<div style={{ textAlign:'center',marginBottom:10 }}><span style={{ fontSize:11,color:'var(--dim)' }}>Click eye to reveal</span></div>}
-            <button onClick={()=>copyKey(k.key,i)} className="btn btn-ghost btn-sm btn-full">{copied[i]?<><CheckCircle size={13} color="var(--green)"/> Copied!</>:<><Copy size={13}/> Copy Key</>}</button>
+            {!revealed[i]&&<div style={{ textAlign:'center',marginBottom:10 }}><span style={{ fontSize:11,color:'var(--dim)' }}>{t('common.reveal')}</span></div>}
+            <button onClick={()=>copyKey(k.key,i)} className="btn btn-ghost btn-sm btn-full">{copied[i]?<><CheckCircle size={13} color="var(--green)"/> {t('common.copied')}</>:<><Copy size={13}/> {t('common.copy')}</>}</button>
             <div style={{ display:'flex',justifyContent:'space-between',marginTop:10,padding:'8px 12px',background:'rgba(255,255,255,.025)',borderRadius:8 }}>
-              <div style={{ fontSize:10,color:'var(--muted)' }}>Status: <span style={{ color:'var(--green)',fontWeight:700 }}>Active</span></div>
-              <div style={{ fontSize:10,color:'var(--muted)' }}>Expires: <span style={{ color:'var(--green)',fontWeight:700 }}>{new Date(k.expiresAt).toLocaleDateString()}</span></div>
+              <div style={{ fontSize:10,color:'var(--muted)' }}>{t('common.status')}: <span style={{ color:'var(--green)',fontWeight:700 }}>{t('common.active')}</span></div>
+              <div style={{ fontSize:10,color:'var(--muted)' }}>{t('wallet.expires')}: <span style={{ color:'var(--green)',fontWeight:700 }}>{new Date(k.expiresAt).toLocaleDateString()}</span></div>
             </div>
           </div>
         ))}
-        <p style={{ fontSize:11,color:'var(--dim)',marginBottom:18 }}>Keys saved to License page. Don't share them.</p>
-        <button onClick={onClose} className="btn btn-g btn-full btn-lg">Done</button>
+        <p style={{ fontSize:11,color:'var(--dim)',marginBottom:18 }}>{t('shop.keysSaved')}</p>
+        <button onClick={onClose} className="btn btn-g btn-full btn-lg">{t('common.done')}</button>
       </div>
     </div>
   );
@@ -524,14 +527,15 @@ function PurchaseSuccessModal({ data, onClose }: { data: { product: any; keys: A
 
 // ── Confirm Modal (logic unchanged) ──────────────────────────
 function ConfirmModal({ product, onConfirm, onCancel }: { product: { name: string; price: number; duration: string; emoji?: string }; onConfirm: () => void; onCancel: () => void }) {
+  const { t } = useTranslation();
   return (
     <div style={{ position:'fixed',inset:0,zIndex:80,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.82)',backdropFilter:'blur(14px)',padding:16 }}>
       <div className="g si" style={{ maxWidth:380,width:'100%',padding:'32px 28px',textAlign:'center',boxShadow:'0 0 80px rgba(139,92,246,.12),0 32px 80px rgba(0,0,0,.7)' }}>
         <div style={{ fontSize:40,marginBottom:16 }}>{product.emoji || '🛒'}</div>
-        <div style={{ fontSize:20,fontWeight:800,color:'#fff',marginBottom:8 }}>Confirm Purchase</div>
-        <div style={{ fontSize:13,color:'var(--muted)',marginBottom:24 }}>Please review your order before proceeding</div>
+        <div style={{ fontSize:20,fontWeight:800,color:'#fff',marginBottom:8 }}>{t('shop.confirmPurchase')}</div>
+        <div style={{ fontSize:13,color:'var(--muted)',marginBottom:24 }}>{t('shop.confirmDesc')}</div>
         <div style={{ background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)',borderRadius:14,padding:20,marginBottom:24,textAlign:'left' }}>
-          {[{l:'Product',v:product.name},{l:'Duration',v:product.duration}].map(r=>(
+          {[{l:t('wallet.product'),v:product.name},{l:t('wallet.duration'),v:product.duration}].map(r=>(
             <div key={r.l} style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10 }}>
               <span style={{ fontSize:13,color:'var(--muted)' }}>{r.l}</span>
               <span style={{ fontSize:14,fontWeight:700,color:'#fff' }}>{r.v}</span>
@@ -539,15 +543,15 @@ function ConfirmModal({ product, onConfirm, onCancel }: { product: { name: strin
           ))}
           <div style={{ height:1,background:'var(--border)',margin:'12px 0' }}/>
           <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center' }}>
-            <span style={{ fontSize:14,fontWeight:700,color:'var(--muted)' }}>Total</span>
+            <span style={{ fontSize:14,fontWeight:700,color:'var(--muted)' }}>{t('shop.total')}</span>
             <span style={{ fontSize:28,fontWeight:900,color:'#fff',letterSpacing:'-.03em' }}>${product.price}</span>
           </div>
         </div>
         <div style={{ display:'flex',gap:10 }}>
-          <button onClick={onCancel} className="btn btn-ghost" style={{ flex:1 }}>Cancel</button>
-          <button onClick={onConfirm} className="btn btn-p" style={{ flex:2,boxShadow:'0 0 24px rgba(109,40,217,.4)' }}>✅ Confirm Purchase</button>
+          <button onClick={onCancel} className="btn btn-ghost" style={{ flex:1 }}>{t('common.cancel')}</button>
+          <button onClick={onConfirm} className="btn btn-p" style={{ flex:2,boxShadow:'0 0 24px rgba(109,40,217,.4)' }}>{t('shop.confirmBtn')}</button>
         </div>
-        <p style={{ fontSize:11,color:'var(--dim)',marginTop:12 }}>Balance deducted immediately. Refunded if key fails.</p>
+        <p style={{ fontSize:11,color:'var(--dim)',marginTop:12 }}>{t('shop.refundNote')}</p>
       </div>
     </div>
   );
@@ -563,11 +567,13 @@ const PANEL_GROUPS = [
 ];
 
 function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUPS[number]; balance: number; onBuy: (plan: any) => void }) {
+  const { t } = useTranslation();
   const [sel, setSel] = useState(0);
   const plan = group.plans[sel];
   const can  = balance >= plan.price;
   const isFeatured = !!(group as any).featured;
   const basePerDay = group.plans[0].price / group.plans[0].days;
+  const copy = getWalletPanelText(t, group.id);
 
   const cardImage = group.id === 'internal'
     ? 'https://www.dropbox.com/scl/fi/vmjmtlagavp3qnxy44vng/Internal.png?rlkey=wu9oxjcrvwh1tw685aqa7z8gm&st=xsnlein0&raw=1'
@@ -595,7 +601,7 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
       }}>
         <img
           src={cardImage}
-          alt={group.name}
+          alt={copy.name}
           style={{
             width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top',
             display:'block', transition:'transform .5s cubic-bezier(.22,1,.36,1)',
@@ -625,7 +631,7 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
             boxShadow:'0 4px 20px rgba(251,191,36,.5)',
           }}>
             <span style={{ fontSize:11 }}>👑</span>
-            <span style={{ fontSize:9, fontWeight:900, letterSpacing:'.14em', textTransform:'uppercase', color:'#fef3c7' }}>Best Value</span>
+            <span style={{ fontSize:9, fontWeight:900, letterSpacing:'.14em', textTransform:'uppercase', color:'#fef3c7' }}>{t('products.catalog.combo30d.badge')}</span>
           </div>
         )}
         {/* Price badge on image */}
@@ -638,7 +644,7 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
             textShadow:`0 0 30px ${group.glow}, 0 2px 8px rgba(0,0,0,.8)`,
           }}>${plan.price}</span>
           <span style={{ fontSize:12, color:'rgba(255,255,255,.5)', fontWeight:600, marginBottom:4 }}>
-            / {plan.label}
+            / {getWalletPlanLabel(t, plan.label)}
           </span>
         </div>
       </div>
@@ -656,8 +662,8 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
             fontSize:20, boxShadow:`0 0 18px ${group.glow}`,
           }}>{group.emoji}</div>
           <div>
-            <div style={{ fontSize:9, fontWeight:800, letterSpacing:'.18em', textTransform:'uppercase', color:group.color, opacity:.8, marginBottom:2 }}>{group.tagline}</div>
-            <div style={{ fontSize:18, fontWeight:900, color:'#fff', letterSpacing:'-.02em', lineHeight:1.15 }}>{group.name}</div>
+            <div style={{ fontSize:9, fontWeight:800, letterSpacing:'.18em', textTransform:'uppercase', color:group.color, opacity:.8, marginBottom:2 }}>{copy.tagline}</div>
+            <div style={{ fontSize:18, fontWeight:900, color:'#fff', letterSpacing:'-.02em', lineHeight:1.15 }}>{copy.name}</div>
           </div>
         </div>
 
@@ -688,7 +694,7 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
                     borderRadius:99, padding:'1px 5px',
                   }}>-{pSavePct}%</span>
                 )}
-                <span style={{ fontSize:12, fontWeight:700, color:active?group.color:'rgba(255,255,255,.45)' }}>{p.label}</span>
+                <span style={{ fontSize:12, fontWeight:700, color:active?group.color:'rgba(255,255,255,.45)' }}>{getWalletPlanLabel(t, p.label)}</span>
                 <span style={{ fontSize:16, fontWeight:900, color:active?'#fff':'rgba(255,255,255,.4)', letterSpacing:'-.03em' }}>${p.price}</span>
                 <span style={{ fontSize:9, color:'rgba(255,255,255,.25)', fontWeight:600 }}>${(p.price/p.days).toFixed(2)}/d</span>
               </button>
@@ -698,7 +704,7 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
 
         {/* Features */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 10px', marginBottom:18 }}>
-          {group.features.map(f=>(
+          {copy.features.map(f=>(
             <div key={f} style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:'rgba(255,255,255,.5)' }}>
               <div style={{
                 width:16, height:16, borderRadius:5, flexShrink:0,
@@ -715,7 +721,7 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
         {can ? (
           <button onClick={()=>onBuy({
             ...plan, keyauthPanel:plan.keyauthPanel, duration:`${plan.days} days`,
-            name:`${group.name} — ${plan.label}`, description:group.desc,
+            name:`${copy.name} — ${getWalletPlanLabel(t, plan.label)}`, description:copy.description,
             badgeType:isFeatured?'gold':group.id==='internal'?'green':'indigo', emoji:group.emoji,
           })} style={{
             width:'100%', padding:'15px 20px', borderRadius:14,
@@ -738,7 +744,7 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
           >
             <span style={{ display:'flex', alignItems:'center', gap:8 }}>
               <span style={{ fontSize:15 }}>⚡</span>
-              Get {plan.label} — ${plan.price}
+              {t('shop.buy')} {getWalletPlanLabel(t, plan.label)} — ${plan.price}
             </span>
             <div style={{
               width:32, height:32, borderRadius:10, background:group.color,
@@ -754,7 +760,7 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
             fontFamily:'inherit', background:'rgba(255,255,255,.03)',
             color:'rgba(255,255,255,.2)', border:'1px solid rgba(255,255,255,.06)', textAlign:'center',
           }}>
-            Insufficient Balance — Add Funds First
+            {t('shop.insufficientBalance')} — {t('wallet.addFunds')}
           </div>
         )}
 
@@ -1167,6 +1173,7 @@ export default function WalletPage() {
 
   const isAdmin   = user?.role === 'admin';
   const isSupport = user?.role === 'support';
+  const canApprove = canApprovePayments(user?.role);
   const normalizedUserEmail = normalizeResellerEmail(user?.email ?? '');
   const sortedPurchasedLicenses = [...licenses].sort((a, b) => new Date(b.expiresAt).getTime() - new Date(a.expiresAt).getTime());
 
@@ -1210,7 +1217,7 @@ export default function WalletPage() {
   }, [normalizedUserEmail]);
 
   useEffect(() => {
-    if (!user || isAdmin || isSupport) return;
+    if (!user || canApprove || isSupport) return;
     loadTxns();
     const onFocus = () => { void loadTxns(); };
     window.addEventListener('focus', onFocus);
@@ -1221,18 +1228,18 @@ export default function WalletPage() {
       window.removeEventListener('focus', onFocus);
       supabase.removeChannel(ch);
     };
-  }, [user?.id, isAdmin, isSupport]);
+  }, [user?.id, canApprove, isSupport]);
 
   const handleBuy = async (product: any) => {
-    if (balance < product.price) { toast.error('Insufficient balance. Add funds first.'); return; }
+    if (balance < product.price) { toast.error(t('shop.insufficientBalance')); return; }
     const deducted = deductBalance(product.price);
-    if (!deducted) { toast.error('Insufficient balance'); return; }
+    if (!deducted) { toast.error(t('shop.insufficientBalance')); return; }
     const panel = product.keyauthPanel ?? 'lag';
     const days  = product.days || parseInt(product.duration)||7;
     const toGen = panel==='both' ? ['internal','lag'] : [panel];
     const generatedKeys: Array<{key:string;panelId:string;panelName:string;expiresAt:string}> = [];
     const errors: string[] = [];
-    toast.loading('Generating your license key...', { id:'keygen' });
+    toast.loading(t('wallet.generatingKey'), { id:'keygen' });
     for (const p of toGen) {
       try {
         const controller = new AbortController();
@@ -1279,12 +1286,12 @@ export default function WalletPage() {
       refundBalance(product.price);
       const errDetail = errors.join(' | ');
       console.error('Key generation failed:', errDetail);
-      toast.error(`❌ Key generation failed. $${product.price} refunded. Error: ${errDetail}`, { duration: 12000 });
+      toast.error(`${t('wallet.keyGenerationFailed')} $${product.price}. ${errDetail}`, { duration: 12000 });
     }
   };
 
   // Admin view
-  if (isAdmin||isSupport) return (
+  if (canApprove) return (
     <div style={{ display:'flex',flexDirection:'column',gap:18 }}>
       <div className="g fu" style={{ padding:'20px 22px' }}>
         <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:10 }}>
@@ -1296,8 +1303,8 @@ export default function WalletPage() {
             </div>
           </div>
           <div style={{ display:'flex',alignItems:'center',gap:8 }}>
-            <span style={{ display:'inline-flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:20,background:isAdmin?'rgba(239,68,68,.1)':'rgba(59,130,246,.1)',border:`1px solid ${isAdmin?'rgba(239,68,68,.25)':'rgba(59,130,246,.25)'}`,fontSize:11,fontWeight:700,color:isAdmin?'#f87171':'#60a5fa' }}>
-              {isAdmin ? '👑 Administrator — Full Access' : '🛡 Support — Payment Approvals Only'}
+            <span style={{ display:'inline-flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:20,background:isOwner(user?.role)?'rgba(251,191,36,.1)':'rgba(239,68,68,.1)',border:`1px solid ${isOwner(user?.role)?'rgba(251,191,36,.25)':'rgba(239,68,68,.25)'}`,fontSize:11,fontWeight:700,color:isOwner(user?.role)?'#fbbf24':'#f87171' }}>
+              {isOwner(user?.role) ? '👑 Owner — Full Access' : '🛡 Admin — Payment Approvals Only'}
             </span>
           </div>
         </div>
@@ -1569,26 +1576,26 @@ export default function WalletPage() {
           <div style={{ position:'relative', display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:24 }}>
             {/* Left — balance */}
             <div>
-              <div className="w-balance-label">Available Balance</div>
+              <div className="w-balance-label">{t('wallet.availableBalance')}</div>
               <div className="w-balance-amount">${balance.toFixed(2)}</div>
 
               {/* Status badges */}
               <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 13px', borderRadius:20, background:'rgba(16,232,152,.08)', border:'1px solid rgba(16,232,152,.18)' }}>
                   <div className="dot dot-green" style={{ width:5, height:5 }} />
-                  <span style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>Active Account</span>
+                  <span style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>{t('dashboard.activeAccount')}</span>
                 </div>
-                <span style={{ fontSize:11, color:'rgba(255,255,255,.22)', letterSpacing:'.02em' }}>Deposits credited after admin approval</span>
+                <span style={{ fontSize:11, color:'rgba(255,255,255,.22)', letterSpacing:'.02em' }}>{t('shop.activeAccountNote')}</span>
               </div>
             </div>
 
             {/* Right — action buttons */}
             <div style={{ display:'flex', flexDirection:'column', gap:10, alignSelf:'center', flexShrink:0 }}>
               <button className="w-btn-primary" onClick={()=>setActiveTab('deposit')}>
-                <Wallet size={16} /> Add Funds
+                <Wallet size={16} /> {t('wallet.addFunds')}
               </button>
               <button className="w-btn-secondary" onClick={()=>setActiveTab('products')}>
-                <ShoppingBag size={15} /> Buy Products
+                <ShoppingBag size={15} /> {t('wallet.buyProducts')}
               </button>
             </div>
           </div>
@@ -1596,9 +1603,9 @@ export default function WalletPage() {
           {/* ── Mini stat strip ── */}
           <div style={{ display:'flex', gap:10, marginTop:28, flexWrap:'wrap' }}>
             {[
-              { label:'Total Deposited', value:`$${myTxns.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount),0).toFixed(2)}`, color:'rgba(139,92,246,.9)' },
-              { label:'Pending',         value:myTxns.filter(t=>t.status==='pending').length,  color:'rgba(251,191,36,.9)'  },
-              { label:'Transactions',    value:myTxns.length,                                   color:'rgba(56,189,248,.9)'  },
+              { label:t('wallet.totalDeposited'), value:`$${myTxns.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount),0).toFixed(2)}`, color:'rgba(139,92,246,.9)' },
+              { label:t('common.pending'),        value:myTxns.filter(t=>t.status==='pending').length,  color:'rgba(251,191,36,.9)'  },
+              { label:t('wallet.transactions'),   value:myTxns.length,                                   color:'rgba(56,189,248,.9)'  },
             ].map(s=>(
               <div key={s.label} className="w-stat">
                 <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,.3)', textTransform:'uppercase', letterSpacing:'.12em', marginBottom:6 }}>{s.label}</div>
@@ -1612,9 +1619,9 @@ export default function WalletPage() {
         {/* ══ TABS ══ */}
         <div style={{ display:'flex', alignItems:'center', gap:3, padding:'4px', background:'rgba(255,255,255,.025)', borderRadius:15, border:'1px solid rgba(255,255,255,.06)', width:'fit-content', backdropFilter:'blur(12px)' }}>
           {([
-            { id:'products', icon:<ShoppingBag size={13}/>, label:'Products'    },
-            { id:'deposit',  icon:<Wallet      size={13}/>, label:'Add Balance' },
-            { id:'history',  icon:<RefreshCw   size={13}/>, label:'History'     },
+            { id:'products', icon:<ShoppingBag size={13}/>, label:t('wallet.products')   },
+            { id:'deposit',  icon:<Wallet      size={13}/>, label:t('wallet.addBalance') },
+            { id:'history',  icon:<RefreshCw   size={13}/>, label:t('wallet.history')    },
           ] as const).map(tab=>(
             <button key={tab.id} className={`w-tab${activeTab===tab.id?' wt-on':''}`} onClick={()=>setActiveTab(tab.id)}>
               {tab.icon}{tab.label}
@@ -1632,8 +1639,8 @@ export default function WalletPage() {
           <div style={{ animation:'w-slide-up .4s cubic-bezier(.22,1,.36,1) both' }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24, flexWrap:'wrap', gap:12 }}>
               <div>
-                <div style={{ fontSize:22, fontWeight:900, color:'#fff', letterSpacing:'-.02em', marginBottom:4 }}>Choose Your Plan</div>
-                <div style={{ fontSize:13, color:'rgba(255,255,255,.38)' }}>Select a panel and duration — key delivered instantly after purchase</div>
+                <div style={{ fontSize:22, fontWeight:900, color:'#fff', letterSpacing:'-.02em', marginBottom:4 }}>{t('wallet.choosePlan')}</div>
+                <div style={{ fontSize:13, color:'rgba(255,255,255,.38)' }}>{t('wallet.choosePlanDesc')}</div>
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:20, background:'rgba(16,232,152,.08)', border:'1px solid rgba(16,232,152,.2)' }}>
@@ -1641,7 +1648,7 @@ export default function WalletPage() {
                   <span style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>OB52 Undetected</span>
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:20, background:'rgba(56,189,248,.07)', border:'1px solid rgba(56,189,248,.18)' }}>
-                  <span style={{ fontSize:11, fontWeight:700, color:'var(--blue)' }}>⚡ Instant Key</span>
+                  <span style={{ fontSize:11, fontWeight:700, color:'var(--blue)' }}>{t('wallet.instantKey')}</span>
                 </div>
               </div>
             </div>
@@ -1673,8 +1680,8 @@ export default function WalletPage() {
               {/* History header */}
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'22px 26px', borderBottom:'1px solid rgba(255,255,255,.06)' }}>
                   <div>
-                    <div style={{ fontSize:16, fontWeight:800, color:'#fff', marginBottom:2 }}>Transaction History</div>
-                    <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>{myTxns.length} payments · {sortedPurchasedLicenses.length} purchased keys</div>
+                    <div style={{ fontSize:16, fontWeight:800, color:'#fff', marginBottom:2 }}>{t('wallet.transactionHistory')}</div>
+                    <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>{t('wallet.historySummary', { payments: myTxns.length, keys: sortedPurchasedLicenses.length })}</div>
                   </div>
                 <button onClick={loadTxns} disabled={txnsLoad}
                   style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:11, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.09)', cursor:'pointer', color:'rgba(255,255,255,.55)', fontFamily:'inherit', fontSize:12, fontWeight:600, transition:'all .18s' }}
@@ -1689,40 +1696,40 @@ export default function WalletPage() {
                 {txnsLoad
                   ? <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'48px 0', color:'rgba(255,255,255,.3)' }}>
                       <Loader2 size={16} className="animate-spin"/>
-                      <span style={{ fontSize:13 }}>Loading transactions…</span>
+                      <span style={{ fontSize:13 }}>{t('wallet.loadingTransactions')}</span>
                     </div>
                     : myTxns.length===0 && sortedPurchasedLicenses.length===0
                     ? <div style={{ textAlign:'center', padding:'56px 0' }}>
                         <div style={{ fontSize:42, marginBottom:14, opacity:.5 }}>📭</div>
-                        <p style={{ fontSize:14, color:'rgba(255,255,255,.4)', fontWeight:700, marginBottom:5 }}>No history yet</p>
-                        <p style={{ fontSize:12, color:'rgba(255,255,255,.2)' }}>Payments and purchased keys will appear here</p>
+                        <p style={{ fontSize:14, color:'rgba(255,255,255,.4)', fontWeight:700, marginBottom:5 }}>{t('wallet.noHistory')}</p>
+                        <p style={{ fontSize:12, color:'rgba(255,255,255,.2)' }}>{t('wallet.noHistoryDesc')}</p>
                       </div>
                     : <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
                         {sortedPurchasedLicenses.length > 0 && (
                           <div style={{ padding:'10px 6px 18px' }}>
-                            <div style={{ fontSize:13, fontWeight:800, color:'#fff', margin:'4px 10px 12px' }}>Purchased Keys</div>
+                            <div style={{ fontSize:13, fontWeight:800, color:'#fff', margin:'4px 10px 12px' }}>{t('wallet.purchasedKeys')}</div>
                             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                               {sortedPurchasedLicenses.map(license => (
                                 <div key={`${license.productId}-${license.key}`} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'16px 18px', borderRadius:18, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)' }}>
                                   <div style={{ minWidth:0, flex:1 }}>
                                     <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8, flexWrap:'wrap' }}>
-                                      <span style={{ fontSize:14, fontWeight:800, color:'#fff' }}>{license.productName}</span>
+                                      <span style={{ fontSize:14, fontWeight:800, color:'#fff' }}>{getLicenseDisplayName(t, license.productId, license.productName)}</span>
                                       <span style={{ padding:'4px 10px', borderRadius:999, fontSize:10, fontWeight:800, background: license.status==='expired' ? 'rgba(248,113,113,.12)' : 'rgba(16,232,152,.12)', border: `1px solid ${license.status==='expired' ? 'rgba(248,113,113,.18)' : 'rgba(16,232,152,.18)'}`, color: license.status==='expired' ? '#fca5a5' : '#86efac' }}>
-                                        {license.status === 'expired' ? 'Expired' : 'Active'}
+                                        {license.status === 'expired' ? t('common.expired') : t('common.active')}
                                       </span>
                                     </div>
                                     <code style={{ display:'block', fontSize:12, color:'#fff', background:'rgba(0,0,0,.24)', padding:'10px 12px', borderRadius:12, border:'1px solid rgba(255,255,255,.06)', wordBreak:'break-all' }}>
                                       {license.key}
                                     </code>
                                     <div style={{ marginTop:8, fontSize:11, color:'rgba(255,255,255,.35)' }}>
-                                      Expires {new Date(license.expiresAt).toLocaleString()}
+                                      {t('wallet.expires')} {new Date(license.expiresAt).toLocaleString()}
                                     </div>
                                   </div>
                                   <button
-                                    onClick={() => { navigator.clipboard.writeText(String(license.key).replace('_INTERNAL','')); toast.success('License key copied'); }}
+                                    onClick={() => { navigator.clipboard.writeText(String(license.key).replace('_INTERNAL','')); toast.success(t('wallet.keyCopied')); }}
                                     style={{ padding:'10px 14px', borderRadius:12, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.08)', color:'#fff', fontFamily:'inherit', fontSize:12, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6, flexShrink:0 }}
                                   >
-                                    <Copy size={13}/> Copy
+                                    <Copy size={13}/> {t('common.copy')}
                                   </button>
                                 </div>
                               ))}
@@ -1735,7 +1742,7 @@ export default function WalletPage() {
                         const sbg = tx.status==='approved'?'rgba(16,232,152,.06)':tx.status==='rejected'?'rgba(248,113,113,.06)':'rgba(251,191,36,.06)';
                         const sbc = tx.status==='approved'?'rgba(16,232,152,.18)':tx.status==='rejected'?'rgba(248,113,113,.18)':'rgba(251,191,36,.18)';
                         const icon = tx.status==='approved'?'✓':tx.status==='rejected'?'✗':'⏳';
-                        const label = tx.status==='approved'?'Approved':tx.status==='rejected'?'Rejected':'Pending';
+                        const label = tx.status==='approved' ? t('common.approved') : tx.status==='rejected' ? t('common.rejected') : t('common.pending');
                         return (
                           <div key={tx.id} className="w-history-row">
                             {/* Method icon */}
@@ -1775,8 +1782,3 @@ export default function WalletPage() {
     </>
   );
 }
-
-
-
-
-

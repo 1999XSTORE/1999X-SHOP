@@ -8,6 +8,7 @@ import LoginPage from '@/pages/LoginPage';
 import SafePageContent from '@/components/layout/SafePageContent';
 import { toast } from 'sonner';
 import { captureReferralFromUrl } from '@/lib/reseller';
+import { canAccessPath, getDefaultPathForRole, normalizeRole, type AppRole } from '@/lib/roles';
 
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const LicensesPage = lazy(() => import('@/pages/LicensesPage'));
@@ -61,17 +62,35 @@ function PageLoader() {
   );
 }
 
-async function fetchRole(email: string): Promise<'admin' | 'support' | 'user'> {
-  const { data } = await safeQuery(
-    () => supabase.from('user_roles').select('role').eq('email', email).maybeSingle(),
-    5000
-  );
-  if (data?.role === 'admin' || data?.role === 'support') return data.role;
-  return 'user';
+async function fetchRole(email: string): Promise<AppRole> {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) return 'user';
+
+  const [{ data: roleRow }, { data: subscriptionRow }] = await Promise.all([
+    safeQuery(
+      () => supabase.from('user_roles').select('role').eq('email', normalizedEmail).maybeSingle(),
+      5000
+    ),
+    safeQuery(
+      () => supabase
+        .from('reseller_subscriptions')
+        .select('id')
+        .eq('email', normalizedEmail)
+        .eq('status', 'active')
+        .gt('expires_at', new Date().toISOString())
+        .limit(1)
+        .maybeSingle(),
+      5000
+    ),
+  ]);
+
+  const dbRole = normalizeRole(roleRow?.role);
+  if (dbRole === 'owner' || dbRole === 'admin' || dbRole === 'support') return dbRole;
+  return subscriptionRow ? 'reseller' : 'user';
 }
 
 export default function Index() {
-  const { isAuthenticated, user, login, logout, setBalance } = useAppStore();
+  const { isAuthenticated, user, login, logout, setBalance, setUserRole } = useAppStore();
 
   // ── Restore last page from sessionStorage ─────────────────
   const [currentPath, setCurrentPath] = useState(getSavedPath);
@@ -149,6 +168,34 @@ export default function Index() {
     captureReferralFromUrl(user.email);
   }, [user?.id, user?.email]);
 
+  useEffect(() => {
+    if (!user?.role) return;
+    if (canAccessPath(currentPath, user.role)) return;
+    navigate(getDefaultPathForRole(user.role));
+  }, [currentPath, user?.role]);
+
+  useEffect(() => {
+    if (!user?.email || !isAuthenticated) return;
+
+    let cancelled = false;
+
+    const syncRole = async () => {
+      const nextRole = await fetchRole(user.email);
+      if (!cancelled && nextRole !== user.role) setUserRole(nextRole);
+    };
+
+    void syncRole();
+    const interval = window.setInterval(syncRole, 30000);
+    const onFocus = () => { void syncRole(); };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [isAuthenticated, user?.email, user?.role, setUserRole]);
+
   const handleLogout = async () => {
     intentionalLogout.current = true;
     savePath('/'); // reset saved path on logout
@@ -159,7 +206,7 @@ export default function Index() {
   };
 
   useEffect(() => {
-    if (!user || user.role === 'admin' || user.role === 'support') return;
+    if (!user || user.role === 'owner' || user.role === 'admin' || user.role === 'support') return;
 
     const creditedKey = `1999x-credited-${user.id}`;
     const rejectedKey = `1999x-rejected-${user.id}`;

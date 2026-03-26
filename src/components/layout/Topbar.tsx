@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/lib/store';
-import { Menu, X, LogOut, Globe, Wallet, Crown, Shield, Home, ShoppingBag, Key, MessageCircle, Gift, Activity, Handshake } from 'lucide-react';
+import { Menu, X, LogOut, Globe, Wallet, Crown, Shield, Home, ShoppingBag, Key, MessageCircle, Gift, Activity, Handshake, Headset } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import { canAccessActivity, canAccessPath, normalizeRole, ROLE_META } from '@/lib/roles';
 
 // Nav order: Home > Shop > License > Chat > Bonus > Status
 const navItems = [
@@ -50,7 +51,9 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
   const [annUnread,   setAnnUnread]   = useState(0);
   const profileRef = useRef<HTMLDivElement>(null);
   const langRef    = useRef<HTMLDivElement>(null);
-  const activeNavIndex = Math.max(0, navItems.findIndex((item) => item.path === currentPath));
+  const role = normalizeRole(user?.role);
+  const visibleNavItems = navItems.filter((item) => canAccessPath(item.path, role));
+  const activeNavIndex = Math.max(0, visibleNavItems.findIndex((item) => item.path === currentPath));
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -190,8 +193,8 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
           {/* Center: Nav — auto column = always exactly centered */}
           <div className="desk-nav" style={{ position:'absolute', left:'50%', top:'50%', transform:'translate(-50%, -50%)', display:'flex', alignItems:'center', justifyContent:'center', minWidth:0, pointerEvents:'auto' }}>
             <div className="glass-radio-group">
-              <div className="glass-glider" style={{ transform:`translateX(${activeNavIndex * 100}%)` }} />
-              {navItems.map(item => (
+              <div className="glass-glider" style={{ width:`calc((100% - 6px) / ${Math.max(visibleNavItems.length, 1)})`, transform:`translateX(${activeNavIndex * 100}%)` }} />
+              {visibleNavItems.map(item => (
                 <button key={item.key} onClick={() => handleNav(item.path)} className={cn('nav-link', currentPath===item.path && 'active')}>
                   <item.Icon size={13} className="nav-ic" />
                   {t(item.tKey)}
@@ -236,8 +239,11 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                 <div style={{ position:'relative' }}>
                   {user?.avatar ? <img src={user.avatar} alt={user.name} className="avatar-ring" style={{ width:26,height:26,objectFit:'cover' }}/>
                     : <div style={{ width:26,height:26,borderRadius:'50%',background:'linear-gradient(135deg,#8b5cf6,#6d28d9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,color:'#fff' }}>{user?.name?.charAt(0)||'U'}</div>}
-                  {user?.role==='admin' && <div style={{ position:'absolute',top:-3,right:-3,width:13,height:13,borderRadius:'50%',background:'#ef4444',border:'2px solid var(--bg)',display:'flex',alignItems:'center',justifyContent:'center' }}><Crown size={6} color="#fff"/></div>}
-                  {user?.role==='support' && <div style={{ position:'absolute',top:-3,right:-3,width:13,height:13,borderRadius:'50%',background:'#3b82f6',border:'2px solid var(--bg)',display:'flex',alignItems:'center',justifyContent:'center' }}><Shield size={6} color="#fff"/></div>}
+                  {role !== 'user' && (
+                    <div style={{ position:'absolute',top:-3,right:-3,width:13,height:13,borderRadius:'50%',background:ROLE_META[role].color,border:'2px solid var(--bg)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:`0 0 8px ${ROLE_META[role].glow}` }}>
+                      {role === 'owner' ? <Crown size={6} color="#fff"/> : role === 'admin' ? <Shield size={6} color="#fff"/> : role === 'support' ? <Headset size={6} color="#fff"/> : <Handshake size={6} color="#fff"/>}
+                    </div>
+                  )}
                 </div>
                 <span style={{ fontSize:12,fontWeight:600,color:'rgba(255,255,255,.8)',maxWidth:70,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{user?.name?.split(' ')[0]||'User'}</span>
               </button>
@@ -250,14 +256,14 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                           : <div style={{ width:34,height:34,borderRadius:'50%',background:'linear-gradient(135deg,#8b5cf6,#6d28d9)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,color:'#fff' }}>{user.name.charAt(0)}</div>}
                         <div style={{ flex:1,minWidth:0 }}>
                           <div style={{ fontSize:13,fontWeight:700,color:'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{user.name}</div>
-                          <div style={{ fontSize:11,fontWeight:600,color:user.role==='admin'?'#f87171':user.role==='support'?'#60a5fa':'rgba(255,255,255,.35)',marginTop:1 }}>
-                            {user.role==='admin'?'👑 Administrator':user.role==='support'?'🛡 Support Staff':user.email}
+                          <div style={{ fontSize:11,fontWeight:600,color:ROLE_META[role].color,marginTop:1 }}>
+                            {role === 'user' ? user.email : `${ROLE_META[role].label} Access`}
                           </div>
                         </div>
                       </div>
                     </div>
                   )}
-                  {user?.role==='admin' && (<>
+                  {canAccessActivity(role) && (<>
                     <button onClick={() => { handleNav('/admin-activity'); setProfileOpen(false); }} className="dropdown-item">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity Logs
                     </button>
@@ -306,7 +312,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                 ))}
               </div>
             </div>
-            {user?.role==='admin' && (
+            {canAccessActivity(role) && (
               <button onClick={() => { handleNav('/admin-activity'); setMobileOpen(false); }} className="dropdown-item">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity Logs
               </button>
@@ -321,7 +327,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
       {/* ══ MOBILE BOTTOM NAV BAR ══ */}
       <div className="mob-bottom-nav">
         <div className="mob-bottom-inner">
-          {navItems.map(item => (
+          {visibleNavItems.map(item => (
             <button key={item.key} className={cn('mob-nav-btn', currentPath===item.path && 'mob-on')} onClick={() => handleNav(item.path)}>
               {item.path==='/chat' && chatUnread>0 && <span className="mob-badge">{chatUnread>9?'9+':chatUnread}</span>}
               {item.path==='/panel-status' && annUnread>0 && <span className="mob-badge">{annUnread>9?'9+':annUnread}</span>}

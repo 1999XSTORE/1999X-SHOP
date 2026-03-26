@@ -152,7 +152,7 @@ function WithdrawModal({ balance, userId, userEmail, onClose, onSuccess }: {
 
 // ══════════════════════════════════════════════════════════════
 export default function ResellerPage() {
-  const { user, balance, deductBalance, refundBalance } = useAppStore();
+  const { user, balance, deductBalance, refundBalance, setUserRole } = useAppStore();
 
   // Subscription state
   const [sub, setSub] = useState<Subscription | null>(null);
@@ -190,6 +190,9 @@ export default function ResellerPage() {
         .maybeSingle()
     );
     setSub(data as Subscription | null);
+    if (user?.role === 'user' || user?.role === 'reseller') {
+      setUserRole(data ? 'reseller' : 'user');
+    }
     setSubLoading(false);
   };
 
@@ -223,6 +226,17 @@ export default function ResellerPage() {
 
   useEffect(() => {
     loadSubscription();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const interval = window.setInterval(() => { void loadSubscription(); }, 30000);
+    const onFocus = () => { void loadSubscription(); };
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [user?.id]);
 
   useEffect(() => {
@@ -283,6 +297,7 @@ export default function ResellerPage() {
     });
 
     toast.success(`🎉 Reseller subscription activated!`);
+    if (user.role === 'user' || user.role === 'reseller') setUserRole('reseller');
     await loadSubscription();
     setPurchasing(false);
   };
@@ -415,8 +430,36 @@ export default function ResellerPage() {
         .rs-withdraw-btn:hover { background: rgba(16,232,152,.14); box-shadow: 0 0 24px rgba(16,232,152,.25); }
         .rs-withdraw-btn:disabled { opacity:.4; cursor:not-allowed; }
 
+        .rs-subscribe-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
+        .rs-sales-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .rs-panel { border-radius:22px; background:rgba(8,9,22,.78); border:1px solid rgba(255,255,255,.08); backdrop-filter:blur(28px); box-shadow:0 8px 32px rgba(0,0,0,.35); }
+        .rs-hero-card { border-radius:28px; overflow:hidden; background:linear-gradient(160deg,rgba(30,16,100,.9),rgba(10,8,40,.95)); border:1px solid rgba(139,92,246,.22); box-shadow:0 32px 80px rgba(0,0,0,.6), 0 0 80px rgba(109,40,217,.15); padding:40px 36px; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:480px; position:relative; backdrop-filter:blur(24px); }
+        .rs-plan-card { border-radius:24px; background:rgba(8,9,22,.82); border:1px solid rgba(255,255,255,.09); backdrop-filter:blur(28px); padding:32px 28px; box-shadow:0 20px 60px rgba(0,0,0,.5); display:flex; flex-direction:column; gap:20px; }
+
         @media(max-width:768px) { .rs-stats-grid { grid-template-columns: 1fr 1fr !important; } }
         @media(max-width:480px) { .rs-stats-grid { grid-template-columns: 1fr !important; } }
+        @media(max-width:900px) {
+          .rs-subscribe-grid,
+          .rs-sales-grid { grid-template-columns:1fr; }
+        }
+        @media(max-width:640px) {
+          .rs-page { padding-bottom:24px !important; }
+          .rs-hero-card { min-height:auto; padding:24px 18px; border-radius:22px; }
+          .rs-plan-card,
+          .rs-panel { border-radius:18px; }
+          .rs-plan-card { padding:20px 16px; gap:16px; }
+          .rs-stat { padding:16px 14px; border-radius:16px; }
+          .rs-plan-btn { padding:12px 14px; border-radius:14px; }
+          .rs-plan-option { padding:12px 14px; gap:10px; }
+          .rs-buy-btn,
+          .rs-copy-btn,
+          .rs-withdraw-btn { width:100%; justify-content:center; }
+          .rs-copy-btn,
+          .rs-withdraw-btn { padding:12px 14px; font-size:12px; }
+          .rs-link-box,
+          .rs-input { padding-top:12px; padding-bottom:12px; font-size:12px; }
+          .rs-sales-grid .rs-panel { padding:18px 14px !important; }
+        }
       `}</style>
 
       <div className="rs-page" style={{ maxWidth:900, margin:'0 auto', paddingBottom:48 }}>
@@ -440,10 +483,10 @@ export default function ResellerPage() {
           /* ══════════════════════════════════════════════════
              NOT SUBSCRIBED — Subscription Card
           ══════════════════════════════════════════════════ */
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24, alignItems:'start' }}>
+          <div className="rs-subscribe-grid">
 
             {/* Left — Image + branding */}
-            <div style={{ borderRadius:28, overflow:'hidden', background:'linear-gradient(160deg,rgba(30,16,100,.9),rgba(10,8,40,.95))', border:'1px solid rgba(139,92,246,.22)', boxShadow:'0 32px 80px rgba(0,0,0,.6), 0 0 80px rgba(109,40,217,.15)', padding:'40px 36px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:480, position:'relative', backdropFilter:'blur(24px)' }}>
+            <div className="rs-hero-card">
               {/* Glow */}
               <div style={{ position:'absolute', top:'30%', left:'50%', transform:'translate(-50%,-50%)', width:280, height:280, borderRadius:'50%', background:'radial-gradient(circle,rgba(109,40,217,.25) 0%,transparent 70%)', pointerEvents:'none' }}/>
               {/* Top accent */}
@@ -471,7 +514,7 @@ export default function ResellerPage() {
             </div>
 
             {/* Right — Plan selector + purchase */}
-            <div style={{ borderRadius:24, background:'rgba(8,9,22,.82)', border:'1px solid rgba(255,255,255,.09)', backdropFilter:'blur(28px)', padding:'32px 28px', boxShadow:'0 20px 60px rgba(0,0,0,.5)', display:'flex', flexDirection:'column', gap:20 }}>
+            <div className="rs-plan-card">
 
               <div>
                 <div style={{ fontSize:11, fontWeight:800, letterSpacing:'.18em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:6 }}>Select Plan</div>
@@ -600,7 +643,7 @@ export default function ResellerPage() {
             </div>
 
             {/* ── Referral URL + Withdraw ── */}
-            <div style={{ borderRadius:22,background:'rgba(8,9,22,.78)',border:'1px solid rgba(255,255,255,.08)',backdropFilter:'blur(28px)',padding:'26px 24px',boxShadow:'0 8px 32px rgba(0,0,0,.35)' }}>
+            <div className="rs-panel" style={{ padding:'26px 24px' }}>
               <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18,flexWrap:'wrap',gap:12 }}>
                 <div>
                   <div style={{ fontSize:9,fontWeight:800,letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(255,255,255,.3)',marginBottom:4 }}>Your Referral</div>
@@ -643,10 +686,10 @@ export default function ResellerPage() {
             </div>
 
             {/* ── Recent Sales & Withdrawals ── */}
-            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:16 }}>
+            <div className="rs-sales-grid">
 
               {/* Sales */}
-              <div style={{ borderRadius:22,background:'rgba(8,9,22,.78)',border:'1px solid rgba(255,255,255,.08)',backdropFilter:'blur(28px)',padding:'22px 20px',boxShadow:'0 8px 32px rgba(0,0,0,.3)' }}>
+              <div className="rs-panel" style={{ padding:'22px 20px' }}>
                 <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16 }}>
                   <div style={{ fontSize:14,fontWeight:800,color:'#fff' }}>Recent Sales</div>
                   <button onClick={loadDashboard} disabled={dashLoading} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.09)',borderRadius:8,padding:'5px 8px',cursor:'pointer',color:'rgba(255,255,255,.4)',display:'flex',alignItems:'center' }}><RefreshCw size={12} className={dashLoading?'animate-spin':''}/></button>
@@ -672,7 +715,7 @@ export default function ResellerPage() {
               </div>
 
               {/* Withdrawals */}
-              <div style={{ borderRadius:22,background:'rgba(8,9,22,.78)',border:'1px solid rgba(255,255,255,.08)',backdropFilter:'blur(28px)',padding:'22px 20px',boxShadow:'0 8px 32px rgba(0,0,0,.3)' }}>
+              <div className="rs-panel" style={{ padding:'22px 20px' }}>
                 <div style={{ fontSize:14,fontWeight:800,color:'#fff',marginBottom:16 }}>Withdrawal History</div>
                 {withdrawReqs.length === 0 ? (
                   <div style={{ textAlign:'center',padding:'24px 0',color:'rgba(255,255,255,.25)',fontSize:13 }}>No withdrawals yet</div>

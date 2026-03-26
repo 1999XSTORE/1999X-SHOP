@@ -82,6 +82,82 @@ const en = {
     scanQr: 'Scan QR Code', zoomQr: 'Click to zoom in', qrSoon: 'QR coming soon',
     amount: 'Amount', method: 'Method', refresh: 'Refresh',
   },
+  products: {
+    from: 'From',
+    processing: 'Processing...',
+    catalog: {
+      internal3d: { name: 'Internal — 3 Days', duration: '3 days', description: 'Try the Internal panel. Full features for 3 days.', badge: 'TRIAL', features: ['Aimbot & ESP', 'Speed & No recoil', 'Auto updates', 'OB52 Undetected'] },
+      internal7d: { name: 'Internal — 7 Days', duration: '7 days', description: 'Weekly Internal panel access. Great value.', badge: 'WEEKLY', features: ['Aimbot & ESP', 'Speed & No recoil', 'Auto updates', 'Priority Support'] },
+      internal30d: { name: 'Internal — 30 Days', duration: '30 days', description: 'Monthly Internal panel. Best per-day value.', badge: 'POPULAR', features: ['Aimbot & ESP', 'Speed & No recoil', 'HWID Spoofer', 'VIP Support'] },
+      combo7d: { name: 'Combo — Weekly', duration: '7 days', description: 'Internal + Fake Lag together. Full 1999X experience.', badge: 'COMBO', features: ['Everything in Internal', 'Everything in Fake Lag', 'Priority Support', 'Best price guaranteed'] },
+      combo30d: { name: 'Combo — Monthly', duration: '30 days', description: 'Monthly combo deal. Internal + Fake Lag at best price.', badge: 'BEST VALUE', features: ['Everything in Internal', 'Everything in Fake Lag', 'Priority Support', 'Best price guaranteed'] },
+      lag7d: { name: 'Fake Lag — Weekly', duration: '7 days', description: 'Weekly Fake Lag access. Dominate with network control.', badge: 'WEEKLY', features: ['Lag switch control', 'Packet manipulation', 'Adjustable delay', 'OB52 Undetected'] },
+      lag30d: { name: 'Fake Lag — Monthly', duration: '30 days', description: 'Monthly Fake Lag access. Best value for serious players.', badge: 'MONTHLY', features: ['Lag switch control', 'Packet manipulation', 'Adjustable delay', 'OB52 Undetected'] },
+    },
+  },
+  wallet: {
+    availableBalance: 'Available Balance',
+    addFunds: 'Add Funds',
+    buyProducts: 'Buy Products',
+    addBalance: 'Add Balance',
+    products: 'Products',
+    history: 'History',
+    totalDeposited: 'Total Deposited',
+    transactions: 'Transactions',
+    choosePlan: 'Choose Your Plan',
+    choosePlanDesc: 'Select a panel and duration — key delivered instantly after purchase',
+    instantKey: 'Instant Key',
+    transactionHistory: 'Transaction History',
+    historySummary: '{{payments}} payments · {{keys}} purchased keys',
+    loadingTransactions: 'Loading transactions...',
+    noHistory: 'No history yet',
+    noHistoryDesc: 'Payments and purchased keys will appear here',
+    purchasedKeys: 'Purchased Keys',
+    expires: 'Expires',
+    keyCopied: 'License key copied',
+    generatingKey: 'Generating your license key...',
+    keyGenerationFailed: 'Key generation failed. Refunded:',
+    product: 'Product',
+    duration: 'Duration',
+    licenseNames: {
+      internal: 'Internal',
+      fakeLag: 'Fake Lag',
+      license: 'License',
+    },
+    planLabels: {
+      days3: '3 Days',
+      days7: '7 Days',
+      days30: '30 Days',
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+    },
+    panels: {
+      internal: {
+        name: 'Internal Panel',
+        tagline: 'Maximum Performance',
+        description: 'Advanced internal cheat with full control.',
+        features: ['Aimbot & ESP', 'Speed & No recoil', 'Auto updates', 'OB52 Undetected'],
+      },
+      combo: {
+        name: 'Combo Pack',
+        tagline: 'Best Value Bundle',
+        description: 'Internal + Fake Lag. The full 1999X experience.',
+        features: ['Everything in Internal', 'Everything in Fake Lag', 'Priority Support', 'Best price guaranteed'],
+      },
+      lag: {
+        name: 'Fake Lag',
+        tagline: 'Network Domination',
+        description: 'Lag-based advantages. Confuse and conquer.',
+        features: ['Lag switch control', 'Packet manipulation', 'Adjustable delay', 'OB52 Undetected'],
+      },
+    },
+  },
+  reseller: {
+    title: 'Reseller Hub',
+    subscription: 'Reseller Subscription',
+    activeSubscription: 'Active Subscription',
+    daysLeft: '{{count}} days left',
+  },
   license: {
     title: 'Activate License Key',
     subtitle: 'Enter your KeyAuth license key to activate your panel',
@@ -178,7 +254,7 @@ function mergeDeep<TObj extends Record<string, any>>(base: TObj, patch: Partial<
 }
 
 // ── Arabic ────────────────────────────────────────────────────
-const ar: T = {
+const ar = {
   nav: { home:'الرئيسية', license:'الترخيص', chat:'الدردشة', shop:'المتجر', bonus:'المكافآت', status:'الحالة', support:'الدعم', signOut:'خروج' },
   auth: { signIn:'تسجيل الدخول', subtitle:'الوصول إلى لوحة 1999X المميزة', continueGoogle:'المتابعة مع Google', terms:'بتسجيل الدخول، توافق على شروط الخدمة', support:'تحتاج مساعدة؟ تواصل معنا على Discord ←', trust1:'غير مكتشف', trust2:'OB52 جاهز', trust3:'آمن' },
   dashboard: { welcomeBack:'مرحبًا بعودتك', balance:'الرصيد', activeKeys:'المفاتيح النشطة', approved:'موافق', bonusPoints:'نقاط المكافأة', activeSubscriptions:'الاشتراكات النشطة', noLicense:'لا توجد تراخيص نشطة', noLicenseDesc:'اذهب للمتجر لتفعيل مفتاحك', dailyBonus:'المكافأة اليومية', dailyBonusDesc:'+١٠ نقاط/يوم · ١٠٠ نقطة = مكافأة', claimNow:'احصل الآن', nextClaim:'التالي في', until:'حتى', undetected:'OB52 غير مكتشف', activeAccount:'حساب نشط', freeKey:'مفتاح تجريبي مجاني لساعة', freeKeyDesc:'مفتاح مجاني واحد كل ٢٤ ساعة', freeKeyBtn:'احصل على مفتاح مجاني', freeKeyCooldown:'المفتاح التالي في', freeKeyActive:'مفتاحك المجاني نشط', freeKeyExpired:'انتهى المفتاح المجاني', freeKeyGenerating:'جارٍ إنشاء المفاتيح…', freeKeyClaimed:'تم إنشاء المفاتيح!', freeKeyLag:'تأخير مزيف (١ ساعة)', freeKeyInternal:'داخلي (١ ساعة)', freeKeyExpiresIn:'ينتهي في', freeKeyOnePerDay:'مفتاح واحد لكل مستخدم كل ٢٤ ساعة', freeKeyReveal:'انقر 👁 للكشف' },
@@ -190,10 +266,10 @@ const ar: T = {
   chat: { title:'الدردشة المجتمعية', placeholder:'أرسل رسالة…', send:'إرسال', noMessages:'لا توجد رسائل', beFirst:'كن أول من يتحدث!', loading:'جارٍ التحميل…', tip:'نصيحة:', online:'متصل', live:'مباشر', privateSupport:'خاص — فريق الدعم فقط', members:'الأعضاء', hide:'إخفاء', show:'عرض', isTyping:'يكتب', areTyping:'يكتبون' },
   support: { title:'الدعم', placeholder:'اشرح مشكلتك…' },
   common: { loading:'تحميل…', error:'خطأ', cancel:'إلغاء', confirm:'تأكيد', copy:'نسخ', copied:'تم النسخ!', done:'تم', status:'الحالة', method:'الطريقة', txnId:'رقم المعاملة', or:'أو', submit:'إرسال', refresh:'تحديث', close:'إغلاق', save:'حفظ', delete:'حذف', active:'نشط', expired:'منتهي', pending:'انتظار', approved:'موافق', rejected:'مرفوض', back:'رجوع', noData:'لا بيانات', tryAgain:'حاول مجددًا', reveal:'كشف' },
-};
+} as T;
 
 // ── Bengali ───────────────────────────────────────────────────
-const bn: T = {
+const bn = {
   nav: { home:'হোম', license:'লাইসেন্স', chat:'চ্যাট', shop:'শপ', bonus:'বোনাস', status:'স্ট্যাটাস', support:'সাপোর্ট', signOut:'সাইন আউট' },
   auth: { signIn:'সাইন ইন', subtitle:'আপনার 1999X প্যানেল অ্যাক্সেস করুন', continueGoogle:'Google দিয়ে চালিয়ে যান', terms:'সাইন ইন করে শর্তে সম্মত হচ্ছেন', support:'সাহায্য? Discord-এ যোগাযোগ করুন →', trust1:'আনডিটেক্টেড', trust2:'OB52 রেডি', trust3:'নিরাপদ' },
   dashboard: { welcomeBack:'স্বাগতম', balance:'ব্যালেন্স', activeKeys:'সক্রিয় কী', approved:'অনুমোদিত', bonusPoints:'বোনাস পয়েন্ট', activeSubscriptions:'সক্রিয় সাবস্ক্রিপশন', noLicense:'কোনো সক্রিয় লাইসেন্স নেই', noLicenseDesc:'শপে যান', dailyBonus:'দৈনিক বোনাস', dailyBonusDesc:'+১০ পয়েন্ট/দিন · ১০০ = পুরস্কার', claimNow:'এখনই নিন', nextClaim:'পরবর্তী', until:'পর্যন্ত', undetected:'OB52 আনডিটেক্টেড', activeAccount:'সক্রিয় অ্যাকাউন্ট', freeKey:'বিনামূল্যে ১ ঘণ্টার কী', freeKeyDesc:'প্রতি ২৪ ঘণ্টায় একটি বিনামূল্যে কী', freeKeyBtn:'বিনামূল্যে কী নিন', freeKeyCooldown:'পরবর্তী কী', freeKeyActive:'আপনার বিনামূল্যে কী সক্রিয়', freeKeyExpired:'মেয়াদোত্তীর্ণ', freeKeyGenerating:'কী তৈরি হচ্ছে…', freeKeyClaimed:'কী তৈরি হয়েছে!', freeKeyLag:'ফেক ল্যাগ (১ঘণ্টা)', freeKeyInternal:'ইন্টার্নাল (১ঘণ্টা)', freeKeyExpiresIn:'মেয়াদ শেষ', freeKeyOnePerDay:'প্রতি ২৪ ঘণ্টায় ১টি', freeKeyReveal:'👁 ক্লিক করুন' },
@@ -205,10 +281,10 @@ const bn: T = {
   chat: { title:'কমিউনিটি চ্যাট', placeholder:'বার্তা পাঠান…', send:'পাঠান', noMessages:'কোনো বার্তা নেই', beFirst:'প্রথম বলুন!', loading:'লোড হচ্ছে…', tip:'টিপ:', online:'অনলাইন', live:'লাইভ', privateSupport:'ব্যক্তিগত — শুধু সাপোর্ট', members:'সদস্য', hide:'লুকান', show:'দেখান', isTyping:'টাইপ করছে', areTyping:'টাইপ করছে' },
   support: { title:'সাপোর্ট', placeholder:'সমস্যা বর্ণনা করুন…' },
   common: { loading:'লোড হচ্ছে…', error:'ত্রুটি', cancel:'বাতিল', confirm:'নিশ্চিত', copy:'কপি', copied:'কপি হয়েছে!', done:'সম্পন্ন', status:'স্ট্যাটাস', method:'পদ্ধতি', txnId:'লেনদেন আইডি', or:'বা', submit:'জমা', refresh:'রিফ্রেশ', close:'বন্ধ', save:'সেভ', delete:'মুছুন', active:'সক্রিয়', expired:'মেয়াদোত্তীর্ণ', pending:'অপেক্ষমান', approved:'অনুমোদিত', rejected:'প্রত্যাখ্যাত', back:'পেছনে', noData:'কোনো ডেটা নেই', tryAgain:'আবার চেষ্টা', reveal:'দেখুন' },
-};
+} as T;
 
 // ── Thai ──────────────────────────────────────────────────────
-const th: T = {
+const th = {
   nav: { home:'หน้าแรก', license:'ใบอนุญาต', chat:'แชท', shop:'ร้านค้า', bonus:'โบนัส', status:'สถานะ', support:'สนับสนุน', signOut:'ออกจากระบบ' },
   auth: { signIn:'เข้าสู่ระบบ', subtitle:'เข้าถึงแผง 1999X ของคุณ', continueGoogle:'ดำเนินการด้วย Google', terms:'การเข้าสู่ระบบแสดงว่าคุณยอมรับเงื่อนไข', support:'ต้องการความช่วยเหลือ? ติดต่อ Discord →', trust1:'ไม่ถูกตรวจจับ', trust2:'OB52 พร้อม', trust3:'ปลอดภัย' },
   dashboard: { welcomeBack:'ยินดีต้อนรับกลับ', balance:'ยอดเงิน', activeKeys:'คีย์ที่ใช้งาน', approved:'อนุมัติ', bonusPoints:'คะแนนโบนัส', activeSubscriptions:'การสมัครสมาชิก', noLicense:'ไม่มีใบอนุญาต', noLicenseDesc:'ไปที่ร้านค้า', dailyBonus:'โบนัสรายวัน', dailyBonusDesc:'+10 แต้ม/วัน · 100 แต้ม = รางวัล', claimNow:'รับตอนนี้', nextClaim:'รับครั้งถัดไปใน', until:'ถึง', undetected:'OB52 ไม่ถูกตรวจจับ', activeAccount:'บัญชีใช้งาน', freeKey:'คีย์ทดลองฟรี 1 ชั่วโมง', freeKeyDesc:'คีย์ฟรีทุก 24 ชั่วโมง', freeKeyBtn:'รับคีย์ฟรี', freeKeyCooldown:'คีย์ถัดไปใน', freeKeyActive:'คีย์ฟรีของคุณใช้งานได้', freeKeyExpired:'คีย์ฟรีหมดอายุ', freeKeyGenerating:'กำลังสร้างคีย์…', freeKeyClaimed:'สร้างคีย์สำเร็จ!', freeKeyLag:'Fake Lag (1ชม)', freeKeyInternal:'Internal (1ชม)', freeKeyExpiresIn:'หมดอายุใน', freeKeyOnePerDay:'1 คีย์ต่อผู้ใช้ทุก 24 ชั่วโมง', freeKeyReveal:'คลิก 👁 เพื่อดู' },
@@ -238,7 +314,7 @@ const partials: Record<string, Partial<T>> = {
 };
 
 // Build full translations: en/ar/bn/th fully typed; rest = en merged with partial
-const resources: Record<string, { translation: T }> = {
+const resources: Record<string, { translation: any }> = {
   en: { translation: en },
   ar: { translation: ar },
   bn: { translation: bn },
