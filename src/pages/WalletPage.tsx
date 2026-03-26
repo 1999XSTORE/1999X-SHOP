@@ -569,110 +569,144 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
   const isFeatured = !!(group as any).featured;
   const basePerDay = group.plans[0].price / group.plans[0].days;
 
+  const cardImage = group.id === 'internal'
+    ? 'https://www.dropbox.com/scl/fi/vmjmtlagavp3qnxy44vng/Internal.png?rlkey=wu9oxjcrvwh1tw685aqa7z8gm&st=xsnlein0&raw=1'
+    : group.id === 'lag'
+      ? 'https://www.dropbox.com/scl/fi/7gg0c6tvs1vkcyba0ofw4/Fake-Lag.png?rlkey=muslqa9erob4yq8ojoyotsgmp&st=87k0qh8e&raw=1'
+      : 'https://www.dropbox.com/scl/fi/b09vgdpumapu0qrmauzf2/Combo.png?rlkey=nph0m7pxg7klstq9n5voxs0qj&st=cnlqvvws&raw=1';
+
   return (
     <div style={{
       position:'relative', borderRadius:24, overflow:'hidden',
-      background:`linear-gradient(160deg, ${group.gradFrom} 0%, ${group.gradTo} 100%)`,
+      background:'linear-gradient(180deg,rgba(9,10,18,.98) 0%,rgba(6,7,14,.99) 100%)',
       border:`1px solid ${group.bc}`,
       boxShadow: isFeatured
-        ? `0 0 0 1px rgba(251,191,36,.1) inset, 0 24px 60px rgba(0,0,0,.6), 0 0 80px ${group.glow}`
-        : `0 24px 60px rgba(0,0,0,.5), 0 0 40px ${group.glow}`,
-      backdropFilter:'blur(20px)',
-      WebkitBackdropFilter:'blur(20px)',
+        ? `0 0 0 1px rgba(251,191,36,.12) inset, 0 32px 72px rgba(0,0,0,.65), 0 0 80px ${group.glow}`
+        : `0 24px 60px rgba(0,0,0,.55), 0 0 40px ${group.glow}`,
       transition:'transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s',
     }}
-      onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform='translateY(-5px)';}}
+      onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform='translateY(-6px)';}}
       onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform='none';}}
     >
-      {/* Top glow line */}
-      <div style={{ height:2, background:`linear-gradient(90deg,transparent,${group.color},${isFeatured?'#e8b84b':group.color},transparent)` }} />
-
-      {/* Featured badge */}
-      {isFeatured && (
-        <div style={{ position:'absolute', top:18, right:18, display:'flex', alignItems:'center', gap:5, background:'linear-gradient(135deg,#92400e,#d97706)', borderRadius:20, padding:'4px 12px 4px 8px', boxShadow:`0 4px 16px rgba(251,191,36,.4)` }}>
-          <span style={{ fontSize:11 }}>👑</span>
-          <span style={{ fontSize:9, fontWeight:900, letterSpacing:'.14em', textTransform:'uppercase', color:'#fef3c7' }}>Best Value</span>
-        </div>
-      )}
-
-      <div style={{ padding:'26px 24px 24px' }}>
-
-        {/* Header */}
-        <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:22 }}>
+      {/* ── Image Preview Banner ── */}
+      <div style={{
+        position:'relative', width:'100%', height:200, overflow:'hidden',
+        background:`linear-gradient(135deg, ${group.gradFrom}, ${group.gradTo})`,
+      }}>
+        <img
+          src={cardImage}
+          alt={group.name}
+          style={{
+            width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top',
+            display:'block', transition:'transform .5s cubic-bezier(.22,1,.36,1)',
+          }}
+          onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.06)')}
+          onMouseLeave={e=>(e.currentTarget.style.transform='scale(1)')}
+        />
+        {/* Bottom fade into card body */}
+        <div style={{
+          position:'absolute', bottom:0, left:0, right:0, height:80,
+          background:'linear-gradient(to bottom, transparent, rgba(9,10,18,.98))',
+          pointerEvents:'none',
+        }}/>
+        {/* Top glow bar */}
+        <div style={{
+          position:'absolute', top:0, left:0, right:0, height:3,
+          background:`linear-gradient(90deg,transparent,${group.color},${isFeatured?'#e8b84b':group.color},transparent)`,
+          pointerEvents:'none',
+        }}/>
+        {/* Featured badge */}
+        {isFeatured && (
           <div style={{
-            width:50, height:50, borderRadius:16, flexShrink:0,
-            background:`radial-gradient(circle at 30% 30%, ${group.bc}, rgba(0,0,0,.3))`,
+            position:'absolute', top:14, right:14, zIndex:2,
+            display:'flex', alignItems:'center', gap:5,
+            background:'linear-gradient(135deg,#92400e,#d97706)',
+            borderRadius:20, padding:'5px 13px 5px 9px',
+            boxShadow:'0 4px 20px rgba(251,191,36,.5)',
+          }}>
+            <span style={{ fontSize:11 }}>👑</span>
+            <span style={{ fontSize:9, fontWeight:900, letterSpacing:'.14em', textTransform:'uppercase', color:'#fef3c7' }}>Best Value</span>
+          </div>
+        )}
+        {/* Price badge on image */}
+        <div style={{
+          position:'absolute', bottom:14, left:16, zIndex:2,
+          display:'flex', alignItems:'baseline', gap:4,
+        }}>
+          <span style={{
+            fontSize:36, fontWeight:900, color:'#fff', letterSpacing:'-.05em', lineHeight:1,
+            textShadow:`0 0 30px ${group.glow}, 0 2px 8px rgba(0,0,0,.8)`,
+          }}>${plan.price}</span>
+          <span style={{ fontSize:12, color:'rgba(255,255,255,.5)', fontWeight:600, marginBottom:4 }}>
+            / {plan.label}
+          </span>
+        </div>
+      </div>
+
+      {/* ── Card Body ── */}
+      <div style={{ padding:'20px 22px 22px' }}>
+
+        {/* Name + tagline */}
+        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
+          <div style={{
+            width:42, height:42, borderRadius:13, flexShrink:0,
+            background:`radial-gradient(circle at 30% 30%, ${group.bc}, rgba(0,0,0,.4))`,
             border:`1px solid ${group.bc}`,
             display:'flex', alignItems:'center', justifyContent:'center',
-            fontSize:22, boxShadow:`0 0 20px ${group.glow}`,
+            fontSize:20, boxShadow:`0 0 18px ${group.glow}`,
           }}>{group.emoji}</div>
           <div>
-            <div style={{ fontSize:9, fontWeight:800, letterSpacing:'.18em', textTransform:'uppercase', color:group.color, marginBottom:3, opacity:.75 }}>{group.tagline}</div>
-            <div style={{ fontSize:20, fontWeight:900, color:'#fff', letterSpacing:'-.02em', lineHeight:1.1 }}>{group.name}</div>
+            <div style={{ fontSize:9, fontWeight:800, letterSpacing:'.18em', textTransform:'uppercase', color:group.color, opacity:.8, marginBottom:2 }}>{group.tagline}</div>
+            <div style={{ fontSize:18, fontWeight:900, color:'#fff', letterSpacing:'-.02em', lineHeight:1.15 }}>{group.name}</div>
           </div>
         </div>
 
-        {/* Progress bar dots */}
-        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:18 }}>
-          {group.plans.map((_,i)=>(
-            <div key={i} style={{ height:3, flex:1, borderRadius:99, background:i<=sel?group.color:'rgba(255,255,255,.1)', transition:'background .2s', boxShadow:i===sel?`0 0 6px ${group.color}`:'none' }}/>
-          ))}
-        </div>
-
-        {/* Plan choice rows */}
-        <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:20 }}>
-          {group.plans.map((p, i) => {
-            const active = sel === i;
-            const ppd = (p.price / p.days).toFixed(2);
-            const pSavePct = i > 0 ? Math.round((1 - p.price / p.days / basePerDay) * 100) : 0;
+        {/* Plan selector — pill tabs */}
+        <div style={{
+          display:'grid', gridTemplateColumns:`repeat(${group.plans.length},1fr)`,
+          gap:6, marginBottom:16,
+          background:'rgba(255,255,255,.04)', borderRadius:13, padding:4,
+          border:'1px solid rgba(255,255,255,.06)',
+        }}>
+          {group.plans.map((p,i)=>{
+            const active = sel===i;
+            const pSavePct = i>0 ? Math.round((1-p.price/p.days/basePerDay)*100) : 0;
             return (
               <button key={p.id} onClick={()=>setSel(i)} style={{
-                display:'flex', alignItems:'center', justifyContent:'space-between',
-                padding:'14px 16px', borderRadius:14,
-                border:active?`1.5px solid ${group.color}`:'1.5px solid rgba(255,255,255,.08)',
-                background:active?'rgba(255,255,255,.06)':'rgba(255,255,255,.025)',
-                cursor:'pointer', fontFamily:'inherit',
-                transition:'all .2s cubic-bezier(.22,1,.36,1)',
-                boxShadow:active?`0 0 24px ${group.glow}, inset 0 1px 0 rgba(255,255,255,.08)`:'none',
+                position:'relative', padding:'10px 6px', borderRadius:10,
+                border: active?`1px solid ${group.color}`:'1px solid transparent',
+                background: active?`linear-gradient(135deg,rgba(255,255,255,.09),rgba(255,255,255,.04))`:'transparent',
+                cursor:'pointer', fontFamily:'inherit', transition:'all .2s cubic-bezier(.22,1,.36,1)',
+                boxShadow: active?`0 0 18px ${group.glow}, inset 0 1px 0 rgba(255,255,255,.1)`:'none',
+                display:'flex', flexDirection:'column', alignItems:'center', gap:1,
               }}>
-                <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                  <div style={{
-                    width:22, height:22, borderRadius:'50%', flexShrink:0,
-                    border:active?`2px solid ${group.color}`:'2px solid rgba(255,255,255,.18)',
-                    display:'flex', alignItems:'center', justifyContent:'center',
-                    background:active?group.color:'transparent', transition:'all .2s',
-                  }}>
-                    {active && <div style={{ width:8, height:8, borderRadius:'50%', background:'#000' }} />}
-                  </div>
-                  <div style={{ textAlign:'left' }}>
-                    <div style={{ fontSize:14, fontWeight:800, color:active?'#fff':'rgba(255,255,255,.6)', letterSpacing:'-.01em' }}>{p.label}</div>
-                    <div style={{ fontSize:10, color:'rgba(255,255,255,.3)', fontWeight:600 }}>${ppd}/day</div>
-                  </div>
-                </div>
-                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  {pSavePct > 0 && (
-                    <span style={{ fontSize:9, fontWeight:800, color:'#4ade80', background:'rgba(74,222,128,.12)', border:'1px solid rgba(74,222,128,.2)', borderRadius:20, padding:'2px 7px' }}>-{pSavePct}%</span>
-                  )}
-                  <div style={{ fontSize:18, fontWeight:900, color:active?'#fff':'rgba(255,255,255,.5)', letterSpacing:'-.03em' }}>${p.price}</div>
-                  <div style={{
-                    width:30, height:30, borderRadius:10, flexShrink:0,
-                    background:active?group.color:'rgba(255,255,255,.07)',
-                    border:active?'none':'1px solid rgba(255,255,255,.1)',
-                    display:'flex', alignItems:'center', justifyContent:'center', transition:'all .2s',
-                  }}>
-                    <ChevronRight size={15} color={active?'#000':'rgba(255,255,255,.4)'}/>
-                  </div>
-                </div>
+                {pSavePct>0 && (
+                  <span style={{
+                    position:'absolute', top:-8, right:-4,
+                    fontSize:8, fontWeight:900, color:'#4ade80',
+                    background:'rgba(74,222,128,.15)', border:'1px solid rgba(74,222,128,.25)',
+                    borderRadius:99, padding:'1px 5px',
+                  }}>-{pSavePct}%</span>
+                )}
+                <span style={{ fontSize:12, fontWeight:700, color:active?group.color:'rgba(255,255,255,.45)' }}>{p.label}</span>
+                <span style={{ fontSize:16, fontWeight:900, color:active?'#fff':'rgba(255,255,255,.4)', letterSpacing:'-.03em' }}>${p.price}</span>
+                <span style={{ fontSize:9, color:'rgba(255,255,255,.25)', fontWeight:600 }}>${(p.price/p.days).toFixed(2)}/d</span>
               </button>
             );
           })}
         </div>
 
-        {/* Feature grid */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'5px 8px', marginBottom:20 }}>
+        {/* Features */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 10px', marginBottom:18 }}>
           {group.features.map(f=>(
-            <div key={f} style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:'rgba(255,255,255,.48)' }}>
-              <span style={{ color:group.color, fontSize:10, fontWeight:900 }}>✓</span>{f}
+            <div key={f} style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:'rgba(255,255,255,.5)' }}>
+              <div style={{
+                width:16, height:16, borderRadius:5, flexShrink:0,
+                background:`rgba(255,255,255,.04)`, border:`1px solid ${group.bc}`,
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:8, fontWeight:900, color:group.color,
+              }}>✓</div>
+              <span style={{ lineHeight:1.3 }}>{f}</span>
             </div>
           ))}
         </div>
@@ -684,28 +718,42 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
             name:`${group.name} — ${plan.label}`, description:group.desc,
             badgeType:isFeatured?'gold':group.id==='internal'?'green':'indigo', emoji:group.emoji,
           })} style={{
-            width:'100%', padding:'15px 20px', borderRadius:14, border:`1px solid ${group.bc}`,
-            background:`linear-gradient(135deg, ${group.gradFrom}, ${group.gradTo})`,
+            width:'100%', padding:'15px 20px', borderRadius:14,
+            border:`1px solid ${group.bc}`,
+            background:`linear-gradient(135deg, ${group.gradFrom}, rgba(0,0,0,.2))`,
             cursor:'pointer', fontFamily:'inherit', fontSize:14, fontWeight:800, color:'#fff',
             display:'flex', alignItems:'center', justifyContent:'space-between',
-            transition:'all .22s', boxShadow:`0 0 28px ${group.glow}`, backdropFilter:'blur(8px)',
+            transition:'all .22s', boxShadow:`0 0 28px ${group.glow}`,
           }}
-            onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.boxShadow=`0 0 48px ${group.glow}`;(e.currentTarget as HTMLButtonElement).style.borderColor=group.color;}}
-            onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.boxShadow=`0 0 28px ${group.glow}`;(e.currentTarget as HTMLButtonElement).style.borderColor=group.bc;}}
+            onMouseEnter={e=>{
+              (e.currentTarget as HTMLButtonElement).style.boxShadow=`0 0 48px ${group.glow}`;
+              (e.currentTarget as HTMLButtonElement).style.borderColor=group.color;
+              (e.currentTarget as HTMLButtonElement).style.background=`linear-gradient(135deg,${group.gradFrom},rgba(255,255,255,.04))`;
+            }}
+            onMouseLeave={e=>{
+              (e.currentTarget as HTMLButtonElement).style.boxShadow=`0 0 28px ${group.glow}`;
+              (e.currentTarget as HTMLButtonElement).style.borderColor=group.bc;
+              (e.currentTarget as HTMLButtonElement).style.background=`linear-gradient(135deg,${group.gradFrom},rgba(0,0,0,.2))`;
+            }}
           >
             <span style={{ display:'flex', alignItems:'center', gap:8 }}>
               <span style={{ fontSize:15 }}>⚡</span>
-              Get {plan.label} Access
+              Get {plan.label} — ${plan.price}
             </span>
-            <span style={{ display:'flex', alignItems:'center', gap:6 }}>
-              <span style={{ fontSize:20, fontWeight:900, letterSpacing:'-.03em' }}>${plan.price}</span>
-              <div style={{ width:28, height:28, borderRadius:8, background:group.color, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <ArrowRight size={14} color="#000"/>
-              </div>
-            </span>
+            <div style={{
+              width:32, height:32, borderRadius:10, background:group.color,
+              display:'flex', alignItems:'center', justifyContent:'center',
+              boxShadow:`0 0 16px ${group.glow}`,
+            }}>
+              <ArrowRight size={16} color="#000"/>
+            </div>
           </button>
         ) : (
-          <div style={{ width:'100%', padding:'15px 20px', borderRadius:14, fontSize:13, fontWeight:700, fontFamily:'inherit', background:'rgba(255,255,255,.03)', color:'rgba(255,255,255,.2)', border:'1px solid rgba(255,255,255,.06)', textAlign:'center' as const }}>
+          <div style={{
+            width:'100%', padding:'15px 20px', borderRadius:14, fontSize:13, fontWeight:700,
+            fontFamily:'inherit', background:'rgba(255,255,255,.03)',
+            color:'rgba(255,255,255,.2)', border:'1px solid rgba(255,255,255,.06)', textAlign:'center',
+          }}>
             Insufficient Balance — Add Funds First
           </div>
         )}
