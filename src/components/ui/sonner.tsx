@@ -11,8 +11,8 @@ export function Toaster({ ...props }: ToasterProps) {
       expand={false}
       richColors={false}
       closeButton={false}
-      duration={3800}
-      gap={10}
+      duration={3500}
+      gap={8}
       toastOptions={{
         classNames: {
           toast:   "nt-toast",
