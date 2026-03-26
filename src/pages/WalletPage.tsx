@@ -47,6 +47,13 @@ function localAmt(usd: number, methodId: string): string {
   return `≈ ${lc.symbol}${val} ${lc.code}`;
 }
 
+function localAmtValue(usd: number, methodId: string): string {
+  const lc = LOCAL[methodId as keyof typeof LOCAL];
+  if (!lc || lc.rate === 1) return '';
+  const value = methodId === 'litecoin' ? (usd * lc.rate).toFixed(4) : Math.ceil(usd * lc.rate).toLocaleString();
+  return `${lc.symbol}${value}`;
+}
+
 const AMOUNTS = [5, 10, 15, 25, 50, 100];
 
 // ── QR Zoom Modal ────────────────────────────────────────────
@@ -788,6 +795,7 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
   const selAmount = custom ? parseFloat(custom)||0 : amount;
   const selMethod = PAYMENT_METHODS.find(m=>m.id===methodId) ?? PAYMENT_METHODS[0];
   const lc = localAmt(selAmount, methodId);
+  const lcValue = localAmtValue(selAmount, methodId);
 
   const handleSubmit = async () => {
     if (!txnId.trim()) { toast.error('Enter your transaction ID'); return; }
@@ -966,7 +974,21 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
                 <span style={{ fontSize:14, color:'rgba(255,255,255,.2)', marginLeft:8, fontWeight:500 }}>✎</span>
               </div>
             )}
-            {lc && !editingAmount && <div style={{ fontSize:12, color:'rgba(255,255,255,.28)', marginTop:10, fontWeight:600 }}>{lc}</div>}
+            {lc && !editingAmount && (
+              <div style={{ marginTop:16, display:'flex', justifyContent:'center' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap', justifyContent:'center', padding:'14px 18px', borderRadius:18, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)' }}>
+                  <div>
+                    <div style={{ fontSize:10, color:'rgba(255,255,255,.28)', fontWeight:800, letterSpacing:'.16em', textTransform:'uppercase', marginBottom:4 }}>Local Amount</div>
+                    <div style={{ fontSize:28, color:'#fff', fontWeight:900, letterSpacing:'-.04em' }}>{lcValue}</div>
+                    <div style={{ fontSize:11, color:'rgba(255,255,255,.35)', fontWeight:600 }}>{LOCAL[methodId as keyof typeof LOCAL]?.code}</div>
+                  </div>
+                  <button className="ab-copy-btn"
+                    onClick={() => { navigator.clipboard.writeText(lcValue); toast.success('Converted amount copied'); }}>
+                    <Copy size={12}/> Copy
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Chips */}
@@ -1052,6 +1074,19 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
                   </div>
                   <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-.04em' }}>${selAmount.toFixed(2)}</div>
                 </div>
+                {lc && (
+                  <div style={{ padding:'16px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+                    <div>
+                      <div style={{ fontSize:9, color:'rgba(255,255,255,.28)', fontWeight:800, letterSpacing:'.18em', textTransform:'uppercase', marginBottom:4 }}>Send Exactly</div>
+                      <div style={{ fontSize:34, fontWeight:900, color:'#fff', letterSpacing:'-.05em' }}>{lcValue}</div>
+                      <div style={{ fontSize:11, color:selMethod.color, fontWeight:700 }}>{LOCAL[methodId as keyof typeof LOCAL]?.name} • {LOCAL[methodId as keyof typeof LOCAL]?.code}</div>
+                    </div>
+                    <button className="ab-copy-btn" style={({'--mc':selMethod.color,'--mb':selMethod.bgColor} as React.CSSProperties)}
+                      onClick={() => { navigator.clipboard.writeText(lcValue); toast.success('Converted amount copied'); }}>
+                      <Copy size={12}/> Copy Amount
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* QR Code */}
