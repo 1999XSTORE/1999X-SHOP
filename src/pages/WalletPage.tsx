@@ -810,267 +810,274 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
       )}
 
       <style>{`
-        @keyframes ab-in { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:none} }
+        @keyframes ab-in { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+        @keyframes ab-fade { from{opacity:0} to{opacity:1} }
 
-        /* ── Glass card ── */
+        /* Glass card wrapper */
         .ab-card {
-          animation:ab-in .32s cubic-bezier(.22,1,.36,1) both;
-          border-radius:24px; overflow:hidden;
-          background:rgba(8,9,24,.82);
-          border:1px solid rgba(255,255,255,.09);
-          box-shadow:0 40px 100px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.04) inset;
-          backdrop-filter:blur(28px) saturate(1.4);
-          -webkit-backdrop-filter:blur(28px) saturate(1.4);
+          animation: ab-in .32s cubic-bezier(.22,1,.36,1) both;
+          border-radius: 24px;
+          background: rgba(8,9,22,0.72);
+          border: 1px solid rgba(255,255,255,0.08);
+          box-shadow: 0 40px 100px rgba(0,0,0,.65), 0 1px 0 rgba(255,255,255,.06) inset;
+          backdrop-filter: blur(32px) saturate(1.5);
+          -webkit-backdrop-filter: blur(32px) saturate(1.5);
+          overflow: hidden;
         }
 
-        /* ── Amount chips ── */
+        /* Section block (like "Contact info", "Shipping") */
+        .ab-section {
+          border-radius: 18px;
+          background: rgba(255,255,255,0.035);
+          border: 1px solid rgba(255,255,255,0.07);
+          overflow: hidden;
+          transition: border-color .2s;
+        }
+        .ab-section:focus-within { border-color: rgba(139,92,246,.35); }
+        .ab-section-title {
+          font-size: 16px; font-weight: 800; color: #fff;
+          letter-spacing: -.02em; padding: 18px 20px 0;
+        }
+
+        /* Field row inside section */
+        .ab-field-row {
+          padding: 14px 20px;
+          border-bottom: 1px solid rgba(255,255,255,.05);
+          display: flex; flex-direction: column; gap: 5px;
+        }
+        .ab-field-row:last-child { border-bottom: none; }
+        .ab-field-lbl {
+          font-size: 9px; font-weight: 800; letter-spacing: .2em;
+          text-transform: uppercase; color: rgba(255,255,255,.3);
+        }
+        .ab-field-val {
+          font-size: 15px; font-weight: 600; color: #fff; letter-spacing: -.01em;
+          background: transparent; border: none; outline: none;
+          font-family: inherit; width: 100%; padding: 0;
+        }
+        .ab-field-val::placeholder { color: rgba(255,255,255,.22); }
+        .ab-field-val-mono { font-family: monospace; font-size: 14px; }
+
+        /* Amount chips */
         .ab-chip {
-          padding:18px 10px; border-radius:16px; cursor:pointer;
-          border:1px solid rgba(255,255,255,.07);
-          background:rgba(255,255,255,.03);
-          color:rgba(255,255,255,.45); font-family:inherit; font-size:20px; font-weight:900;
-          transition:all .2s cubic-bezier(.22,1,.36,1);
-          display:flex; flex-direction:column; align-items:center; gap:3px;
-          backdrop-filter:blur(12px);
+          padding: 18px 10px; border-radius: 16px; cursor: pointer;
+          border: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.03);
+          color: rgba(255,255,255,.45); font-family: inherit; font-size: 20px; font-weight: 900;
+          transition: all .2s cubic-bezier(.22,1,.36,1);
+          display: flex; flex-direction: column; align-items: center; gap: 3px;
         }
-        .ab-chip:hover { background:rgba(255,255,255,.07); color:rgba(255,255,255,.85); transform:translateY(-2px); border-color:rgba(255,255,255,.14); }
+        .ab-chip:hover { background: rgba(255,255,255,.07); color: rgba(255,255,255,.85); transform: translateY(-2px); border-color: rgba(255,255,255,.14); }
         .ab-chip.ab-on {
-          border-color:rgba(109,40,217,.7);
-          background:linear-gradient(135deg,rgba(109,40,217,.2),rgba(139,92,246,.1));
-          color:#ddd6fe;
-          box-shadow:0 0 28px rgba(109,40,217,.3), inset 0 1px 0 rgba(255,255,255,.08);
+          border-color: rgba(109,40,217,.7);
+          background: linear-gradient(135deg,rgba(109,40,217,.18),rgba(139,92,246,.08));
+          color: #ddd6fe;
+          box-shadow: 0 0 28px rgba(109,40,217,.28), inset 0 1px 0 rgba(255,255,255,.08);
         }
 
-        /* ── Submit button ── */
-        .ab-submit {
-          width:100%; padding:17px; border-radius:16px; border:none; cursor:pointer;
-          font-family:inherit; font-size:15px; font-weight:800;
-          display:flex; align-items:center; justify-content:center; gap:9px;
-          transition:all .25s cubic-bezier(.22,1,.36,1);
-          background:linear-gradient(135deg,#7c3aed,#6d28d9,#5b21b6);
-          color:#fff;
-          box-shadow:0 0 36px rgba(109,40,217,.5), 0 4px 20px rgba(0,0,0,.35);
-          position:relative; overflow:hidden; letter-spacing:.01em;
+        /* Method row */
+        .ab-method {
+          display: flex; align-items: center; gap: 14px;
+          padding: 14px 20px; cursor: pointer; font-family: inherit;
+          border-bottom: 1px solid rgba(255,255,255,.05);
+          background: transparent; border-left: none; border-right: none; border-top: none;
+          transition: background .15s; width: 100%; text-align: left;
         }
-        .ab-submit::before { content:''; position:absolute; top:0; bottom:0; left:-80%; width:40%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent); transition:left .45s ease; pointer-events:none; }
-        .ab-submit:hover { transform:translateY(-2px); box-shadow:0 0 52px rgba(109,40,217,.7), 0 8px 28px rgba(0,0,0,.4); }
+        .ab-method:last-child { border-bottom: none; }
+        .ab-method:hover { background: rgba(255,255,255,.04); }
+        .ab-method.ab-m-on { background: rgba(255,255,255,.04); border-bottom-color: rgba(255,255,255,.05); }
+
+        /* Submit button */
+        .ab-submit {
+          width: 100%; padding: 17px; border-radius: 16px; border: none; cursor: pointer;
+          font-family: inherit; font-size: 15px; font-weight: 800; letter-spacing: .01em;
+          display: flex; align-items: center; justify-content: center; gap: 9px;
+          transition: all .25s cubic-bezier(.22,1,.36,1);
+          background: linear-gradient(135deg,#7c3aed,#6d28d9,#5b21b6);
+          color: #fff;
+          box-shadow: 0 0 36px rgba(109,40,217,.5), 0 4px 20px rgba(0,0,0,.35);
+          position: relative; overflow: hidden;
+        }
+        .ab-submit::before { content:''; position:absolute; top:0; bottom:0; left:-80%; width:40%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent); transition:left .45s ease; pointer-events:none; }
+        .ab-submit:hover { transform: translateY(-2px); box-shadow: 0 0 52px rgba(109,40,217,.7), 0 8px 28px rgba(0,0,0,.4); }
         .ab-submit:hover::before { left:160%; }
-        .ab-submit:active { transform:translateY(0) scale(.97); }
+        .ab-submit:active { transform: translateY(0) scale(.97); }
         .ab-submit:disabled { opacity:.35; cursor:not-allowed; transform:none !important; }
 
-        .ab-input { width:100%; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); border-radius:14px; padding:15px 18px; color:#fff; font-family:inherit; font-size:14px; outline:none; transition:all .2s; box-sizing:border-box; }
-        .ab-input:focus { border-color:rgba(109,40,217,.55); box-shadow:0 0 0 3px rgba(109,40,217,.12); background:rgba(255,255,255,.06); }
-        .ab-input::placeholder { color:rgba(255,255,255,.18); }
+        /* Copy pill button */
+        .ab-copy-btn {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 6px 12px; border-radius: 9px; cursor: pointer; font-family: inherit;
+          font-size: 11px; font-weight: 700; transition: all .15s;
+          border: 1px solid var(--mc, rgba(255,255,255,.12));
+          background: var(--mb, rgba(255,255,255,.05));
+          color: var(--mc, rgba(255,255,255,.5));
+          flex-shrink: 0;
+        }
+        .ab-copy-btn:hover { opacity: .85; transform: translateY(-1px); }
 
-        @media(max-width:720px){
-          .ab-split{ grid-template-columns:1fr !important; }
-          .ab-left-border{ border-right:none !important; border-bottom:1px solid rgba(255,255,255,.06) !important; }
+        @media(max-width:740px){
+          .ab-split-grid{ grid-template-columns:1fr !important; }
+          .ab-border-r{ border-right:none !important; border-bottom:1px solid rgba(255,255,255,.06) !important; }
         }
       `}</style>
 
-      {/* ══ STEP 1 ══ */}
+      {/* ══ STEP 1 — Amount ══ */}
       {step===1 && (
         <div className="ab-card">
-          {/* Header row */}
-          <div style={{ padding:'28px 32px 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          {/* Header */}
+          <div style={{ padding:'26px 30px 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <div>
-              <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.18em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:4 }}>Deposit to Wallet</div>
-              <div style={{ fontSize:11, color:'rgba(255,255,255,.25)' }}>Select an amount or tap the number to type</div>
+              <div style={{ fontSize:9, fontWeight:800, letterSpacing:'.22em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', marginBottom:4 }}>Deposit to Wallet</div>
+              <div style={{ fontSize:13, color:'rgba(255,255,255,.4)', fontWeight:500 }}>Tap the amount to type a custom value</div>
             </div>
-            <div style={{ display:'flex', alignItems:'center', gap:7, padding:'8px 16px', borderRadius:99, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.09)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 16px', borderRadius:99, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.09)' }}>
               <div style={{ width:7, height:7, borderRadius:'50%', background:'#4ade80', boxShadow:'0 0 8px #4ade80' }}/>
-              <span style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,.6)' }}>Balance: <span style={{ color:'#fff' }}>${balance.toFixed(2)}</span></span>
+              <span style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,.55)' }}>Balance: <span style={{ color:'#fff' }}>${balance.toFixed(2)}</span></span>
             </div>
           </div>
 
-          {/* Big editable amount display */}
-          <div style={{ textAlign:'center', padding:'28px 32px 20px', position:'relative' }}
+          {/* Big clickable amount */}
+          <div style={{ textAlign:'center', padding:'28px 30px 22px', cursor:'text' }}
             onClick={()=>{ if (!editingAmount){ setEditingAmount(true); setTimeout(()=>amountInputRef.current?.focus(),30); } }}
           >
             {editingAmount ? (
-              <div style={{ position:'relative', display:'inline-block' }}>
-                <span style={{ fontSize:70, fontWeight:900, color:'rgba(255,255,255,.25)', letterSpacing:'-.06em', lineHeight:1, userSelect:'none', pointerEvents:'none' }}>$</span>
-                <input
-                  ref={amountInputRef}
-                  type="number"
-                  value={custom}
+              <div style={{ display:'inline-flex', alignItems:'baseline', gap:4 }}>
+                <span style={{ fontSize:68, fontWeight:900, color:'rgba(255,255,255,.3)', letterSpacing:'-.06em', lineHeight:1 }}>$</span>
+                <input ref={amountInputRef} type="number" value={custom}
                   onChange={e=>{ setCustom(e.target.value); setAmount(0); }}
-                  onBlur={()=>{ setEditingAmount(false); if (!custom || parseFloat(custom)<=0) { setCustom(''); setAmount(10); } }}
-                  onKeyDown={e=>{ if (e.key==='Enter'||e.key==='Escape') { setEditingAmount(false); if (!custom||parseFloat(custom)<=0){setCustom('');setAmount(10);} } }}
+                  onBlur={()=>{ setEditingAmount(false); if (!custom||parseFloat(custom)<=0){setCustom('');setAmount(10);} }}
+                  onKeyDown={e=>{ if(e.key==='Enter'||e.key==='Escape'){setEditingAmount(false);if(!custom||parseFloat(custom)<=0){setCustom('');setAmount(10);}} }}
                   placeholder="0"
-                  style={{
-                    fontSize:70, fontWeight:900, color:'#fff', letterSpacing:'-.06em', lineHeight:1,
-                    background:'transparent', border:'none', outline:'none', fontFamily:'inherit',
-                    width: Math.max(2, (custom||'0').length) + 'ch',
-                    minWidth:'1ch', maxWidth:'8ch',
-                    textShadow:'0 0 60px rgba(139,92,246,.5)',
-                    caretColor: '#8b5cf6',
-                  }}
+                  style={{ fontSize:68, fontWeight:900, color:'#fff', letterSpacing:'-.06em', lineHeight:1, background:'transparent', border:'none', outline:'none', fontFamily:'inherit', width:Math.max(2,(custom||'0').length+1)+'ch', minWidth:'1ch', maxWidth:'8ch', caretColor:'#8b5cf6', textShadow:'0 0 60px rgba(139,92,246,.4)' }}
                 />
               </div>
             ) : (
-              <div style={{
-                fontSize:70, fontWeight:900, color:'#fff', letterSpacing:'-.06em', lineHeight:1,
-                textShadow:'0 0 60px rgba(139,92,246,.35)',
-                cursor:'text', display:'inline-block',
-                borderBottom: '2px solid rgba(255,255,255,.08)',
-                paddingBottom:4, transition:'border-color .2s',
-              }}
-                onMouseEnter={e=>(e.currentTarget.style.borderColor='rgba(139,92,246,.5)')}
-                onMouseLeave={e=>(e.currentTarget.style.borderColor='rgba(255,255,255,.08)')}
+              <div style={{ display:'inline-block', fontSize:68, fontWeight:900, color:'#fff', letterSpacing:'-.06em', lineHeight:1, textShadow:'0 0 60px rgba(109,40,217,.35)', borderBottom:'2px solid rgba(255,255,255,.07)', paddingBottom:4, transition:'border-color .2s' }}
+                onMouseEnter={e=>(e.currentTarget.style.borderColor='rgba(139,92,246,.45)')}
+                onMouseLeave={e=>(e.currentTarget.style.borderColor='rgba(255,255,255,.07)')}
               >
-                ${selAmount > 0 ? selAmount.toFixed(2) : '0.00'}
-                <span style={{ fontSize:14, color:'rgba(255,255,255,.2)', marginLeft:8, fontWeight:500, letterSpacing:'normal' }}>✎</span>
+                ${selAmount>0?selAmount.toFixed(2):'0.00'}
+                <span style={{ fontSize:14, color:'rgba(255,255,255,.2)', marginLeft:8, fontWeight:500 }}>✎</span>
               </div>
             )}
-            {lc && !editingAmount && <div style={{ fontSize:13, color:'rgba(255,255,255,.3)', marginTop:10, fontWeight:600 }}>{lc}</div>}
+            {lc && !editingAmount && <div style={{ fontSize:12, color:'rgba(255,255,255,.28)', marginTop:10, fontWeight:600 }}>{lc}</div>}
           </div>
 
-          {/* Amount chips — 2 rows × 3 cols, full width */}
-          <div style={{ padding:'0 32px 24px' }}>
+          {/* Chips */}
+          <div style={{ padding:'0 30px 26px' }}>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:20 }}>
-              {[5,10,15,25,50,100].map(a=>{
-                const isOn = !custom && amount===a;
-                return (
-                  <button key={a} className={`ab-chip${isOn?' ab-on':''}`}
-                    onClick={()=>{ setAmount(a); setCustom(''); setEditingAmount(false); }}>
-                    <span style={{ fontSize:9, fontWeight:700, opacity:.5, letterSpacing:'.1em' }}>USD</span>
-                    ${a}
-                  </button>
-                );
-              })}
+              {[5,10,15,25,50,100].map(a=>(
+                <button key={a} className={`ab-chip${!custom&&amount===a?' ab-on':''}`}
+                  onClick={()=>{setAmount(a);setCustom('');setEditingAmount(false);}}>
+                  <span style={{ fontSize:9, fontWeight:700, opacity:.5, letterSpacing:'.1em' }}>USD</span>
+                  ${a}
+                </button>
+              ))}
             </div>
             <button className="ab-submit" onClick={()=>selAmount>0?setStep(2):toast.error('Please select an amount')}>
               Continue to Payment <ArrowRight size={17}/>
             </button>
-            <div style={{ display:'flex', justifyContent:'center', gap:18, marginTop:14 }}>
-              {['🔒 Secure','⚡ Instant Credit','✉️ Admin Verified'].map(s=>(
-                <span key={s} style={{ fontSize:10, color:'rgba(255,255,255,.22)', fontWeight:600 }}>{s}</span>
+            <div style={{ display:'flex', justifyContent:'center', gap:20, marginTop:16 }}>
+              {['🔒 Secure','⚡ Fast Credit','✓ Verified'].map(s=>(
+                <span key={s} style={{ fontSize:10, color:'rgba(255,255,255,.2)', fontWeight:600 }}>{s}</span>
               ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* ══ STEP 2 ══ */}
+      {/* ══ STEP 2 — Method + Details ══ */}
       {step===2 && (
-        <div className="ab-card" style={{ overflow:'visible' }}>
+        <div className="ab-card">
 
           {/* Top bar */}
-          <div style={{ padding:'18px 24px 16px', borderBottom:'1px solid rgba(255,255,255,.06)', display:'flex', alignItems:'center', gap:12, background:'rgba(255,255,255,.02)', borderRadius:'24px 24px 0 0' }}>
-            <button onClick={()=>setStep(1)} style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 14px', borderRadius:10, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', cursor:'pointer', color:'rgba(255,255,255,.55)', fontSize:12, fontFamily:'inherit', fontWeight:700, transition:'all .15s' }}
+          <div style={{ padding:'18px 24px 16px', borderBottom:'1px solid rgba(255,255,255,.06)', display:'flex', alignItems:'center', gap:12 }}>
+            <button onClick={()=>setStep(1)} style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 14px', borderRadius:10, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.09)', cursor:'pointer', color:'rgba(255,255,255,.55)', fontSize:12, fontFamily:'inherit', fontWeight:700, transition:'all .15s' }}
               onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.1)';(e.currentTarget as HTMLButtonElement).style.color='#fff';}}
               onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.06)';(e.currentTarget as HTMLButtonElement).style.color='rgba(255,255,255,.55)';}}
             ><ArrowLeft size={13}/> Back</button>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.22)' }}>Choose Payment Method</div>
-            </div>
-            <div style={{ padding:'8px 20px', borderRadius:99, background:'rgba(139,92,246,.18)', border:'1px solid rgba(139,92,246,.3)', fontSize:17, fontWeight:900, color:'#c4b5fd', letterSpacing:'-.02em' }}>${selAmount.toFixed(2)}</div>
+            <div style={{ flex:1, fontSize:11, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.22)' }}>Payment</div>
+            <div style={{ padding:'8px 20px', borderRadius:99, background:'rgba(109,40,217,.18)', border:'1px solid rgba(139,92,246,.28)', fontSize:17, fontWeight:900, color:'#c4b5fd', letterSpacing:'-.02em' }}>${selAmount.toFixed(2)}</div>
           </div>
 
-          {/* Main split layout */}
-          <div className="ab-split" style={{ display:'grid', gridTemplateColumns:'380px 1fr' }}>
+          {/* Two column */}
+          <div className="ab-split-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1.1fr' }}>
 
-            {/* ── LEFT: Method List ── */}
-            <div className="ab-left-border" style={{ padding:'20px 16px', borderRight:'1px solid rgba(255,255,255,.05)' }}>
-              <div style={{ fontSize:9, fontWeight:800, letterSpacing:'.2em', textTransform:'uppercase', color:'rgba(255,255,255,.2)', marginBottom:12, paddingLeft:4 }}>Select Method</div>
-              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            {/* LEFT — Payment Method section (like "Payments" in photo) */}
+            <div className="ab-border-r" style={{ padding:'22px 20px', borderRight:'1px solid rgba(255,255,255,.05)' }}>
+              <div className="ab-section">
+                <div className="ab-section-title" style={{ paddingBottom:14 }}>Payment Method</div>
                 {PAYMENT_METHODS.map(m=>{
                   const active = methodId===m.id;
                   return (
-                    <button key={m.id} onClick={()=>setMethodId(m.id)}
+                    <button key={m.id} className={`ab-method${active?' ab-m-on':''}`}
                       style={{
-                        display:'flex', alignItems:'center', gap:14, padding:'13px 16px',
-                        borderRadius:14, border:`1.5px solid ${active ? m.color : 'rgba(255,255,255,.07)'}`,
-                        background: active
-                          ? `linear-gradient(135deg, ${m.bgColor}, rgba(255,255,255,.03))`
-                          : 'rgba(255,255,255,.03)',
-                        cursor:'pointer', fontFamily:'inherit',
-                        transition:'all .2s cubic-bezier(.22,1,.36,1)',
-                        boxShadow: active ? `0 0 24px ${m.glow}, inset 0 1px 0 rgba(255,255,255,.06)` : 'none',
-                        width:'100%', textAlign:'left',
-                      }}>
-                      {/* Icon box */}
-                      <div style={{
-                        width:38, height:38, borderRadius:11, flexShrink:0,
-                        background: active ? m.bgColor : 'rgba(255,255,255,.06)',
-                        border:`1px solid ${active ? m.color : 'rgba(255,255,255,.09)'}`,
-                        display:'flex', alignItems:'center', justifyContent:'center',
-                        transition:'all .2s', boxShadow: active ? `0 0 14px ${m.glow}` : 'none',
-                      }}>
+                        borderLeft: active ? `3px solid ${m.color}` : '3px solid transparent',
+                        background: active ? `linear-gradient(90deg, ${m.bgColor}, rgba(0,0,0,0))` : 'transparent',
+                      } as React.CSSProperties}
+                      onClick={()=>setMethodId(m.id)}>
+                      {/* Icon */}
+                      <div style={{ width:40, height:40, borderRadius:12, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background: active ? m.bgColor : 'rgba(255,255,255,.06)', border:`1px solid ${active ? m.color : 'rgba(255,255,255,.08)'}`, transition:'all .2s', boxShadow: active ? `0 0 14px ${m.glow}` : 'none' }}>
                         {m.icon}
                       </div>
                       {/* Label */}
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontSize:13, fontWeight:700, color: active ? '#fff' : 'rgba(255,255,255,.6)', letterSpacing:'-.01em' }}>{m.label}</div>
-                        {active && lc && <div style={{ fontSize:10, color:m.color, fontWeight:600, marginTop:1 }}>{lc}</div>}
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:14, fontWeight:700, color: active ? '#fff' : 'rgba(255,255,255,.55)', letterSpacing:'-.01em' }}>{m.label}</div>
+                        {active && lc && <div style={{ fontSize:10, color:m.color, fontWeight:600, marginTop:2 }}>{lc}</div>}
                       </div>
-                      {/* Chevron */}
-                      <div style={{
-                        width:26, height:26, borderRadius:8, flexShrink:0,
-                        background: active ? m.color : 'rgba(255,255,255,.05)',
-                        display:'flex', alignItems:'center', justifyContent:'center',
-                        transition:'all .2s',
-                      }}>
-                        <ChevronRight size={13} color={active ? '#000' : 'rgba(255,255,255,.3)'}/>
-                      </div>
+                      {/* Dot indicator */}
+                      {active && <div style={{ width:8, height:8, borderRadius:'50%', background:m.color, boxShadow:`0 0 8px ${m.color}`, flexShrink:0 }}/>}
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* ── RIGHT: Payment Details ── */}
-            <div style={{ padding:'24px 26px', display:'flex', flexDirection:'column', gap:16 }}>
+            {/* RIGHT — Details (like "Card information" sections in photo) */}
+            <div style={{ padding:'22px 22px 24px', display:'flex', flexDirection:'column', gap:14 }}>
 
-              {/* Amount + method hero card */}
-              <div style={{
-                padding:'20px 22px', borderRadius:18,
-                background:`linear-gradient(135deg, ${selMethod.bgColor}, rgba(0,0,0,.35))`,
-                border:`1px solid ${selMethod.borderColor}`,
-                boxShadow:`0 8px 32px ${selMethod.glow}`,
-              }}>
-                <div style={{ fontSize:9, fontWeight:800, letterSpacing:'.2em', textTransform:'uppercase', color:'rgba(255,255,255,.35)', marginBottom:6 }}>Paying via {selMethod.label}</div>
-                <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
-                  <div style={{ fontSize:44, fontWeight:900, color:'#fff', letterSpacing:'-.05em', lineHeight:1 }}>${selAmount.toFixed(2)}</div>
-                  {lc && <div style={{ fontSize:13, color:selMethod.color, fontWeight:700 }}>{lc}</div>}
+              {/* Order summary section */}
+              <div className="ab-section">
+                <div style={{ padding:'16px 20px', borderBottom:'1px solid rgba(255,255,255,.05)', display:'flex', alignItems:'center', gap:12 }}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:selMethod.bgColor, border:`1px solid ${selMethod.borderColor}`, display:'flex', alignItems:'center', justifyContent:'center' }}>{selMethod.icon}</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:9, color:'rgba(255,255,255,.28)', fontWeight:800, letterSpacing:'.18em', textTransform:'uppercase' }}>Paying via</div>
+                    <div style={{ fontSize:14, fontWeight:800, color:'#fff' }}>{selMethod.label}</div>
+                  </div>
+                  <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-.04em' }}>${selAmount.toFixed(2)}</div>
                 </div>
               </div>
 
-              {/* QR Code — centered, prominent */}
+              {/* QR Code */}
               {selMethod.hasQr && selMethod.qr && !selMethod.qr.startsWith('YOUR_') && (
-                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
-                  <div style={{
-                    padding:12, borderRadius:20, background:'#fff', cursor:'zoom-in',
-                    transition:'transform .2s, box-shadow .2s',
-                    boxShadow:`0 0 40px ${selMethod.glow}, 0 16px 40px rgba(0,0,0,.5)`,
-                  }}
+                <div style={{ textAlign:'center', padding:'4px 0' }}>
+                  <div style={{ display:'inline-block', padding:11, borderRadius:20, background:'#fff', cursor:'zoom-in', transition:'transform .2s, box-shadow .2s', boxShadow:`0 0 40px ${selMethod.glow}, 0 12px 36px rgba(0,0,0,.5)` }}
                     onClick={()=>setQrZoom(true)}
-                    onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform='scale(1.04)';(e.currentTarget as HTMLDivElement).style.boxShadow=`0 0 60px ${selMethod.glow}, 0 20px 50px rgba(0,0,0,.6)`;}}
-                    onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform='scale(1)';(e.currentTarget as HTMLDivElement).style.boxShadow=`0 0 40px ${selMethod.glow}, 0 16px 40px rgba(0,0,0,.5)`;}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform='scale(1.04)';}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform='scale(1)';}}
                   >
-                    <img src={selMethod.qr} alt="QR" style={{ width:150, height:150, objectFit:'contain', borderRadius:12, display:'block' }} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
+                    <img src={selMethod.qr} alt="QR" style={{ width:140, height:140, objectFit:'contain', borderRadius:12, display:'block' }} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
                   </div>
-                  <div style={{ fontSize:10, color:'rgba(255,255,255,.22)', fontWeight:600, letterSpacing:'.06em' }}>TAP TO ZOOM • SCAN TO PAY</div>
+                  <div style={{ fontSize:9, color:'rgba(255,255,255,.22)', fontWeight:700, letterSpacing:'.12em', marginTop:8 }}>TAP TO ZOOM • SCAN TO PAY</div>
                 </div>
               )}
 
-              {/* Payment ID fields — bigger, cleaner */}
-              {selMethod.fields.length > 0 && selMethod.id!=='paypal' && selMethod.id!=='truewallet' && (
-                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {/* Payment ID fields as section rows */}
+              {selMethod.fields.length>0 && selMethod.id!=='paypal' && selMethod.id!=='truewallet' && (
+                <div className="ab-section">
                   {selMethod.fields.map((f,i)=>(
-                    <div key={i} style={{ borderRadius:14, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', padding:'14px 18px' }}>
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
-                        <span style={{ fontSize:9, color:'rgba(255,255,255,.3)', textTransform:'uppercase' as const, letterSpacing:'.14em', fontWeight:800 }}>{f.label}</span>
-                        {f.note && <span style={{ fontSize:9, color:selMethod.color, fontWeight:800, letterSpacing:'.06em' }}>{f.note}</span>}
+                    <div key={i} style={{ padding:'14px 20px', borderBottom:i<selMethod.fields.length-1?'1px solid rgba(255,255,255,.05)':'none' }}>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:5 }}>
+                        <span style={{ fontSize:9, fontWeight:800, letterSpacing:'.2em', textTransform:'uppercase', color:'rgba(255,255,255,.3)' }}>{f.label}</span>
+                        {f.note && <span style={{ fontSize:9, fontWeight:800, color:selMethod.color, letterSpacing:'.08em' }}>{f.note}</span>}
                       </div>
                       <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                        <code style={{ flex:1, fontSize:16, fontFamily:'monospace', color:'#fff', fontWeight:700, letterSpacing:'.02em', wordBreak:'break-all' }}>{f.value}</code>
+                        <code style={{ flex:1, fontSize:17, fontFamily:'monospace', color:'#fff', fontWeight:700, letterSpacing:'.01em', wordBreak:'break-all' }}>{f.value}</code>
                         {!f.value.startsWith('http') && !f.value.startsWith('YOUR_') && (
-                          <button onClick={()=>{navigator.clipboard.writeText(f.value);toast.success(`${f.label} copied!`);}} style={{ padding:'8px 12px', borderRadius:10, background:`${selMethod.bgColor}`, border:`1px solid ${selMethod.borderColor}`, cursor:'pointer', color:selMethod.color, display:'flex', alignItems:'center', gap:5, flexShrink:0, fontSize:11, fontWeight:700, fontFamily:'inherit', transition:'all .15s' }}
-                            onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.boxShadow=`0 0 14px ${selMethod.glow}`;}}
-                            onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.boxShadow='none';}}
-                          ><Copy size={13}/> Copy</button>
+                          <button className="ab-copy-btn" style={({'--mc':selMethod.color,'--mb':selMethod.bgColor} as React.CSSProperties)}
+                            onClick={()=>{navigator.clipboard.writeText(f.value);toast.success(`${f.label} copied!`);}}>
+                            <Copy size={12}/> Copy
+                          </button>
                         )}
                       </div>
                     </div>
@@ -1084,32 +1091,24 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
               {/* TrueWallet */}
               {selMethod.id==='truewallet' && <TrueWalletRedeem user={user} onSuccess={onSuccess} expectedUsdAmount={selAmount} referralEmail={referralEmail}/>}
 
-              {/* Manual form: email + txn */}
+              {/* Manual form fields — like "Contact info" section */}
               {selMethod.id!=='paypal' && selMethod.id!=='truewallet' && (
                 <>
-                  {/* Email */}
-                  <div style={{ borderRadius:14, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', padding:'14px 18px' }}>
-                    <div style={{ fontSize:9, color:'rgba(255,255,255,.3)', textTransform:'uppercase' as const, letterSpacing:'.14em', fontWeight:800, marginBottom:6 }}>Your Email</div>
-                    <input type="email" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}
-                      style={{ width:'100%', background:'transparent', border:'none', outline:'none', color:'#fff', fontFamily:'inherit', fontSize:14, fontWeight:600, padding:0 }}
-                    />
+                  <div className="ab-section">
+                    <div className="ab-section-title">Your Info</div>
+                    <div className="ab-field-row">
+                      <div className="ab-field-lbl">Email</div>
+                      <input type="email" className="ab-field-val" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}/>
+                    </div>
+                    <div className="ab-field-row">
+                      <div className="ab-field-lbl">Transaction ID</div>
+                      <input type="text" className="ab-field-val ab-field-val-mono" placeholder="Paste TXN / reference ID…" value={txnId} onChange={e=>setTxnId(e.target.value)}/>
+                    </div>
                   </div>
 
-                  {/* Transaction ID */}
-                  <div style={{ borderRadius:14, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', padding:'14px 18px', transition:'border-color .2s' }}
-                    onFocusCapture={e=>(e.currentTarget.style.borderColor='rgba(139,92,246,.45)')}
-                    onBlurCapture={e=>(e.currentTarget.style.borderColor='rgba(255,255,255,.08)')}
-                  >
-                    <div style={{ fontSize:9, color:'rgba(255,255,255,.3)', textTransform:'uppercase' as const, letterSpacing:'.14em', fontWeight:800, marginBottom:6 }}>Transaction ID</div>
-                    <input type="text" placeholder="Paste TXN / reference ID…" value={txnId} onChange={e=>setTxnId(e.target.value)}
-                      style={{ width:'100%', background:'transparent', border:'none', outline:'none', color:'#fff', fontFamily:'monospace', fontSize:13, fontWeight:600, padding:0 }}
-                    />
-                  </div>
-
-                  {/* CTA */}
                   <button className="ab-submit" onClick={()=>{
-                    if (!txnId.trim()) { toast.error('Enter your transaction ID'); return; }
-                    if (!email.trim()) { toast.error('Enter your email'); return; }
+                    if (!txnId.trim()){toast.error('Enter your transaction ID');return;}
+                    if (!email.trim()){toast.error('Enter your email');return;}
                     setStep(3);
                   }}>
                     I've Sent Payment <ArrowRight size={16}/>
@@ -1121,26 +1120,26 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
         </div>
       )}
 
-      {/* ══ STEP 3 ══ */}
+      {/* ══ STEP 3 — Confirm ══ */}
       {step===3 && (
         <div className="ab-card" style={{ padding:'36px 32px' }}>
-          <button onClick={()=>setStep(2)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,.4)', fontSize:13, fontFamily:'inherit', marginBottom:24, padding:0, fontWeight:700, transition:'color .15s' }}
-            onMouseEnter={e=>(e.currentTarget.style.color='#fff')} onMouseLeave={e=>(e.currentTarget.style.color='rgba(255,255,255,.4)')}
+          <button onClick={()=>setStep(2)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,.35)', fontSize:13, fontFamily:'inherit', marginBottom:26, padding:0, fontWeight:700, transition:'color .15s' }}
+            onMouseEnter={e=>(e.currentTarget.style.color='#fff')} onMouseLeave={e=>(e.currentTarget.style.color='rgba(255,255,255,.35)')}
           ><ArrowLeft size={14}/> Back</button>
 
-          <div style={{ fontSize:9, fontWeight:800, letterSpacing:'.2em', textTransform:'uppercase', color:'rgba(255,255,255,.25)', marginBottom:6 }}>Review Order</div>
+          <div style={{ fontSize:9, fontWeight:800, letterSpacing:'.22em', textTransform:'uppercase', color:'rgba(255,255,255,.25)', marginBottom:6 }}>Review Order</div>
           <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-.03em', marginBottom:24 }}>Confirm Submission</div>
 
-          <div style={{ borderRadius:18, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', overflow:'hidden', marginBottom:16 }}>
+          <div className="ab-section" style={{ marginBottom:16 }}>
             {[{l:'Method',v:selMethod.label},{l:'Amount',v:`$${selAmount.toFixed(2)}`},{l:'Email',v:email},{l:'Transaction ID',v:txnId}].map((r,i)=>(
               <div key={r.l} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'15px 20px', borderBottom:i<3?'1px solid rgba(255,255,255,.05)':'none' }}>
-                <span style={{ fontSize:11, color:'rgba(255,255,255,.35)', fontWeight:700, letterSpacing:'.06em', textTransform:'uppercase' as const }}>{r.l}</span>
-                <span style={{ fontSize:13, fontWeight:700, color:'#fff', fontFamily:r.l==='Transaction ID'?'monospace':undefined, maxWidth:240, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.v}</span>
+                <span style={{ fontSize:10, fontWeight:800, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.3)' }}>{r.l}</span>
+                <span style={{ fontSize:14, fontWeight:700, color:'#fff', fontFamily:r.l==='Transaction ID'?'monospace':undefined, maxWidth:240, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.v}</span>
               </div>
             ))}
           </div>
 
-          <div style={{ display:'flex', alignItems:'center', gap:10, padding:'13px 18px', borderRadius:13, background:'rgba(139,92,246,.07)', border:'1px solid rgba(139,92,246,.18)', marginBottom:22 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10, padding:'13px 18px', borderRadius:14, background:'rgba(109,40,217,.08)', border:'1px solid rgba(139,92,246,.18)', marginBottom:22 }}>
             <span style={{ fontSize:16, flexShrink:0 }}>⚡</span>
             <p style={{ fontSize:12, color:'rgba(255,255,255,.5)', lineHeight:1.6, margin:0 }}>Admin will verify and credit <strong style={{ color:'#a78bfa' }}>${selAmount.toFixed(2)}</strong> to your balance within minutes.</p>
           </div>

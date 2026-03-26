@@ -8,7 +8,7 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 const en = {
   nav: {
     home: 'Home', license: 'License', chat: 'Chat', shop: 'Shop',
-    bonus: 'Bonus', status: 'Status', support: 'Support', signOut: 'Sign Out',
+    bonus: 'Bonus', status: 'Status', support: 'Support', signOut: 'Sign Out', reseller: 'Reseller',
   },
   auth: {
     signIn: 'Sign In', subtitle: 'Access your premium 1999X panel',

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/lib/store';
-import { Menu, X, LogOut, Globe, Wallet, Crown, Shield, Home, ShoppingBag, Key, MessageCircle, Gift, Activity } from 'lucide-react';
+import { Menu, X, LogOut, Globe, Wallet, Crown, Shield, Home, ShoppingBag, Key, MessageCircle, Gift, Activity, Handshake } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
@@ -13,6 +13,7 @@ const navItems = [
   { key: 'chat',        path: '/chat',         tKey: 'nav.chat',    Icon: MessageCircle },
   { key: 'bonus',       path: '/bonus',        tKey: 'nav.bonus',   Icon: Gift          },
   { key: 'panelStatus', path: '/panel-status', tKey: 'nav.status',  Icon: Activity      },
+  { key: 'reseller',    path: '/reseller',     tKey: 'nav.reseller', Icon: Handshake     },
 ];
 
 const LANGUAGES = [
@@ -133,7 +134,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
 
         /* glass radio */
         .glass-radio-group { display:flex; position:relative; background:rgba(255,255,255,.045); border-radius:15px; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); overflow:visible; width:fit-content; padding:3px; gap:1px; }
-        .glass-glider { position:absolute; top:3px; bottom:3px; width:calc((100% - 6px) / 6); border-radius:12px; z-index:1; transition:transform .48s cubic-bezier(0.34,1.56,0.64,1); background:linear-gradient(135deg,rgba(251,191,36,.28),rgba(245,158,11,.22),rgba(217,119,6,.18)); border:1px solid rgba(251,191,36,.3); box-shadow:0 0 20px rgba(251,191,36,.4); animation:gold-pulse 2.8s ease-in-out infinite; overflow:hidden; }
+        .glass-glider { position:absolute; top:3px; bottom:3px; width:calc((100% - 6px) / 7); border-radius:12px; z-index:1; transition:transform .48s cubic-bezier(0.34,1.56,0.64,1); background:linear-gradient(135deg,rgba(251,191,36,.28),rgba(245,158,11,.22),rgba(217,119,6,.18)); border:1px solid rgba(251,191,36,.3); box-shadow:0 0 20px rgba(251,191,36,.4); animation:gold-pulse 2.8s ease-in-out infinite; overflow:hidden; }
         .glass-glider::after { content:''; position:absolute; top:0; bottom:0; width:45%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent); animation:gold-shine 3s ease-in-out infinite; pointer-events:none; }
 
         /* nav links */

@@ -18,6 +18,7 @@ const WalletPage = lazy(() => import('@/pages/WalletPage'));
 const BonusPage = lazy(() => import('@/pages/BonusPage'));
 const AnnouncementsPage = lazy(() => import('@/pages/AnnouncementsPage'));
 const AdminActivityPage = lazy(() => import('@/pages/AdminActivityPage'));
+const ResellerPage       = lazy(() => import('@/pages/ResellerPage'));
 
 const pageComponents: Record<string, React.LazyExoticComponent<React.ComponentType<any>>> = {
   '/':                DashboardPage,
@@ -29,6 +30,7 @@ const pageComponents: Record<string, React.LazyExoticComponent<React.ComponentTy
   '/bonus':           BonusPage,
   '/announcements':   AnnouncementsPage,
   '/admin-activity':  AdminActivityPage,
+  '/reseller':        ResellerPage,
 };
 
 
