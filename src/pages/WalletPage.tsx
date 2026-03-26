@@ -771,6 +771,8 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
   const [step, setStep] = useState<1|2|3>(1);
   const [amount, setAmount] = useState(10);
   const [custom, setCustom] = useState('');
+  const [editingAmount, setEditingAmount] = useState(false);
+  const amountInputRef = useRef<HTMLInputElement>(null);
   const [methodId, setMethodId] = useState<MethodId>('binance');
   const [txnId, setTxnId] = useState('');
   const [email, setEmail] = useState(user?.email || '');
@@ -808,33 +810,72 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
       )}
 
       <style>{`
-        @keyframes ab-in { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
-        .ab-card { animation:ab-in .3s cubic-bezier(.22,1,.36,1) both; border-radius:24px; overflow:hidden; background:linear-gradient(160deg,rgba(10,10,20,.97) 0%,rgba(6,6,16,.97) 100%); border:1px solid rgba(255,255,255,.08); box-shadow:0 32px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.02) inset; }
-        .ab-chip { padding:14px 8px; border-radius:14px; cursor:pointer; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:rgba(255,255,255,.5); font-family:inherit; font-size:18px; font-weight:900; transition:all .2s cubic-bezier(.22,1,.36,1); display:flex; flex-direction:column; align-items:center; gap:2px; }
-        .ab-chip:hover { background:rgba(255,255,255,.07); color:rgba(255,255,255,.8); transform:translateY(-2px); }
-        .ab-chip.ab-on { border-color:rgba(139,92,246,.6); background:linear-gradient(135deg,rgba(139,92,246,.18),rgba(109,40,217,.1)); color:#e9d5ff; box-shadow:0 0 24px rgba(109,40,217,.22),inset 0 1px 0 rgba(255,255,255,.07); }
-        .ab-method-row { display:flex; align-items:center; gap:14px; padding:12px 16px; border-radius:13px; border:1px solid rgba(255,255,255,.07); background:rgba(255,255,255,.03); cursor:pointer; font-family:inherit; transition:all .2s cubic-bezier(.22,1,.36,1); width:100%; text-align:left; }
-        .ab-method-row:hover { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.12); }
-        .ab-method-row.ab-m-on { border-color:var(--mc,rgba(139,92,246,.5)); background:rgba(255,255,255,.04); box-shadow:0 0 20px var(--mg,rgba(109,40,217,.2)); }
-        .ab-submit { width:100%; padding:16px; border-radius:14px; border:none; cursor:pointer; font-family:inherit; font-size:15px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:9px; transition:all .25s cubic-bezier(.22,1,.36,1); background:linear-gradient(135deg,#8b5cf6,#7c3aed,#6d28d9); color:#fff; box-shadow:0 0 32px rgba(109,40,217,.45),0 4px 20px rgba(0,0,0,.3); position:relative; overflow:hidden; }
-        .ab-submit::before { content:''; position:absolute; top:0; bottom:0; left:-80%; width:40%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent); transition:left .4s ease; pointer-events:none; }
-        .ab-submit:hover { transform:translateY(-2px); box-shadow:0 0 48px rgba(109,40,217,.65),0 8px 28px rgba(0,0,0,.4); }
+        @keyframes ab-in { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:none} }
+
+        /* ── Glass card ── */
+        .ab-card {
+          animation:ab-in .32s cubic-bezier(.22,1,.36,1) both;
+          border-radius:24px; overflow:hidden;
+          background:rgba(8,9,24,.82);
+          border:1px solid rgba(255,255,255,.09);
+          box-shadow:0 40px 100px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.04) inset;
+          backdrop-filter:blur(28px) saturate(1.4);
+          -webkit-backdrop-filter:blur(28px) saturate(1.4);
+        }
+
+        /* ── Amount chips ── */
+        .ab-chip {
+          padding:18px 10px; border-radius:16px; cursor:pointer;
+          border:1px solid rgba(255,255,255,.07);
+          background:rgba(255,255,255,.03);
+          color:rgba(255,255,255,.45); font-family:inherit; font-size:20px; font-weight:900;
+          transition:all .2s cubic-bezier(.22,1,.36,1);
+          display:flex; flex-direction:column; align-items:center; gap:3px;
+          backdrop-filter:blur(12px);
+        }
+        .ab-chip:hover { background:rgba(255,255,255,.07); color:rgba(255,255,255,.85); transform:translateY(-2px); border-color:rgba(255,255,255,.14); }
+        .ab-chip.ab-on {
+          border-color:rgba(109,40,217,.7);
+          background:linear-gradient(135deg,rgba(109,40,217,.2),rgba(139,92,246,.1));
+          color:#ddd6fe;
+          box-shadow:0 0 28px rgba(109,40,217,.3), inset 0 1px 0 rgba(255,255,255,.08);
+        }
+
+        /* ── Submit button ── */
+        .ab-submit {
+          width:100%; padding:17px; border-radius:16px; border:none; cursor:pointer;
+          font-family:inherit; font-size:15px; font-weight:800;
+          display:flex; align-items:center; justify-content:center; gap:9px;
+          transition:all .25s cubic-bezier(.22,1,.36,1);
+          background:linear-gradient(135deg,#7c3aed,#6d28d9,#5b21b6);
+          color:#fff;
+          box-shadow:0 0 36px rgba(109,40,217,.5), 0 4px 20px rgba(0,0,0,.35);
+          position:relative; overflow:hidden; letter-spacing:.01em;
+        }
+        .ab-submit::before { content:''; position:absolute; top:0; bottom:0; left:-80%; width:40%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent); transition:left .45s ease; pointer-events:none; }
+        .ab-submit:hover { transform:translateY(-2px); box-shadow:0 0 52px rgba(109,40,217,.7), 0 8px 28px rgba(0,0,0,.4); }
         .ab-submit:hover::before { left:160%; }
-        .ab-submit:active { transform:translateY(0) scale(.98); }
-        .ab-submit:disabled { opacity:.4; cursor:not-allowed; transform:none !important; }
-        .ab-input { width:100%; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09); border-radius:12px; padding:14px 16px; color:#fff; font-family:inherit; font-size:14px; outline:none; transition:all .2s; box-sizing:border-box; }
-        .ab-input:focus { border-color:rgba(139,92,246,.5); box-shadow:0 0 0 3px rgba(139,92,246,.1); }
-        .ab-input::placeholder { color:rgba(255,255,255,.2); }
-        @media(max-width:680px){ .ab-split{ grid-template-columns:1fr !important; } .ab-left-border{ border-right:none !important; border-bottom:1px solid rgba(255,255,255,.06) !important; } }
+        .ab-submit:active { transform:translateY(0) scale(.97); }
+        .ab-submit:disabled { opacity:.35; cursor:not-allowed; transform:none !important; }
+
+        .ab-input { width:100%; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); border-radius:14px; padding:15px 18px; color:#fff; font-family:inherit; font-size:14px; outline:none; transition:all .2s; box-sizing:border-box; }
+        .ab-input:focus { border-color:rgba(109,40,217,.55); box-shadow:0 0 0 3px rgba(109,40,217,.12); background:rgba(255,255,255,.06); }
+        .ab-input::placeholder { color:rgba(255,255,255,.18); }
+
+        @media(max-width:720px){
+          .ab-split{ grid-template-columns:1fr !important; }
+          .ab-left-border{ border-right:none !important; border-bottom:1px solid rgba(255,255,255,.06) !important; }
+        }
       `}</style>
 
       {/* ══ STEP 1 ══ */}
       {step===1 && (
         <div className="ab-card">
+          {/* Header row */}
           <div style={{ padding:'28px 32px 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <div>
-              <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.18em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:5 }}>Deposit to Wallet</div>
-              <div style={{ fontSize:11, color:'rgba(255,255,255,.25)' }}>Select or type an amount to add</div>
+              <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.18em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:4 }}>Deposit to Wallet</div>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.25)' }}>Select an amount or tap the number to type</div>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:7, padding:'8px 16px', borderRadius:99, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.09)' }}>
               <div style={{ width:7, height:7, borderRadius:'50%', background:'#4ade80', boxShadow:'0 0 8px #4ade80' }}/>
@@ -842,27 +883,62 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
             </div>
           </div>
 
-          {/* Big amount */}
-          <div style={{ textAlign:'center', padding:'32px 32px 24px' }}>
-            <div style={{ fontSize:70, fontWeight:900, color:'#fff', letterSpacing:'-.06em', lineHeight:1, textShadow:'0 0 60px rgba(139,92,246,.35)' }}>
-              ${selAmount > 0 ? selAmount.toFixed(2) : '0.00'}
-            </div>
-            {lc && <div style={{ fontSize:13, color:'rgba(255,255,255,.3)', marginTop:8, fontWeight:600 }}>{lc}</div>}
+          {/* Big editable amount display */}
+          <div style={{ textAlign:'center', padding:'28px 32px 20px', position:'relative' }}
+            onClick={()=>{ if (!editingAmount){ setEditingAmount(true); setTimeout(()=>amountInputRef.current?.focus(),30); } }}
+          >
+            {editingAmount ? (
+              <div style={{ position:'relative', display:'inline-block' }}>
+                <span style={{ fontSize:70, fontWeight:900, color:'rgba(255,255,255,.25)', letterSpacing:'-.06em', lineHeight:1, userSelect:'none', pointerEvents:'none' }}>$</span>
+                <input
+                  ref={amountInputRef}
+                  type="number"
+                  value={custom}
+                  onChange={e=>{ setCustom(e.target.value); setAmount(0); }}
+                  onBlur={()=>{ setEditingAmount(false); if (!custom || parseFloat(custom)<=0) { setCustom(''); setAmount(10); } }}
+                  onKeyDown={e=>{ if (e.key==='Enter'||e.key==='Escape') { setEditingAmount(false); if (!custom||parseFloat(custom)<=0){setCustom('');setAmount(10);} } }}
+                  placeholder="0"
+                  style={{
+                    fontSize:70, fontWeight:900, color:'#fff', letterSpacing:'-.06em', lineHeight:1,
+                    background:'transparent', border:'none', outline:'none', fontFamily:'inherit',
+                    width: Math.max(2, (custom||'0').length) + 'ch',
+                    minWidth:'1ch', maxWidth:'8ch',
+                    textShadow:'0 0 60px rgba(139,92,246,.5)',
+                    caretColor: '#8b5cf6',
+                  }}
+                />
+              </div>
+            ) : (
+              <div style={{
+                fontSize:70, fontWeight:900, color:'#fff', letterSpacing:'-.06em', lineHeight:1,
+                textShadow:'0 0 60px rgba(139,92,246,.35)',
+                cursor:'text', display:'inline-block',
+                borderBottom: '2px solid rgba(255,255,255,.08)',
+                paddingBottom:4, transition:'border-color .2s',
+              }}
+                onMouseEnter={e=>(e.currentTarget.style.borderColor='rgba(139,92,246,.5)')}
+                onMouseLeave={e=>(e.currentTarget.style.borderColor='rgba(255,255,255,.08)')}
+              >
+                ${selAmount > 0 ? selAmount.toFixed(2) : '0.00'}
+                <span style={{ fontSize:14, color:'rgba(255,255,255,.2)', marginLeft:8, fontWeight:500, letterSpacing:'normal' }}>✎</span>
+              </div>
+            )}
+            {lc && !editingAmount && <div style={{ fontSize:13, color:'rgba(255,255,255,.3)', marginTop:10, fontWeight:600 }}>{lc}</div>}
           </div>
 
-          {/* Chips */}
-          <div style={{ padding:'0 32px 20px' }}>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:14 }}>
-              {[5,10,15,25,50,100].map(a=>(
-                <button key={a} className={`ab-chip${!custom && amount===a?' ab-on':''}`} onClick={()=>{setAmount(a);setCustom('');}}>
-                  <span style={{ fontSize:9, fontWeight:700, opacity:.5, letterSpacing:'.1em' }}>USD</span>
-                  ${a}
-                </button>
-              ))}
-            </div>
-            <div style={{ position:'relative', marginBottom:20 }}>
-              <span style={{ position:'absolute', left:16, top:'50%', transform:'translateY(-50%)', color:'rgba(255,255,255,.35)', fontWeight:700, fontSize:18, pointerEvents:'none' }}>$</span>
-              <input type="number" className="ab-input" placeholder="Custom amount…" value={custom} onChange={e=>setCustom(e.target.value)} style={{ paddingLeft:36, fontSize:16, fontWeight:700 }}/>
+          {/* Amount chips — 2 rows × 3 cols, full width */}
+          <div style={{ padding:'0 32px 24px' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:20 }}>
+              {[5,10,15,25,50,100].map(a=>{
+                const isOn = !custom && amount===a;
+                return (
+                  <button key={a} className={`ab-chip${isOn?' ab-on':''}`}
+                    onClick={()=>{ setAmount(a); setCustom(''); setEditingAmount(false); }}>
+                    <span style={{ fontSize:9, fontWeight:700, opacity:.5, letterSpacing:'.1em' }}>USD</span>
+                    ${a}
+                  </button>
+                );
+              })}
             </div>
             <button className="ab-submit" onClick={()=>selAmount>0?setStep(2):toast.error('Please select an amount')}>
               Continue to Payment <ArrowRight size={17}/>
@@ -878,78 +954,123 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
 
       {/* ══ STEP 2 ══ */}
       {step===2 && (
-        <div className="ab-card">
-          <div style={{ padding:'20px 24px 18px', borderBottom:'1px solid rgba(255,255,255,.07)', display:'flex', alignItems:'center', gap:12 }}>
-            <button onClick={()=>setStep(1)} style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 13px', borderRadius:10, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.09)', cursor:'pointer', color:'rgba(255,255,255,.5)', fontSize:12, fontFamily:'inherit', fontWeight:600 }}><ArrowLeft size={13}/> Back</button>
+        <div className="ab-card" style={{ overflow:'visible' }}>
+
+          {/* Top bar */}
+          <div style={{ padding:'18px 24px 16px', borderBottom:'1px solid rgba(255,255,255,.06)', display:'flex', alignItems:'center', gap:12, background:'rgba(255,255,255,.02)', borderRadius:'24px 24px 0 0' }}>
+            <button onClick={()=>setStep(1)} style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 14px', borderRadius:10, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', cursor:'pointer', color:'rgba(255,255,255,.55)', fontSize:12, fontFamily:'inherit', fontWeight:700, transition:'all .15s' }}
+              onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.1)';(e.currentTarget as HTMLButtonElement).style.color='#fff';}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.06)';(e.currentTarget as HTMLButtonElement).style.color='rgba(255,255,255,.55)';}}
+            ><ArrowLeft size={13}/> Back</button>
             <div style={{ flex:1 }}>
-              <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.25)' }}>Choose Payment Method</div>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.22)' }}>Choose Payment Method</div>
             </div>
-            <div style={{ padding:'8px 18px', borderRadius:99, background:'rgba(139,92,246,.15)', border:'1px solid rgba(139,92,246,.25)', fontSize:16, fontWeight:900, color:'#c4b5fd' }}>${selAmount.toFixed(2)}</div>
+            <div style={{ padding:'8px 20px', borderRadius:99, background:'rgba(139,92,246,.18)', border:'1px solid rgba(139,92,246,.3)', fontSize:17, fontWeight:900, color:'#c4b5fd', letterSpacing:'-.02em' }}>${selAmount.toFixed(2)}</div>
           </div>
 
-          {/* Split */}
-          <div className="ab-split" style={{ display:'grid', gridTemplateColumns:'1fr 1.3fr' }}>
+          {/* Main split layout */}
+          <div className="ab-split" style={{ display:'grid', gridTemplateColumns:'380px 1fr' }}>
 
-            {/* LEFT — method list */}
-            <div className="ab-left-border" style={{ padding:'18px', borderRight:'1px solid rgba(255,255,255,.06)', display:'flex', flexDirection:'column', gap:5 }}>
-              <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.25)', marginBottom:8 }}>Select Method</div>
-              {PAYMENT_METHODS.map(m=>{
-                const active = methodId===m.id;
-                return (
-                  <button key={m.id} className={`ab-method-row${active?' ab-m-on':''}`}
-                    style={({'--mc':m.color,'--mg':m.glow} as React.CSSProperties)}
-                    onClick={()=>setMethodId(m.id)}>
-                    <div style={{ width:34, height:34, borderRadius:10, flexShrink:0, background:active?m.bgColor:'rgba(255,255,255,.05)', border:`1px solid ${active?m.color:'rgba(255,255,255,.08)'}`, display:'flex', alignItems:'center', justifyContent:'center', transition:'all .2s' }}>
-                      {m.icon}
-                    </div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:12, fontWeight:700, color:active?'#fff':'rgba(255,255,255,.55)', lineHeight:1.2 }}>{m.label}</div>
-                      {active && lc && <div style={{ fontSize:10, color:m.color, fontWeight:600, marginTop:1 }}>{lc}</div>}
-                    </div>
-                    <div style={{ width:24, height:24, borderRadius:7, flexShrink:0, background:active?m.color:'rgba(255,255,255,.06)', display:'flex', alignItems:'center', justifyContent:'center', transition:'all .2s' }}>
-                      <ChevronRight size={12} color={active?'#000':'rgba(255,255,255,.35)'}/>
-                    </div>
-                  </button>
-                );
-              })}
+            {/* ── LEFT: Method List ── */}
+            <div className="ab-left-border" style={{ padding:'20px 16px', borderRight:'1px solid rgba(255,255,255,.05)' }}>
+              <div style={{ fontSize:9, fontWeight:800, letterSpacing:'.2em', textTransform:'uppercase', color:'rgba(255,255,255,.2)', marginBottom:12, paddingLeft:4 }}>Select Method</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {PAYMENT_METHODS.map(m=>{
+                  const active = methodId===m.id;
+                  return (
+                    <button key={m.id} onClick={()=>setMethodId(m.id)}
+                      style={{
+                        display:'flex', alignItems:'center', gap:14, padding:'13px 16px',
+                        borderRadius:14, border:`1.5px solid ${active ? m.color : 'rgba(255,255,255,.07)'}`,
+                        background: active
+                          ? `linear-gradient(135deg, ${m.bgColor}, rgba(255,255,255,.03))`
+                          : 'rgba(255,255,255,.03)',
+                        cursor:'pointer', fontFamily:'inherit',
+                        transition:'all .2s cubic-bezier(.22,1,.36,1)',
+                        boxShadow: active ? `0 0 24px ${m.glow}, inset 0 1px 0 rgba(255,255,255,.06)` : 'none',
+                        width:'100%', textAlign:'left',
+                      }}>
+                      {/* Icon box */}
+                      <div style={{
+                        width:38, height:38, borderRadius:11, flexShrink:0,
+                        background: active ? m.bgColor : 'rgba(255,255,255,.06)',
+                        border:`1px solid ${active ? m.color : 'rgba(255,255,255,.09)'}`,
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                        transition:'all .2s', boxShadow: active ? `0 0 14px ${m.glow}` : 'none',
+                      }}>
+                        {m.icon}
+                      </div>
+                      {/* Label */}
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:13, fontWeight:700, color: active ? '#fff' : 'rgba(255,255,255,.6)', letterSpacing:'-.01em' }}>{m.label}</div>
+                        {active && lc && <div style={{ fontSize:10, color:m.color, fontWeight:600, marginTop:1 }}>{lc}</div>}
+                      </div>
+                      {/* Chevron */}
+                      <div style={{
+                        width:26, height:26, borderRadius:8, flexShrink:0,
+                        background: active ? m.color : 'rgba(255,255,255,.05)',
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                        transition:'all .2s',
+                      }}>
+                        <ChevronRight size={13} color={active ? '#000' : 'rgba(255,255,255,.3)'}/>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* RIGHT — payment details */}
-            <div style={{ padding:'20px 22px', display:'flex', flexDirection:'column', gap:14 }}>
+            {/* ── RIGHT: Payment Details ── */}
+            <div style={{ padding:'24px 26px', display:'flex', flexDirection:'column', gap:16 }}>
 
-              {/* Order summary */}
-              <div style={{ padding:'16px 18px', borderRadius:16, background:`linear-gradient(135deg,${selMethod.bgColor},rgba(0,0,0,.2))`, border:`1px solid ${selMethod.borderColor}` }}>
-                <div style={{ fontSize:9, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:3 }}>Paying via {selMethod.label}</div>
-                <div style={{ fontSize:36, fontWeight:900, color:'#fff', letterSpacing:'-.05em', lineHeight:1, marginBottom:4 }}>${selAmount.toFixed(2)}</div>
-                {lc && <div style={{ fontSize:11, color:selMethod.color, fontWeight:700 }}>{lc}</div>}
+              {/* Amount + method hero card */}
+              <div style={{
+                padding:'20px 22px', borderRadius:18,
+                background:`linear-gradient(135deg, ${selMethod.bgColor}, rgba(0,0,0,.35))`,
+                border:`1px solid ${selMethod.borderColor}`,
+                boxShadow:`0 8px 32px ${selMethod.glow}`,
+              }}>
+                <div style={{ fontSize:9, fontWeight:800, letterSpacing:'.2em', textTransform:'uppercase', color:'rgba(255,255,255,.35)', marginBottom:6 }}>Paying via {selMethod.label}</div>
+                <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
+                  <div style={{ fontSize:44, fontWeight:900, color:'#fff', letterSpacing:'-.05em', lineHeight:1 }}>${selAmount.toFixed(2)}</div>
+                  {lc && <div style={{ fontSize:13, color:selMethod.color, fontWeight:700 }}>{lc}</div>}
+                </div>
               </div>
 
-              {/* QR */}
+              {/* QR Code — centered, prominent */}
               {selMethod.hasQr && selMethod.qr && !selMethod.qr.startsWith('YOUR_') && (
-                <div style={{ textAlign:'center' }}>
-                  <div style={{ display:'inline-block', padding:10, borderRadius:18, background:'#fff', cursor:'zoom-in', transition:'transform .2s', boxShadow:`0 0 32px ${selMethod.glow}` }}
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+                  <div style={{
+                    padding:12, borderRadius:20, background:'#fff', cursor:'zoom-in',
+                    transition:'transform .2s, box-shadow .2s',
+                    boxShadow:`0 0 40px ${selMethod.glow}, 0 16px 40px rgba(0,0,0,.5)`,
+                  }}
                     onClick={()=>setQrZoom(true)}
-                    onMouseEnter={e=>(e.currentTarget as HTMLDivElement).style.transform='scale(1.03)'}
-                    onMouseLeave={e=>(e.currentTarget as HTMLDivElement).style.transform='none'}>
-                    <img src={selMethod.qr} alt="QR" style={{ width:120, height:120, objectFit:'contain', borderRadius:10, display:'block' }} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
+                    onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform='scale(1.04)';(e.currentTarget as HTMLDivElement).style.boxShadow=`0 0 60px ${selMethod.glow}, 0 20px 50px rgba(0,0,0,.6)`;}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform='scale(1)';(e.currentTarget as HTMLDivElement).style.boxShadow=`0 0 40px ${selMethod.glow}, 0 16px 40px rgba(0,0,0,.5)`;}}
+                  >
+                    <img src={selMethod.qr} alt="QR" style={{ width:150, height:150, objectFit:'contain', borderRadius:12, display:'block' }} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
                   </div>
-                  <div style={{ fontSize:10, color:'rgba(255,255,255,.25)', marginTop:6 }}>Tap to zoom • Scan to pay</div>
+                  <div style={{ fontSize:10, color:'rgba(255,255,255,.22)', fontWeight:600, letterSpacing:'.06em' }}>TAP TO ZOOM • SCAN TO PAY</div>
                 </div>
               )}
 
-              {/* Payment fields */}
+              {/* Payment ID fields — bigger, cleaner */}
               {selMethod.fields.length > 0 && selMethod.id!=='paypal' && selMethod.id!=='truewallet' && (
-                <div style={{ borderRadius:12, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', overflow:'hidden' }}>
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   {selMethod.fields.map((f,i)=>(
-                    <div key={i} style={{ padding:'10px 14px', borderBottom:i<selMethod.fields.length-1?'1px solid rgba(255,255,255,.05)':'none' }}>
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:3 }}>
-                        <span style={{ fontSize:9, color:'rgba(255,255,255,.3)', textTransform:'uppercase' as const, letterSpacing:'.1em', fontWeight:700 }}>{f.label}</span>
-                        {f.note && <span style={{ fontSize:9, color:selMethod.color, fontWeight:700 }}>{f.note}</span>}
+                    <div key={i} style={{ borderRadius:14, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', padding:'14px 18px' }}>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+                        <span style={{ fontSize:9, color:'rgba(255,255,255,.3)', textTransform:'uppercase' as const, letterSpacing:'.14em', fontWeight:800 }}>{f.label}</span>
+                        {f.note && <span style={{ fontSize:9, color:selMethod.color, fontWeight:800, letterSpacing:'.06em' }}>{f.note}</span>}
                       </div>
-                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                        <code style={{ flex:1, fontSize:12, fontFamily:'monospace', color:'#fff', fontWeight:700, wordBreak:'break-all' }}>{f.value}</code>
+                      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                        <code style={{ flex:1, fontSize:16, fontFamily:'monospace', color:'#fff', fontWeight:700, letterSpacing:'.02em', wordBreak:'break-all' }}>{f.value}</code>
                         {!f.value.startsWith('http') && !f.value.startsWith('YOUR_') && (
-                          <button onClick={()=>{navigator.clipboard.writeText(f.value);toast.success(`${f.label} copied!`);}} style={{ padding:'4px 8px', borderRadius:7, background:'rgba(255,255,255,.06)', border:`1px solid ${selMethod.borderColor}`, cursor:'pointer', color:'rgba(255,255,255,.5)', display:'flex', alignItems:'center', flexShrink:0 }}><Copy size={11}/></button>
+                          <button onClick={()=>{navigator.clipboard.writeText(f.value);toast.success(`${f.label} copied!`);}} style={{ padding:'8px 12px', borderRadius:10, background:`${selMethod.bgColor}`, border:`1px solid ${selMethod.borderColor}`, cursor:'pointer', color:selMethod.color, display:'flex', alignItems:'center', gap:5, flexShrink:0, fontSize:11, fontWeight:700, fontFamily:'inherit', transition:'all .15s' }}
+                            onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.boxShadow=`0 0 14px ${selMethod.glow}`;}}
+                            onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.boxShadow='none';}}
+                          ><Copy size={13}/> Copy</button>
                         )}
                       </div>
                     </div>
@@ -963,24 +1084,29 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
               {/* TrueWallet */}
               {selMethod.id==='truewallet' && <TrueWalletRedeem user={user} onSuccess={onSuccess} expectedUsdAmount={selAmount} referralEmail={referralEmail}/>}
 
-              {/* Instruction */}
-              <div style={{ padding:'10px 14px', borderRadius:11, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.06)', display:'flex', gap:8, alignItems:'flex-start' }}>
-                <span style={{ fontSize:14, flexShrink:0 }}>💡</span>
-                <p style={{ fontSize:11, color:'rgba(255,255,255,.38)', lineHeight:1.6, margin:0 }}>{selMethod.instruction}</p>
-              </div>
-
-              {/* Form for manual methods */}
+              {/* Manual form: email + txn */}
               {selMethod.id!=='paypal' && selMethod.id!=='truewallet' && (
                 <>
-                  <div>
-                    <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase' as const, letterSpacing:'.12em', color:'rgba(255,255,255,.3)', display:'block', marginBottom:6 }}>Your Email</label>
-                    <input type="email" className="ab-input" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}/>
+                  {/* Email */}
+                  <div style={{ borderRadius:14, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', padding:'14px 18px' }}>
+                    <div style={{ fontSize:9, color:'rgba(255,255,255,.3)', textTransform:'uppercase' as const, letterSpacing:'.14em', fontWeight:800, marginBottom:6 }}>Your Email</div>
+                    <input type="email" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}
+                      style={{ width:'100%', background:'transparent', border:'none', outline:'none', color:'#fff', fontFamily:'inherit', fontSize:14, fontWeight:600, padding:0 }}
+                    />
                   </div>
-                  <div>
-                    <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase' as const, letterSpacing:'.12em', color:'rgba(255,255,255,.3)', display:'block', marginBottom:6 }}>Transaction ID</label>
-                    <input type="text" className="ab-input" placeholder="Paste TXN / reference ID…" value={txnId} onChange={e=>setTxnId(e.target.value)} style={{ fontFamily:'monospace' }}/>
-                    <p style={{ fontSize:10, color:'rgba(255,255,255,.2)', marginTop:5, marginBottom:0 }}>From your payment receipt</p>
+
+                  {/* Transaction ID */}
+                  <div style={{ borderRadius:14, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', padding:'14px 18px', transition:'border-color .2s' }}
+                    onFocusCapture={e=>(e.currentTarget.style.borderColor='rgba(139,92,246,.45)')}
+                    onBlurCapture={e=>(e.currentTarget.style.borderColor='rgba(255,255,255,.08)')}
+                  >
+                    <div style={{ fontSize:9, color:'rgba(255,255,255,.3)', textTransform:'uppercase' as const, letterSpacing:'.14em', fontWeight:800, marginBottom:6 }}>Transaction ID</div>
+                    <input type="text" placeholder="Paste TXN / reference ID…" value={txnId} onChange={e=>setTxnId(e.target.value)}
+                      style={{ width:'100%', background:'transparent', border:'none', outline:'none', color:'#fff', fontFamily:'monospace', fontSize:13, fontWeight:600, padding:0 }}
+                    />
                   </div>
+
+                  {/* CTA */}
                   <button className="ab-submit" onClick={()=>{
                     if (!txnId.trim()) { toast.error('Enter your transaction ID'); return; }
                     if (!email.trim()) { toast.error('Enter your email'); return; }
@@ -997,24 +1123,28 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
 
       {/* ══ STEP 3 ══ */}
       {step===3 && (
-        <div className="ab-card" style={{ padding:'32px' }}>
-          <button onClick={()=>setStep(2)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,.4)', fontSize:13, fontFamily:'inherit', marginBottom:22, padding:0, fontWeight:600 }}>
-            <ArrowLeft size={14}/> Back
-          </button>
-          <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', marginBottom:4 }}>Review Order</div>
-          <div style={{ fontSize:26, fontWeight:900, color:'#fff', letterSpacing:'-.03em', marginBottom:24 }}>Confirm Submission</div>
-          <div style={{ borderRadius:16, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', overflow:'hidden', marginBottom:18 }}>
+        <div className="ab-card" style={{ padding:'36px 32px' }}>
+          <button onClick={()=>setStep(2)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,.4)', fontSize:13, fontFamily:'inherit', marginBottom:24, padding:0, fontWeight:700, transition:'color .15s' }}
+            onMouseEnter={e=>(e.currentTarget.style.color='#fff')} onMouseLeave={e=>(e.currentTarget.style.color='rgba(255,255,255,.4)')}
+          ><ArrowLeft size={14}/> Back</button>
+
+          <div style={{ fontSize:9, fontWeight:800, letterSpacing:'.2em', textTransform:'uppercase', color:'rgba(255,255,255,.25)', marginBottom:6 }}>Review Order</div>
+          <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-.03em', marginBottom:24 }}>Confirm Submission</div>
+
+          <div style={{ borderRadius:18, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', overflow:'hidden', marginBottom:16 }}>
             {[{l:'Method',v:selMethod.label},{l:'Amount',v:`$${selAmount.toFixed(2)}`},{l:'Email',v:email},{l:'Transaction ID',v:txnId}].map((r,i)=>(
-              <div key={r.l} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 18px', borderBottom:i<3?'1px solid rgba(255,255,255,.05)':'none' }}>
-                <span style={{ fontSize:12, color:'rgba(255,255,255,.4)' }}>{r.l}</span>
-                <span style={{ fontSize:13, fontWeight:700, color:'#fff', fontFamily:r.l==='Transaction ID'?'monospace':undefined, maxWidth:220, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.v}</span>
+              <div key={r.l} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'15px 20px', borderBottom:i<3?'1px solid rgba(255,255,255,.05)':'none' }}>
+                <span style={{ fontSize:11, color:'rgba(255,255,255,.35)', fontWeight:700, letterSpacing:'.06em', textTransform:'uppercase' as const }}>{r.l}</span>
+                <span style={{ fontSize:13, fontWeight:700, color:'#fff', fontFamily:r.l==='Transaction ID'?'monospace':undefined, maxWidth:240, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.v}</span>
               </div>
             ))}
           </div>
-          <div style={{ display:'flex', alignItems:'flex-start', gap:12, padding:'14px 18px', borderRadius:13, background:'rgba(251,191,36,.05)', border:'1px solid rgba(251,191,36,.15)', marginBottom:20 }}>
-            <span style={{ fontSize:18, flexShrink:0 }}>⚡</span>
-            <p style={{ fontSize:12, color:'rgba(255,255,255,.5)', lineHeight:1.65, margin:0 }}>After submission, admin will verify and credit <strong style={{ color:'var(--green)' }}>${selAmount.toFixed(2)}</strong> to your balance within minutes.</p>
+
+          <div style={{ display:'flex', alignItems:'center', gap:10, padding:'13px 18px', borderRadius:13, background:'rgba(139,92,246,.07)', border:'1px solid rgba(139,92,246,.18)', marginBottom:22 }}>
+            <span style={{ fontSize:16, flexShrink:0 }}>⚡</span>
+            <p style={{ fontSize:12, color:'rgba(255,255,255,.5)', lineHeight:1.6, margin:0 }}>Admin will verify and credit <strong style={{ color:'#a78bfa' }}>${selAmount.toFixed(2)}</strong> to your balance within minutes.</p>
           </div>
+
           <button className="ab-submit" onClick={handleSubmit} disabled={submitting}>
             {submitting ? <><Loader2 size={18} className="animate-spin"/> Submitting…</> : <><CheckCircle size={17}/> Confirm &amp; Submit</>}
           </button>
