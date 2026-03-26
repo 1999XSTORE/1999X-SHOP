@@ -53,7 +53,7 @@ function MouseGlow() {
         pointerEvents: "none",
         zIndex: 0,
         background:
-          "radial-gradient(circle, rgba(99,70,255,0.07) 0%, rgba(70,45,200,0.04) 35%, transparent 70%)",
+          "radial-gradient(circle, rgba(80,55,220,0.055) 0%, rgba(55,35,180,0.025) 40%, transparent 68%)",
         willChange: "transform",
         mixBlendMode: "screen",
       }}

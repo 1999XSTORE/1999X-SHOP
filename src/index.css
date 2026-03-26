@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 :root {
-  --bg:        #080b1a;
+  --bg:        #080809;
   --surface:   rgba(255,255,255,0.04);
   --surface2:  rgba(255,255,255,0.07);
   --border:    rgba(255,255,255,0.08);
@@ -33,7 +33,7 @@ html { scroll-behavior: smooth; }
 
 body {
   font-family: 'Inter', -apple-system, sans-serif;
-  background: #080b1a;
+  background: #080809;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   min-height: 100svh;
@@ -41,55 +41,31 @@ body {
   position: relative;
 }
 
-/* Deep navy SaaS background */
+/* Pure black with soft bottom glow */
 body::before {
   content: '';
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
-    /* Strong top-left blue-purple glow */
-    radial-gradient(ellipse 75% 55% at 5%  0%,    rgba(79, 42, 230, 0.55) 0%, transparent 55%),
-    /* Top-right accent */
-    radial-gradient(ellipse 50% 40% at 95% 0%,    rgba(49, 22, 180, 0.30) 0%, transparent 50%),
-    /* Bottom center deep glow */
-    radial-gradient(ellipse 90% 60% at 50% 110%,  rgba(55, 28, 210, 0.45) 0%, transparent 55%),
-    /* Bottom right green tint */
-    radial-gradient(ellipse 50% 40% at 95% 100%,  rgba(16, 100, 80, 0.18) 0%, transparent 50%);
+    /* Bottom-center horizon glow — main light source like the photo */
+    radial-gradient(ellipse 70% 40% at 50% 100%, rgba(70, 45, 200, 0.22) 0%, transparent 65%),
+    /* Soft wide base floor */
+    radial-gradient(ellipse 100% 25% at 50% 108%, rgba(50, 30, 160, 0.15) 0%, transparent 60%);
 }
 
-/* Light beam rays from bottom */
+/* Glowing orb floor effect */
 body::after {
   content: '';
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
-    /* Left beam */
-    linear-gradient(
-      150deg,
-      transparent 0%,
-      transparent 50%,
-      rgba(110, 70, 255, 0.07) 55%,
-      rgba(130, 90, 255, 0.16) 58%,
-      rgba(110, 70, 255, 0.07) 61%,
-      transparent 66%
-    ),
-    /* Right beam */
-    linear-gradient(
-      210deg,
-      transparent 0%,
-      transparent 50%,
-      rgba(80, 50, 230, 0.06) 55%,
-      rgba(100, 65, 255, 0.14) 58%,
-      rgba(80, 50, 230, 0.06) 61%,
-      transparent 66%
-    ),
-    /* Central vertical ray */
-    radial-gradient(ellipse 30% 80% at 50% 100%, rgba(90, 55, 255, 0.25) 0%, transparent 60%);
+    radial-gradient(ellipse 50% 22% at 50% 100%, rgba(90, 60, 240, 0.18) 0%, rgba(50, 30, 160, 0.08) 50%, transparent 75%);
+  filter: blur(1px);
 }
 
 body > #root { position: relative; z-index: 1; }
 
 /* Glass card */
 .g {
-  background: rgba(10,11,28,0.68);
+  background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: var(--r);
   backdrop-filter: blur(30px) saturate(1.6);
