@@ -85,7 +85,6 @@ export function getDefaultPathForRole(role?: AppRole | null) {
 export function canAccessPath(path: string, role?: AppRole | null) {
   const normalized = normalizeRole(role);
   if (normalized === 'owner') return true;
-  if (path === '/reseller') return normalized === 'reseller';
   if (path === '/admin-activity') return false;
   if (normalized === 'admin') return path === '/chat' || path === '/wallet';
   if (normalized === 'support') return path === '/chat';
