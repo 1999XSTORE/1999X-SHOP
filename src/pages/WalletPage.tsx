@@ -5,7 +5,7 @@ import { ArrowRight, ArrowLeft, RefreshCw, Users, Check, X, Copy, CheckCircle, L
 import { safeQuery } from '@/lib/safeFetch';
 import { logActivity, notifyUser } from '@/lib/activity';
 import { cn } from '@/lib/utils';
-import { buildReferralLink, captureReferralFromUrl, clearStoredReferralEmail, getStoredReferralEmail, normalizeReferralValue, normalizeResellerEmail, sanitizeReferralCode } from '@/lib/reseller';
+import { captureReferralFromUrl, getStoredReferralEmail, normalizeReferralValue, normalizeResellerEmail, clearStoredReferralEmail } from '@/lib/reseller';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
@@ -1159,36 +1159,17 @@ export default function WalletPage() {
   const { t } = useTranslation();
   const { balance, deductBalance, refundBalance, addLicense, licenses, user } = useAppStore();
   const [myTxns, setMyTxns] = useState<any[]>([]);
-  const [isReseller, setIsReseller] = useState(false);
-  const [resellerWallet, setResellerWallet] = useState<any | null>(null);
-  const [resellerTransactions, setResellerTransactions] = useState<any[]>([]);
-  const [withdrawRequests, setWithdrawRequests] = useState<any[]>([]);
-  const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawing, setWithdrawing] = useState(false);
   const [activeReferral, setActiveReferral] = useState('');
-  const [referralCode, setReferralCode] = useState('');
-  const [referralInput, setReferralInput] = useState('');
-  const [savingReferralCode, setSavingReferralCode] = useState(false);
   const [txnsLoad, setTxnsLoad] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState<{ product: any; keys: Array<{ key: string; panelId: string; panelName: string; expiresAt: string }> } | null>(null);
   const [confirmPending, setConfirmPending] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<'products'|'deposit'|'history'>('products');
-  const resellerAccessChecked = useRef(false);
 
   const isAdmin   = user?.role === 'admin';
   const isSupport = user?.role === 'support';
   const normalizedUserEmail = normalizeResellerEmail(user?.email ?? '');
-  const referralLink = isReseller && (referralCode || user?.email) ? buildReferralLink(referralCode || user.email) : '';
-  const isFriday = new Date().getDay() === 5;
   const sortedPurchasedLicenses = [...licenses].sort((a, b) => new Date(b.expiresAt).getTime() - new Date(a.expiresAt).getTime());
 
-  useEffect(() => {
-    resellerAccessChecked.current = false;
-    setIsReseller(false);
-    setResellerWallet(null);
-    setResellerTransactions([]);
-    setWithdrawRequests([]);
-  }, [user?.id]);
 
   const loadTxns = async () => {
     if (!user) return;
@@ -1203,69 +1184,6 @@ export default function WalletPage() {
     );
     setMyTxns(data ?? []);
     setTxnsLoad(false);
-  };
-
-  const loadResellerData = async () => {
-    if (!user?.id || !user.email || isAdmin || isSupport) return;
-    if (!resellerAccessChecked.current) {
-      const { data: accessRow } = await safeQuery(() =>
-        supabase
-          .from('reseller_accounts')
-          .select('email,is_active,referral_code')
-          .eq('email', user.email.toLowerCase())
-          .eq('is_active', true)
-          .maybeSingle()
-      );
-      const allowed = !!accessRow;
-      setIsReseller(allowed);
-      resellerAccessChecked.current = true;
-      if (!allowed) {
-        setResellerWallet(null);
-        setResellerTransactions([]);
-        setWithdrawRequests([]);
-        setReferralCode('');
-        setReferralInput('');
-        return;
-      }
-
-      const defaultCode = sanitizeReferralCode(accessRow?.referral_code || user.email.split('@')[0] || '');
-      setReferralCode(defaultCode);
-      setReferralInput(defaultCode);
-
-      await safeQuery(() => supabase.rpc('ensure_reseller_wallet', { p_user_id: user.id, p_email: user.email }));
-    } else if (!isReseller) {
-      return;
-    }
-
-    const [{ data: walletData }, { data: resellerData }, { data: withdrawalData }] = await Promise.all([
-      safeQuery(() => supabase.from('reseller_wallets').select('user_id,email,balance,total_earned,updated_at').eq('user_id', user.id).maybeSingle()),
-      safeQuery(() => supabase.from('reseller_transactions').select('id,amount,fee,net_amount,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20)),
-      safeQuery(() => supabase.from('withdrawal_requests').select('id,amount,status,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10)),
-    ]);
-
-    setResellerWallet(walletData ?? null);
-    setResellerTransactions(resellerData ?? []);
-    setWithdrawRequests(withdrawalData ?? []);
-  };
-
-  const handleWithdrawRequest = async () => {
-    if (!user?.id || !user.email || !isReseller) { toast.error('Reseller access required'); return; }
-    const amountValue = roundMoney(Number(withdrawAmount || 0));
-    if (amountValue <= 0) { toast.error('Enter a valid withdrawal amount'); return; }
-    setWithdrawing(true);
-    const { error } = await safeQuery(() => supabase.rpc('request_reseller_withdrawal', {
-      p_user_id: user.id,
-      p_email: user.email,
-      p_amount: amountValue,
-    }));
-    setWithdrawing(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success('Withdrawal request submitted.');
-    setWithdrawAmount('');
-    loadResellerData();
   };
 
   useEffect(() => {
@@ -1291,49 +1209,19 @@ export default function WalletPage() {
     return () => { cancelled = true; };
   }, [normalizedUserEmail]);
 
-  const saveReferralCode = async () => {
-    if (!isReseller) {
-      toast.error('Reseller access required');
-      return;
-    }
-    const cleanCode = sanitizeReferralCode(referralInput);
-    if (cleanCode.length < 3) {
-      toast.error('Referral code must be at least 3 characters');
-      return;
-    }
-    setSavingReferralCode(true);
-    const { data, error } = await safeQuery(() => supabase.rpc('set_reseller_referral_code', { p_code: cleanCode }));
-    setSavingReferralCode(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    const nextCode = sanitizeReferralCode((data as any)?.referral_code || cleanCode);
-    setReferralCode(nextCode);
-    setReferralInput(nextCode);
-    toast.success('Referral link updated');
-  };
-
   useEffect(() => {
     if (!user || isAdmin || isSupport) return;
     loadTxns();
-    loadResellerData();
-    const onFocus = () => {
-      void loadTxns();
-      void loadResellerData();
-    };
+    const onFocus = () => { void loadTxns(); };
     window.addEventListener('focus', onFocus);
     const ch = supabase.channel(`wallet-${user.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` }, () => loadTxns())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reseller_wallets', filter: `user_id=eq.${user.id}` }, () => loadResellerData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reseller_transactions', filter: `user_id=eq.${user.id}` }, () => loadResellerData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'withdrawal_requests', filter: `user_id=eq.${user.id}` }, () => loadResellerData())
       .subscribe();
     return () => {
       window.removeEventListener('focus', onFocus);
       supabase.removeChannel(ch);
     };
-  }, [user?.id, isAdmin, isSupport, isReseller]);
+  }, [user?.id, isAdmin, isSupport]);
 
   const handleBuy = async (product: any) => {
     if (balance < product.price) { toast.error('Insufficient balance. Add funds first.'); return; }
@@ -1720,127 +1608,6 @@ export default function WalletPage() {
           </div>
         </div>
 
-        {!isAdmin && !isSupport && isReseller && (
-          <div className="g" style={{ padding:'24px 24px 22px', background:'linear-gradient(180deg,rgba(14,17,28,.96),rgba(10,11,20,.94))', border:'1px solid rgba(139,92,246,.16)', boxShadow:'0 24px 60px rgba(0,0,0,.28)' }}>
-            <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:16,flexWrap:'wrap',marginBottom:18 }}>
-              <div>
-                <div style={{ fontSize:11,fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(255,255,255,.34)',marginBottom:6 }}>Reseller System</div>
-                <div style={{ fontSize:24,fontWeight:900,color:'#fff',letterSpacing:'-.03em',marginBottom:4 }}>Your Referral Wallet</div>
-                <div style={{ fontSize:13,color:'rgba(255,255,255,.42)',maxWidth:620 }}>Share your personal checkout link. When someone pays through it, 99% goes to your reseller wallet and 1% stays as the platform fee.</div>
-              </div>
-              <div style={{ display:'flex',alignItems:'center',gap:8,flexWrap:'wrap' }}>
-                <span style={{ padding:'6px 12px',borderRadius:999,border:'1px solid rgba(16,232,152,.18)',background:'rgba(16,232,152,.08)',fontSize:11,fontWeight:700,color:'var(--green)' }}>
-                  ${Number(resellerWallet?.balance ?? 0).toFixed(2)} available
-                </span>
-                <span style={{ padding:'6px 12px',borderRadius:999,border:'1px solid rgba(56,189,248,.18)',background:'rgba(56,189,248,.08)',fontSize:11,fontWeight:700,color:'var(--blue)' }}>
-                  ${Number(resellerWallet?.total_earned ?? 0).toFixed(2)} earned
-                </span>
-              </div>
-            </div>
-
-            <div style={{ display:'grid',gridTemplateColumns:'minmax(0,1.4fr) minmax(280px,1fr)',gap:16,alignItems:'stretch' }}>
-              <div style={{ padding:16,borderRadius:18,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)' }}>
-                <div style={{ fontSize:10,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(255,255,255,.28)',marginBottom:10 }}>Referral Link</div>
-                <div style={{ display:'flex',gap:10,alignItems:'stretch',flexWrap:'wrap' }}>
-                  <div style={{ flex:1,minWidth:220,padding:'14px 16px',borderRadius:14,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)',fontSize:13,color:'#fff',wordBreak:'break-all' }}>
-                    {referralLink || 'Login required'}
-                  </div>
-                  <button
-                    className="w-btn-secondary"
-                    onClick={() => { if (referralLink) { navigator.clipboard.writeText(referralLink); toast.success('Referral link copied'); } }}
-                    disabled={!referralLink}
-                    style={{ minWidth:136 }}
-                  >
-                    <Copy size={15}/> Copy Link
-                  </button>
-                </div>
-                <div style={{ display:'flex',gap:10,flexWrap:'wrap',marginTop:12 }}>
-                  <div style={{ flex:'1 1 180px',padding:'12px 14px',borderRadius:14,background:'rgba(139,92,246,.08)',border:'1px solid rgba(139,92,246,.16)' }}>
-                    <div style={{ fontSize:10,fontWeight:700,color:'rgba(255,255,255,.34)',textTransform:'uppercase',letterSpacing:'.14em',marginBottom:4 }}>Referral Code</div>
-                    <div style={{ fontSize:13,fontWeight:700,color:'#fff',wordBreak:'break-all' }}>{referralCode || 'Not set'}</div>
-                  </div>
-                  <div style={{ flex:'1 1 180px',padding:'12px 14px',borderRadius:14,background:isFriday?'rgba(16,232,152,.08)':'rgba(251,191,36,.08)',border:`1px solid ${isFriday?'rgba(16,232,152,.16)':'rgba(251,191,36,.16)'}` }}>
-                    <div style={{ fontSize:10,fontWeight:700,color:'rgba(255,255,255,.34)',textTransform:'uppercase',letterSpacing:'.14em',marginBottom:4 }}>Withdraw Window</div>
-                    <div style={{ fontSize:13,fontWeight:700,color:isFriday?'var(--green)':'var(--amber)' }}>{isFriday ? 'Open today' : 'Friday only'}</div>
-                  </div>
-                </div>
-                <div style={{ display:'flex',gap:10,alignItems:'stretch',flexWrap:'wrap',marginTop:12 }}>
-                  <input
-                    value={referralInput}
-                    onChange={(e) => setReferralInput(sanitizeReferralCode(e.target.value))}
-                    placeholder="Custom referral code"
-                    style={{ flex:1,minWidth:220,padding:'14px 16px',borderRadius:14,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)',fontSize:13,color:'#fff',fontFamily:'inherit',outline:'none' }}
-                  />
-                  <button
-                    className="w-btn-secondary"
-                    onClick={saveReferralCode}
-                    disabled={savingReferralCode || sanitizeReferralCode(referralInput).length < 3}
-                    style={{ minWidth:160, opacity: savingReferralCode || sanitizeReferralCode(referralInput).length < 3 ? 0.6 : 1 }}
-                  >
-                    {savingReferralCode ? <><Loader2 size={15} className="animate-spin"/> Saving...</> : <>Save Code</>}
-                  </button>
-                </div>
-                <div style={{ fontSize:11,color:'rgba(255,255,255,.34)',marginTop:8 }}>
-                  Use 3-32 characters with letters, numbers, `_` or `-`.
-                </div>
-                {activeReferral && (
-                  <div style={{ marginTop:12,padding:'12px 14px',borderRadius:14,background:'rgba(56,189,248,.08)',border:'1px solid rgba(56,189,248,.16)',fontSize:12,color:'#dbeafe' }}>
-                    This payment session is currently linked to reseller <strong>{activeReferral}</strong>.
-                  </div>
-                )}
-              </div>
-
-              <div style={{ padding:16,borderRadius:18,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)',display:'flex',flexDirection:'column',gap:12 }}>
-                <div>
-                  <div style={{ fontSize:10,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(255,255,255,.28)',marginBottom:8 }}>Request Withdrawal</div>
-                  <div style={{ fontSize:13,color:'rgba(255,255,255,.42)' }}>Withdrawals can only be requested on Friday. Rejected requests are returned to your reseller wallet automatically.</div>
-                </div>
-                <input
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder={`Amount (max $${Number(resellerWallet?.balance ?? 0).toFixed(2)})`}
-                  style={{ width:'100%',padding:'14px 16px',borderRadius:14,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)',color:'#fff',fontSize:14,fontFamily:'inherit',outline:'none' }}
-                />
-                <button
-                  className="w-btn-primary"
-                  onClick={handleWithdrawRequest}
-                  disabled={withdrawing || !isFriday || Number(resellerWallet?.balance ?? 0) <= 0}
-                  style={{ opacity: withdrawing || !isFriday || Number(resellerWallet?.balance ?? 0) <= 0 ? 0.55 : 1 }}
-                >
-                  {withdrawing ? <><Loader2 size={16} className="animate-spin"/> Requesting...</> : <>Request Withdrawal <ArrowRight size={16}/></>}
-                </button>
-                <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
-                  {(withdrawRequests.length ? withdrawRequests.slice(0,3) : [{ id:'empty', status:'none', amount:0, created_at:new Date().toISOString() }]).map((request) => (
-                    request.status === 'none' ? (
-                      <div key={request.id} style={{ fontSize:12,color:'rgba(255,255,255,.34)',padding:'10px 2px' }}>No withdrawal requests yet.</div>
-                    ) : (
-                      <div key={request.id} style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 12px',borderRadius:12,background:'rgba(255,255,255,.025)',border:'1px solid rgba(255,255,255,.06)',gap:12 }}>
-                        <div>
-                          <div style={{ fontSize:13,fontWeight:700,color:'#fff' }}>${Number(request.amount).toFixed(2)}</div>
-                          <div style={{ fontSize:11,color:'rgba(255,255,255,.34)' }}>{new Date(request.created_at).toLocaleDateString()}</div>
-                        </div>
-                        <span className={`badge badge-${request.status==='pending'?'amber':request.status==='approved'?'green':'red'}`}>{request.status}</span>
-                      </div>
-                    )
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:10,marginTop:16 }}>
-              {[
-                { label:'Referral Sales', value: resellerTransactions.length, color:'rgba(139,92,246,.9)' },
-                { label:'Net Earned', value: `$${resellerTransactions.reduce((sum, row) => sum + Number(row.net_amount ?? 0), 0).toFixed(2)}`, color:'var(--green)' },
-                { label:'Fees Kept', value: `$${resellerTransactions.reduce((sum, row) => sum + Number(row.fee ?? 0), 0).toFixed(2)}`, color:'var(--amber)' },
-              ].map((item) => (
-                <div key={item.label} className="w-stat" style={{ padding:'16px 18px' }}>
-                  <div style={{ fontSize:10,fontWeight:700,color:'rgba(255,255,255,.3)',textTransform:'uppercase',letterSpacing:'.12em',marginBottom:5 }}>{item.label}</div>
-                  <div style={{ fontSize:24,fontWeight:900,color:item.color }}>{item.value}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* ══ TABS ══ */}
         <div style={{ display:'flex', alignItems:'center', gap:3, padding:'4px', background:'rgba(255,255,255,.025)', borderRadius:15, border:'1px solid rgba(255,255,255,.06)', width:'fit-content', backdropFilter:'blur(12px)' }}>
