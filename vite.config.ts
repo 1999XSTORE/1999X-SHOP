@@ -18,22 +18,4 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  build: {
-    cssCodeSplit: true,
-    modulePreload: {
-      polyfill: true,
-    },
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return;
-          if (id.includes("react") || id.includes("scheduler")) return "react-vendor";
-          if (id.includes("@tanstack") || id.includes("zustand") || id.includes("i18next")) return "state-vendor";
-          if (id.includes("@supabase")) return "supabase-vendor";
-          if (id.includes("@radix-ui") || id.includes("lucide-react") || id.includes("sonner")) return "ui-vendor";
-          return "vendor";
-        },
-      },
-    },
-  },
 }));
