@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppStore, PRODUCTS } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
-import { ArrowRight, ArrowLeft, RefreshCw, Users, Check, X, Copy, CheckCircle, Loader2, Eye, EyeOff, ZoomIn, Wallet, ShoppingBag, CreditCard, ExternalLink, Search } from 'lucide-react';
+import { ArrowRight, ArrowLeft, RefreshCw, Users, Check, X, Copy, CheckCircle, Loader2, Eye, EyeOff, ZoomIn, Wallet, ShoppingBag, CreditCard, ExternalLink, Search, ChevronRight } from 'lucide-react';
 import { safeQuery } from '@/lib/safeFetch';
 import { logActivity, notifyUser } from '@/lib/activity';
 import { cn } from '@/lib/utils';
@@ -553,11 +553,13 @@ function ConfirmModal({ product, onConfirm, onCancel }: { product: { name: strin
   );
 }
 
-// ── Panel Product Cards ───────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  ✨ NEW PRODUCT CARDS — Glassmorphism Choice-Card Style
+// ══════════════════════════════════════════════════════════════
 const PANEL_GROUPS = [
-  { id:'internal', name:'Internal Panel', desc:'Advanced internal cheat features. Full control, maximum performance.', emoji:'⚡', color:'#4ade80', glow:'rgba(74,222,128,.3)', bg:'rgba(74,222,128,.06)', bc:'rgba(74,222,128,.18)', features:['Aimbot & ESP','Speed & No recoil','Auto updates','OB52 Undetected'], plans:[{id:'internal-3d',label:'3 Days',price:3,days:3,keyauthPanel:'internal' as const},{id:'internal-7d',label:'7 Days',price:7,days:7,keyauthPanel:'internal' as const},{id:'internal-30d',label:'30 Days',price:15,days:30,keyauthPanel:'internal' as const}] },
-  { id:'combo', name:'Combo Package', desc:'Internal + Fake Lag together. The full 1999X experience at the best price.', emoji:'👑', color:'#f0d47a', glow:'rgba(201,168,76,.3)', bg:'rgba(201,168,76,.06)', bc:'rgba(201,168,76,.25)', features:['Everything in Internal','Everything in Fake Lag','Priority Support','Best price guaranteed'], plans:[{id:'combo-7d',label:'Weekly',price:10,days:7,keyauthPanel:'both' as const},{id:'combo-30d',label:'Monthly',price:20,days:30,keyauthPanel:'both' as const}], featured:true },
-  { id:'lag', name:'Fake Lag', desc:'Network tool for lag-based advantages. Confuse enemies and dominate.', emoji:'🔷', color:'#a5b4fc', glow:'rgba(165,180,252,.3)', bg:'rgba(165,180,252,.06)', bc:'rgba(165,180,252,.18)', features:['Lag switch control','Packet manipulation','Adjustable delay','OB52 Undetected'], plans:[{id:'lag-7d',label:'Weekly',price:5,days:7,keyauthPanel:'lag' as const},{id:'lag-30d',label:'Monthly',price:10,days:30,keyauthPanel:'lag' as const}] },
+  { id:'internal', name:'Internal Panel', tagline:'Maximum Performance', desc:'Advanced internal cheat with full control.', emoji:'⚡', color:'#4ade80', glow:'rgba(74,222,128,.3)', gradFrom:'rgba(20,83,45,.55)', gradTo:'rgba(5,46,22,.35)', bc:'rgba(74,222,128,.22)', features:['Aimbot & ESP','Speed & No recoil','Auto updates','OB52 Undetected'], plans:[{id:'internal-3d',label:'3 Days',price:3,days:3,keyauthPanel:'internal' as const},{id:'internal-7d',label:'7 Days',price:7,days:7,keyauthPanel:'internal' as const},{id:'internal-30d',label:'30 Days',price:15,days:30,keyauthPanel:'internal' as const}] },
+  { id:'combo', name:'Combo Pack', tagline:'Best Value Bundle', desc:'Internal + Fake Lag. The full 1999X experience.', emoji:'👑', color:'#fbbf24', glow:'rgba(251,191,36,.35)', gradFrom:'rgba(92,67,0,.55)', gradTo:'rgba(45,26,0,.35)', bc:'rgba(251,191,36,.28)', features:['Everything in Internal','Everything in Fake Lag','Priority Support','Best price guaranteed'], plans:[{id:'combo-7d',label:'Weekly',price:10,days:7,keyauthPanel:'both' as const},{id:'combo-30d',label:'Monthly',price:20,days:30,keyauthPanel:'both' as const}], featured:true },
+  { id:'lag', name:'Fake Lag', tagline:'Network Domination', desc:'Lag-based advantages. Confuse and conquer.', emoji:'🔷', color:'#818cf8', glow:'rgba(129,140,248,.3)', gradFrom:'rgba(30,27,75,.55)', gradTo:'rgba(15,14,46,.35)', bc:'rgba(129,140,248,.22)', features:['Lag switch control','Packet manipulation','Adjustable delay','OB52 Undetected'], plans:[{id:'lag-7d',label:'Weekly',price:5,days:7,keyauthPanel:'lag' as const},{id:'lag-30d',label:'Monthly',price:10,days:30,keyauthPanel:'lag' as const}] },
 ];
 
 function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUPS[number]; balance: number; onBuy: (plan: any) => void }) {
@@ -565,229 +567,146 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
   const plan = group.plans[sel];
   const can  = balance >= plan.price;
   const isFeatured = !!(group as any).featured;
-  const cardImage = group.id === 'internal'
-    ? 'https://www.dropbox.com/scl/fi/vmjmtlagavp3qnxy44vng/Internal.png?rlkey=wu9oxjcrvwh1tw685aqa7z8gm&st=xsnlein0&raw=1'
-    : group.id === 'lag'
-      ? 'https://www.dropbox.com/scl/fi/7gg0c6tvs1vkcyba0ofw4/Fake-Lag.png?rlkey=muslqa9erob4yq8ojoyotsgmp&st=87k0qh8e&raw=1'
-      : 'https://www.dropbox.com/scl/fi/b09vgdpumapu0qrmauzf2/Combo.png?rlkey=nph0m7pxg7klstq9n5voxs0qj&st=cnlqvvws&raw=1';
-
-  // per-day price for value label
-  const perDay = (plan.price / plan.days).toFixed(2);
-
-  // savings vs highest per-day (first plan)
   const basePerDay = group.plans[0].price / group.plans[0].days;
-  const savePct = sel > 0 ? Math.round((1 - plan.price / plan.days / basePerDay) * 100) : 0;
 
   return (
     <div style={{
-      position: 'relative',
-      borderRadius: 24,
-      overflow: 'hidden',
-      background: isFeatured
-        ? 'linear-gradient(160deg,rgba(28,22,6,.97) 0%,rgba(18,14,4,.97) 100%)'
-        : 'linear-gradient(160deg,rgba(13,13,20,.97) 0%,rgba(9,9,16,.97) 100%)',
-      border: `1px solid ${isFeatured ? 'rgba(201,168,76,.35)' : group.bc}`,
+      position:'relative', borderRadius:24, overflow:'hidden',
+      background:`linear-gradient(160deg, ${group.gradFrom} 0%, ${group.gradTo} 100%)`,
+      border:`1px solid ${group.bc}`,
       boxShadow: isFeatured
-        ? `0 0 0 1px rgba(201,168,76,.12), 0 32px 64px rgba(0,0,0,.55), 0 0 80px ${group.glow}`
-        : `0 24px 48px rgba(0,0,0,.45)`,
-      transition: 'transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s',
+        ? `0 0 0 1px rgba(251,191,36,.1) inset, 0 24px 60px rgba(0,0,0,.6), 0 0 80px ${group.glow}`
+        : `0 24px 60px rgba(0,0,0,.5), 0 0 40px ${group.glow}`,
+      backdropFilter:'blur(20px)',
+      WebkitBackdropFilter:'blur(20px)',
+      transition:'transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s',
     }}
-      onMouseEnter={e => {
-        (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-6px)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow = isFeatured
-          ? `0 0 0 1px rgba(201,168,76,.2), 0 40px 80px rgba(0,0,0,.6), 0 0 100px ${group.glow}`
-          : `0 40px 80px rgba(0,0,0,.55), 0 0 60px ${group.glow}`;
-      }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLDivElement).style.transform = 'none';
-        (e.currentTarget as HTMLDivElement).style.boxShadow = isFeatured
-          ? `0 0 0 1px rgba(201,168,76,.12), 0 32px 64px rgba(0,0,0,.55), 0 0 80px ${group.glow}`
-          : `0 24px 48px rgba(0,0,0,.45)`;
-      }}
+      onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform='translateY(-5px)';}}
+      onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform='none';}}
     >
-      <img
-        src={cardImage}
-        alt={group.name}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          objectPosition: 'center',
-          opacity: .18,
-          transform: 'scale(1.04)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(9,10,17,.18) 0%, rgba(9,10,17,.78) 48%, rgba(9,10,17,.95) 100%)', pointerEvents: 'none' }} />
-      {/* Top accent bar */}
-      <div style={{ height: 2, background: `linear-gradient(90deg, transparent 0%, ${group.color} 40%, ${isFeatured ? '#e8b84b' : group.color} 60%, transparent 100%)` }} />
+      {/* Top glow line */}
+      <div style={{ height:2, background:`linear-gradient(90deg,transparent,${group.color},${isFeatured?'#e8b84b':group.color},transparent)` }} />
 
-      {/* Featured crown badge */}
+      {/* Featured badge */}
       {isFeatured && (
-        <div style={{ position: 'absolute', top: 18, right: 18, display: 'flex', alignItems: 'center', gap: 5, background: 'linear-gradient(135deg,#c9a84c,#e8b84b)', borderRadius: 20, padding: '4px 12px 4px 8px', boxShadow: '0 4px 16px rgba(201,168,76,.4)' }}>
-          <span style={{ fontSize: 11 }}>👑</span>
-          <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: '.14em', textTransform: 'uppercase', color: '#0a0a0a' }}>Best Value</span>
+        <div style={{ position:'absolute', top:18, right:18, display:'flex', alignItems:'center', gap:5, background:'linear-gradient(135deg,#92400e,#d97706)', borderRadius:20, padding:'4px 12px 4px 8px', boxShadow:`0 4px 16px rgba(251,191,36,.4)` }}>
+          <span style={{ fontSize:11 }}>👑</span>
+          <span style={{ fontSize:9, fontWeight:900, letterSpacing:'.14em', textTransform:'uppercase', color:'#fef3c7' }}>Best Value</span>
         </div>
       )}
 
-      <div style={{ padding: '28px 26px 26px' }}>
+      <div style={{ padding:'26px 24px 24px' }}>
 
-        {/* ── Header ── */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 22 }}>
+        {/* Header */}
+        <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:22 }}>
           <div style={{
-            width: 52, height: 52, borderRadius: 16, flexShrink: 0,
-            background: `radial-gradient(circle at 30% 30%, ${group.bg}, rgba(0,0,0,.3))`,
-            border: `1px solid ${group.bc}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 24, boxShadow: `0 0 24px ${group.glow}, inset 0 1px 0 rgba(255,255,255,.08)`,
+            width:50, height:50, borderRadius:16, flexShrink:0,
+            background:`radial-gradient(circle at 30% 30%, ${group.bc}, rgba(0,0,0,.3))`,
+            border:`1px solid ${group.bc}`,
+            display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:22, boxShadow:`0 0 20px ${group.glow}`,
           }}>{group.emoji}</div>
-          <div style={{ flex: 1, paddingTop: 2 }}>
-            <div style={{ fontSize: 19, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', lineHeight: 1.2, marginBottom: 5 }}>{group.name}</div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.42)', lineHeight: 1.5 }}>{group.desc}</div>
+          <div>
+            <div style={{ fontSize:9, fontWeight:800, letterSpacing:'.18em', textTransform:'uppercase', color:group.color, marginBottom:3, opacity:.75 }}>{group.tagline}</div>
+            <div style={{ fontSize:20, fontWeight:900, color:'#fff', letterSpacing:'-.02em', lineHeight:1.1 }}>{group.name}</div>
           </div>
         </div>
 
-        {/* ── Features ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 10px', marginBottom: 24 }}>
-          {group.features.map(f => (
-            <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11.5, color: 'rgba(255,255,255,.58)' }}>
-              <div style={{
-                width: 15, height: 15, borderRadius: 5, flexShrink: 0,
-                background: group.bg, border: `1px solid ${group.bc}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 7, fontWeight: 900, color: group.color,
-              }}>✓</div>
-              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f}</span>
-            </div>
+        {/* Progress bar dots */}
+        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:18 }}>
+          {group.plans.map((_,i)=>(
+            <div key={i} style={{ height:3, flex:1, borderRadius:99, background:i<=sel?group.color:'rgba(255,255,255,.1)', transition:'background .2s', boxShadow:i===sel?`0 0 6px ${group.color}`:'none' }}/>
           ))}
         </div>
 
-        {/* ── Divider ── */}
-        <div style={{ height: 1, background: 'rgba(255,255,255,.06)', marginBottom: 22 }} />
-
-        {/* ── Plan selector label ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.32)', textTransform: 'uppercase', letterSpacing: '.12em' }}>Choose Plan</span>
-          {savePct > 0 && (
-            <span style={{ fontSize: 10, fontWeight: 800, color: '#4ade80', background: 'rgba(74,222,128,.1)', border: '1px solid rgba(74,222,128,.25)', borderRadius: 20, padding: '2px 9px', letterSpacing: '.04em' }}>
-              Save {savePct}%
-            </span>
-          )}
-        </div>
-
-        {/* ── Plan pill tabs ── */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${group.plans.length}, 1fr)`,
-          gap: 8,
-          marginBottom: 20,
-        }}>
+        {/* Plan choice rows */}
+        <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:20 }}>
           {group.plans.map((p, i) => {
             const active = sel === i;
             const ppd = (p.price / p.days).toFixed(2);
+            const pSavePct = i > 0 ? Math.round((1 - p.price / p.days / basePerDay) * 100) : 0;
             return (
-              <button
-                key={p.id}
-                onClick={() => setSel(i)}
-                style={{
-                  position: 'relative',
-                  padding: '14px 8px 12px',
-                  borderRadius: 14,
-                  border: active ? `1.5px solid ${group.color}` : '1.5px solid rgba(255,255,255,.08)',
-                  background: active
-                    ? `radial-gradient(ellipse at top, ${group.bg} 0%, rgba(0,0,0,.35) 100%)`
-                    : 'rgba(255,255,255,.025)',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  transition: 'all .2s cubic-bezier(.22,1,.36,1)',
-                  boxShadow: active ? `0 0 20px ${group.glow}, inset 0 1px 0 rgba(255,255,255,.06)` : 'none',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                }}
-              >
-                {/* Glow dot when active */}
-                {active && <div style={{ position: 'absolute', top: 8, right: 8, width: 6, height: 6, borderRadius: '50%', background: group.color, boxShadow: `0 0 8px ${group.color}` }} />}
-
-                <span style={{ fontSize: 13, fontWeight: 800, color: active ? group.color : 'rgba(255,255,255,.55)', letterSpacing: '-.01em' }}>
-                  {p.label}
-                </span>
-                <span style={{ fontSize: 18, fontWeight: 900, color: active ? '#fff' : 'rgba(255,255,255,.45)', letterSpacing: '-.03em', lineHeight: 1 }}>
-                  ${p.price}
-                </span>
-                <span style={{ fontSize: 9.5, color: active ? 'rgba(255,255,255,.45)' : 'rgba(255,255,255,.22)', fontWeight: 600 }}>
-                  ${ppd}/day
-                </span>
+              <button key={p.id} onClick={()=>setSel(i)} style={{
+                display:'flex', alignItems:'center', justifyContent:'space-between',
+                padding:'14px 16px', borderRadius:14,
+                border:active?`1.5px solid ${group.color}`:'1.5px solid rgba(255,255,255,.08)',
+                background:active?'rgba(255,255,255,.06)':'rgba(255,255,255,.025)',
+                cursor:'pointer', fontFamily:'inherit',
+                transition:'all .2s cubic-bezier(.22,1,.36,1)',
+                boxShadow:active?`0 0 24px ${group.glow}, inset 0 1px 0 rgba(255,255,255,.08)`:'none',
+              }}>
+                <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                  <div style={{
+                    width:22, height:22, borderRadius:'50%', flexShrink:0,
+                    border:active?`2px solid ${group.color}`:'2px solid rgba(255,255,255,.18)',
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    background:active?group.color:'transparent', transition:'all .2s',
+                  }}>
+                    {active && <div style={{ width:8, height:8, borderRadius:'50%', background:'#000' }} />}
+                  </div>
+                  <div style={{ textAlign:'left' }}>
+                    <div style={{ fontSize:14, fontWeight:800, color:active?'#fff':'rgba(255,255,255,.6)', letterSpacing:'-.01em' }}>{p.label}</div>
+                    <div style={{ fontSize:10, color:'rgba(255,255,255,.3)', fontWeight:600 }}>${ppd}/day</div>
+                  </div>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  {pSavePct > 0 && (
+                    <span style={{ fontSize:9, fontWeight:800, color:'#4ade80', background:'rgba(74,222,128,.12)', border:'1px solid rgba(74,222,128,.2)', borderRadius:20, padding:'2px 7px' }}>-{pSavePct}%</span>
+                  )}
+                  <div style={{ fontSize:18, fontWeight:900, color:active?'#fff':'rgba(255,255,255,.5)', letterSpacing:'-.03em' }}>${p.price}</div>
+                  <div style={{
+                    width:30, height:30, borderRadius:10, flexShrink:0,
+                    background:active?group.color:'rgba(255,255,255,.07)',
+                    border:active?'none':'1px solid rgba(255,255,255,.1)',
+                    display:'flex', alignItems:'center', justifyContent:'center', transition:'all .2s',
+                  }}>
+                    <ChevronRight size={15} color={active?'#000':'rgba(255,255,255,.4)'}/>
+                  </div>
+                </div>
               </button>
             );
           })}
         </div>
 
-        {/* ── Price summary row ── */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'rgba(255,255,255,.03)', border: `1px solid rgba(255,255,255,.07)`,
-          borderRadius: 14, padding: '14px 18px', marginBottom: 16,
-        }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', fontWeight: 600 }}>Access for</span>
-            <span style={{ fontSize: 15, fontWeight: 800, color: group.color }}>{plan.label} — {plan.days} day{plan.days > 1 ? 's' : ''}</span>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 38, fontWeight: 900, color: '#fff', letterSpacing: '-.04em', lineHeight: 1 }}>
-              ${plan.price}
+        {/* Feature grid */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'5px 8px', marginBottom:20 }}>
+          {group.features.map(f=>(
+            <div key={f} style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, color:'rgba(255,255,255,.48)' }}>
+              <span style={{ color:group.color, fontSize:10, fontWeight:900 }}>✓</span>{f}
             </div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,.28)', marginTop: 2 }}>${perDay} per day</div>
-          </div>
+          ))}
         </div>
 
-        {/* ── CTA Button (slide-up icon animation) ── */}
+        {/* CTA */}
         {can ? (
-          <button
-            onClick={() => onBuy({
-              ...plan,
-              keyauthPanel: plan.keyauthPanel,
-              duration: `${plan.days} days`,
-              name: `${group.name} — ${plan.label}`,
-              description: group.desc,
-              badgeType: isFeatured ? 'gold' : group.id === 'internal' ? 'green' : 'indigo',
-              emoji: group.emoji,
-            })}
-            className={`ppc-btn ppc-btn-${group.id}`}
-            data-tooltip={`$${plan.price}`}
-            style={{
-              '--btn-color':   isFeatured ? '#b8860b' : group.color,
-              '--btn-bg':      isFeatured
-                ? 'linear-gradient(135deg,#c9a84c,#e8b84b)'
-                : `linear-gradient(135deg,${group.color}28,${group.color}14)`,
-              '--btn-border':  isFeatured ? 'rgba(201,168,76,.7)' : group.bc,
-              '--btn-glow':    isFeatured ? 'rgba(201,168,76,.5)'  : group.glow,
-              '--btn-txt-color': isFeatured ? '#0a0a0a' : group.color,
-            } as React.CSSProperties}
+          <button onClick={()=>onBuy({
+            ...plan, keyauthPanel:plan.keyauthPanel, duration:`${plan.days} days`,
+            name:`${group.name} — ${plan.label}`, description:group.desc,
+            badgeType:isFeatured?'gold':group.id==='internal'?'green':'indigo', emoji:group.emoji,
+          })} style={{
+            width:'100%', padding:'15px 20px', borderRadius:14, border:`1px solid ${group.bc}`,
+            background:`linear-gradient(135deg, ${group.gradFrom}, ${group.gradTo})`,
+            cursor:'pointer', fontFamily:'inherit', fontSize:14, fontWeight:800, color:'#fff',
+            display:'flex', alignItems:'center', justifyContent:'space-between',
+            transition:'all .22s', boxShadow:`0 0 28px ${group.glow}`, backdropFilter:'blur(8px)',
+          }}
+            onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.boxShadow=`0 0 48px ${group.glow}`;(e.currentTarget as HTMLButtonElement).style.borderColor=group.color;}}
+            onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.boxShadow=`0 0 28px ${group.glow}`;(e.currentTarget as HTMLButtonElement).style.borderColor=group.bc;}}
           >
-            <span className="ppc-btn-wrapper">
-              {/* Text layer — slides up on hover */}
-              <span className="ppc-btn-text">
-                Get {plan.label} — ${plan.price}
-              </span>
-              {/* Icon layer — slides in from below */}
-              <span className="ppc-btn-icon" aria-hidden>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="5 12 12 5 19 12"/>
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                </svg>
-              </span>
+            <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <span style={{ fontSize:15 }}>⚡</span>
+              Get {plan.label} Access
+            </span>
+            <span style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <span style={{ fontSize:20, fontWeight:900, letterSpacing:'-.03em' }}>${plan.price}</span>
+              <div style={{ width:28, height:28, borderRadius:8, background:group.color, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <ArrowRight size={14} color="#000"/>
+              </div>
             </span>
           </button>
         ) : (
-          <div style={{
-            width: '100%', padding: '15px 20px', borderRadius: 14,
-            fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
-            background: 'rgba(255,255,255,.03)', color: 'rgba(255,255,255,.2)',
-            border: '1px solid rgba(255,255,255,.06)', textAlign: 'center',
-            letterSpacing: '.02em',
-          }}>
-            Insufficient Balance
+          <div style={{ width:'100%', padding:'15px 20px', borderRadius:14, fontSize:13, fontWeight:700, fontFamily:'inherit', background:'rgba(255,255,255,.03)', color:'rgba(255,255,255,.2)', border:'1px solid rgba(255,255,255,.06)', textAlign:'center' as const }}>
+            Insufficient Balance — Add Funds First
           </div>
         )}
 
@@ -797,9 +716,10 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
 }
 
 // ══════════════════════════════════════════════════════════════
-//  Premium Add-Balance UI — complete redesign
+//  ✨ NEW ADD BALANCE UI — Bold Amount + Split Payment Flow
 // ══════════════════════════════════════════════════════════════
 function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess: () => void; referralEmail?: string }) {
+  const { balance } = useAppStore();
   const [step, setStep] = useState<1|2|3>(1);
   const [amount, setAmount] = useState(10);
   const [custom, setCustom] = useState('');
@@ -819,18 +739,15 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
     if (selAmount <= 0) { toast.error('Select a valid amount'); return; }
     if (!email.trim()) { toast.error('Enter your email'); return; }
     setSubmitting(true);
-    const { error } = await safeQuery(() => supabase.from('transactions').insert({
-        user_id:user.id, user_email:email.trim(), user_name:user.name,
-        amount:selAmount, method:methodId, transaction_id:txnId.trim(), status:'pending', referral_email: referralEmail || ''
-      }));
+    const { error } = await safeQuery(()=>supabase.from('transactions').insert({ user_id:user.id, user_email:email.trim(), user_name:user.name, amount:selAmount, method:methodId, transaction_id:txnId.trim(), status:'pending', referral_email:referralEmail||'' }));
     if (error) {
       if (error.message==='timeout') toast.error('Request timed out.');
       else if (error.message.includes('relation')) toast.error('Table not found. Run SQL migrations.');
       else toast.error('Failed: '+error.message);
     } else {
       toast.success('✅ Submitted! Admin will approve shortly.');
-      logActivity({ userId:user.id, userEmail:email.trim(), userName:user.name, action:'payment_submit', amount:selAmount, status:'success', meta:{ method:methodId, txnId:txnId.trim()||'paypal-auto' } });
-        setStep(1); setTxnId(''); setCustom('');
+      logActivity({userId:user.id,userEmail:email.trim(),userName:user.name,action:'payment_submit',amount:selAmount,status:'success',meta:{method:methodId,txnId:txnId.trim()||'paypal-auto'}});
+      setStep(1); setTxnId(''); setCustom('');
       onSuccess();
     }
     setSubmitting(false);
@@ -843,275 +760,148 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
       )}
 
       <style>{`
-        @keyframes dep-in { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
-        .dep-wrap { animation: dep-in .32s cubic-bezier(.22,1,.36,1) both; }
-
-        /* ── Step bar ── */
-        .dep-step-bar {
-          display:flex; align-items:center; gap:0;
-          background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
-          border-radius:14px; padding:8px 20px; width:fit-content; margin-bottom:24px;
-          backdrop-filter:blur(12px);
-        }
-        .dep-step { display:flex; align-items:center; gap:8px; padding:4px 10px; border-radius:9px; cursor:default; transition:background .2s; }
-        .dep-step.done  { cursor:pointer; }
-        .dep-step.done:hover { background:rgba(16,232,152,.08); }
-        .dep-step.active { background:rgba(139,92,246,.12); }
-        .dep-step-num {
-          width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-          font-size:11px; font-weight:900; flex-shrink:0; transition:all .2s;
-        }
-        .dep-step-label { font-size:12px; font-weight:700; transition:color .2s; }
-        .dep-sep { width:28px; height:1px; background:rgba(255,255,255,.08); margin:0 2px; flex-shrink:0; }
-        .dep-sep.done { background:rgba(16,232,152,.35); }
-
-        /* ── Card ── */
-        .dep-card {
-          background:linear-gradient(160deg,rgba(14,14,22,.97) 0%,rgba(9,9,18,.97) 100%);
-          border:1px solid rgba(255,255,255,.08); border-radius:22px; overflow:hidden;
-          box-shadow:0 32px 64px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.03) inset;
-        }
-
-        /* ── Amount grid ── */
-        .dep-amt-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-        .dep-amt-btn {
-          padding:18px 8px; border-radius:16px; font-size:20px; font-weight:900;
-          cursor:pointer; font-family:inherit; transition:all .2s cubic-bezier(.22,1,.36,1);
-          display:flex; flex-direction:column; align-items:center; gap:3; position:relative;
-        }
-        .dep-amt-btn:hover { transform:translateY(-2px); }
-        .dep-amt-btn.sel { border-color:rgba(139,92,246,.6) !important; }
-
-        /* ── Field ── */
-        .dep-field {
-          width:100%; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09);
-          border-radius:12px; padding:14px 16px; color:#fff; font-family:inherit;
-          font-size:14px; outline:none; transition:all .2s; box-sizing:border-box;
-        }
-        .dep-field:focus { border-color:rgba(139,92,246,.5); box-shadow:0 0 0 3px rgba(139,92,246,.1); }
-        .dep-field::placeholder { color:rgba(255,255,255,.25); }
-        .dep-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.12em; color:rgba(255,255,255,.35); margin-bottom:7px; display:block; }
-
-        /* ── Method chips ── */
-        .dep-method-chip {
-          display:inline-flex; align-items:center; gap:7px; padding:8px 14px; border-radius:999px;
-          font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;
-          transition:all .2s cubic-bezier(.22,1,.36,1); white-space:nowrap; flex-shrink:0;
-        }
-        .dep-method-chip:hover { transform:translateY(-1px); }
-
-        /* ── Upload drop zone ── */
-        .dep-upload {
-          border:1.5px dashed rgba(255,255,255,.12); border-radius:14px; padding:28px 16px;
-          text-align:center; cursor:pointer; transition:all .2s;
-          background:rgba(255,255,255,.02);
-        }
-        .dep-upload:hover { border-color:rgba(139,92,246,.4); background:rgba(139,92,246,.04); }
-
-        /* ── Submit button ── */
-        .dep-submit {
-          width:100%; padding:16px; border-radius:14px; border:none; cursor:pointer;
-          font-family:inherit; font-size:15px; font-weight:800; display:flex; align-items:center;
-          justify-content:center; gap:9px; transition:all .25s cubic-bezier(.22,1,.36,1);
-          background:linear-gradient(135deg,#8b5cf6,#7c3aed,#c026d3);
-          color:#fff; box-shadow:0 0 32px rgba(109,40,217,.45), 0 4px 20px rgba(0,0,0,.3);
-          position:relative; overflow:hidden;
-        }
-        .dep-submit::before {
-          content:''; position:absolute; top:0; bottom:0; left:-80%; width:40%;
-          background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);
-          transition:left .4s ease; pointer-events:none;
-        }
-        .dep-submit:hover { transform:translateY(-2px); box-shadow:0 0 48px rgba(109,40,217,.65), 0 8px 28px rgba(0,0,0,.4); }
-        .dep-submit:hover::before { left:160%; }
-        .dep-submit:active { transform:translateY(0) scale(.98); }
-        .dep-submit:disabled { opacity:.45; cursor:not-allowed; transform:none !important; }
-
-        /* ── QR card ── */
-        .dep-qr-wrap {
-          display:inline-block; cursor:zoom-in; padding:12px; border-radius:22px;
-          background:#fff; transition:transform .2s,box-shadow .2s;
-        }
-        .dep-qr-wrap:hover { transform:scale(1.03); }
-
-        @media(max-width:720px){ .dep-split{ grid-template-columns:1fr !important; } }
+        @keyframes ab-in { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+        .ab-card { animation:ab-in .3s cubic-bezier(.22,1,.36,1) both; border-radius:24px; overflow:hidden; background:linear-gradient(160deg,rgba(10,10,20,.97) 0%,rgba(6,6,16,.97) 100%); border:1px solid rgba(255,255,255,.08); box-shadow:0 32px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.02) inset; }
+        .ab-chip { padding:14px 8px; border-radius:14px; cursor:pointer; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:rgba(255,255,255,.5); font-family:inherit; font-size:18px; font-weight:900; transition:all .2s cubic-bezier(.22,1,.36,1); display:flex; flex-direction:column; align-items:center; gap:2px; }
+        .ab-chip:hover { background:rgba(255,255,255,.07); color:rgba(255,255,255,.8); transform:translateY(-2px); }
+        .ab-chip.ab-on { border-color:rgba(139,92,246,.6); background:linear-gradient(135deg,rgba(139,92,246,.18),rgba(109,40,217,.1)); color:#e9d5ff; box-shadow:0 0 24px rgba(109,40,217,.22),inset 0 1px 0 rgba(255,255,255,.07); }
+        .ab-method-row { display:flex; align-items:center; gap:14px; padding:12px 16px; border-radius:13px; border:1px solid rgba(255,255,255,.07); background:rgba(255,255,255,.03); cursor:pointer; font-family:inherit; transition:all .2s cubic-bezier(.22,1,.36,1); width:100%; text-align:left; }
+        .ab-method-row:hover { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.12); }
+        .ab-method-row.ab-m-on { border-color:var(--mc,rgba(139,92,246,.5)); background:rgba(255,255,255,.04); box-shadow:0 0 20px var(--mg,rgba(109,40,217,.2)); }
+        .ab-submit { width:100%; padding:16px; border-radius:14px; border:none; cursor:pointer; font-family:inherit; font-size:15px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:9px; transition:all .25s cubic-bezier(.22,1,.36,1); background:linear-gradient(135deg,#8b5cf6,#7c3aed,#6d28d9); color:#fff; box-shadow:0 0 32px rgba(109,40,217,.45),0 4px 20px rgba(0,0,0,.3); position:relative; overflow:hidden; }
+        .ab-submit::before { content:''; position:absolute; top:0; bottom:0; left:-80%; width:40%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent); transition:left .4s ease; pointer-events:none; }
+        .ab-submit:hover { transform:translateY(-2px); box-shadow:0 0 48px rgba(109,40,217,.65),0 8px 28px rgba(0,0,0,.4); }
+        .ab-submit:hover::before { left:160%; }
+        .ab-submit:active { transform:translateY(0) scale(.98); }
+        .ab-submit:disabled { opacity:.4; cursor:not-allowed; transform:none !important; }
+        .ab-input { width:100%; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09); border-radius:12px; padding:14px 16px; color:#fff; font-family:inherit; font-size:14px; outline:none; transition:all .2s; box-sizing:border-box; }
+        .ab-input:focus { border-color:rgba(139,92,246,.5); box-shadow:0 0 0 3px rgba(139,92,246,.1); }
+        .ab-input::placeholder { color:rgba(255,255,255,.2); }
+        @media(max-width:680px){ .ab-split{ grid-template-columns:1fr !important; } .ab-left-border{ border-right:none !important; border-bottom:1px solid rgba(255,255,255,.06) !important; } }
       `}</style>
 
-      {/* ── Step indicator ── */}
-      <div className="dep-step-bar">
-        {(['Amount','Payment','Submit'] as const).map((label, i) => {
-          const n = i + 1;
-          const done = n < step;
-          const active = n === step;
-          return (
-            <div key={label} style={{ display:'flex', alignItems:'center' }}>
-              <div className={`dep-step${done?' done':''}${active?' active':''}`}
-                onClick={() => done && setStep(n as 1|2|3)}>
-                <div className="dep-step-num" style={{
-                  background: done ? 'var(--green)' : active ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : 'rgba(255,255,255,.06)',
-                  color: done || active ? '#fff' : 'rgba(255,255,255,.3)',
-                  boxShadow: active ? '0 0 14px rgba(109,40,217,.5)' : 'none',
-                }}>{done ? '✓' : n}</div>
-                <span className="dep-step-label" style={{ color: active ? '#fff' : done ? 'var(--green)' : 'rgba(255,255,255,.3)' }}>{label}</span>
-              </div>
-              {i < 2 && <div className={`dep-sep${done?' done':''}`} />}
+      {/* ══ STEP 1 ══ */}
+      {step===1 && (
+        <div className="ab-card">
+          <div style={{ padding:'28px 32px 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div>
+              <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.18em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:5 }}>Deposit to Wallet</div>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.25)' }}>Select or type an amount to add</div>
             </div>
-          );
-        })}
-      </div>
+            <div style={{ display:'flex', alignItems:'center', gap:7, padding:'8px 16px', borderRadius:99, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.09)' }}>
+              <div style={{ width:7, height:7, borderRadius:'50%', background:'#4ade80', boxShadow:'0 0 8px #4ade80' }}/>
+              <span style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,.6)' }}>Balance: <span style={{ color:'#fff' }}>${balance.toFixed(2)}</span></span>
+            </div>
+          </div>
 
-      {/* ══ STEP 1: Choose Amount ══ */}
-      {step === 1 && (
-        <div className="dep-wrap dep-card" style={{ padding:'32px 32px 36px' }}>
-          <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:6 }}>Deposit Wallet Balance</div>
-          <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-.03em', marginBottom:26 }}>Choose Your Amount</div>
+          {/* Big amount */}
+          <div style={{ textAlign:'center', padding:'32px 32px 24px' }}>
+            <div style={{ fontSize:70, fontWeight:900, color:'#fff', letterSpacing:'-.06em', lineHeight:1, textShadow:'0 0 60px rgba(139,92,246,.35)' }}>
+              ${selAmount > 0 ? selAmount.toFixed(2) : '0.00'}
+            </div>
+            {lc && <div style={{ fontSize:13, color:'rgba(255,255,255,.3)', marginTop:8, fontWeight:600 }}>{lc}</div>}
+          </div>
 
-          {/* Amount grid */}
-          <div className="dep-amt-grid" style={{ marginBottom:16 }}>
-            {AMOUNTS.map(a => {
-              const sel = amount === a && !custom;
-              return (
-                <button key={a} className={`dep-amt-btn${sel?' sel':''}`}
-                  onClick={() => { setAmount(a); setCustom(''); }}
-                  style={{
-                    border: `1px solid ${sel ? 'rgba(139,92,246,.6)' : 'rgba(255,255,255,.08)'}`,
-                    background: sel ? 'linear-gradient(135deg,rgba(139,92,246,.2),rgba(139,92,246,.08))' : 'rgba(255,255,255,.04)',
-                    color: sel ? '#e9d5ff' : 'rgba(255,255,255,.55)',
-                    boxShadow: sel ? '0 0 24px rgba(109,40,217,.25), inset 0 1px 0 rgba(255,255,255,.06)' : 'none',
-                  }}>
-                  <span style={{ fontSize:9, fontWeight:700, color: sel ? 'rgba(233,213,255,.5)' : 'rgba(255,255,255,.25)', letterSpacing:'.1em' }}>USD</span>
+          {/* Chips */}
+          <div style={{ padding:'0 32px 20px' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:14 }}>
+              {[5,10,15,25,50,100].map(a=>(
+                <button key={a} className={`ab-chip${!custom && amount===a?' ab-on':''}`} onClick={()=>{setAmount(a);setCustom('');}}>
+                  <span style={{ fontSize:9, fontWeight:700, opacity:.5, letterSpacing:'.1em' }}>USD</span>
                   ${a}
-                  {sel && <div style={{ position:'absolute', top:8, right:10, width:7, height:7, borderRadius:'50%', background:'#8b5cf6', boxShadow:'0 0 8px #8b5cf6', animation:'blink 1.5s infinite' }} />}
                 </button>
-              );
-            })}
-          </div>
-
-          {/* Custom amount */}
-          <div style={{ position:'relative', marginBottom:24 }}>
-            <span style={{ position:'absolute', left:16, top:'50%', transform:'translateY(-50%)', color:'rgba(255,255,255,.4)', fontWeight:700, fontSize:18, pointerEvents:'none' }}>$</span>
-            <input type="number" className="dep-field" placeholder="Or enter custom amount…"
-              value={custom} onChange={e => setCustom(e.target.value)}
-              style={{ paddingLeft:36, fontSize:16, fontWeight:700 }} />
-          </div>
-
-          {/* Preview */}
-          {selAmount > 0 && (
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 20px', borderRadius:14, background:'rgba(139,92,246,.1)', border:'1px solid rgba(139,92,246,.22)', marginBottom:24 }}>
-              <span style={{ fontSize:13, color:'rgba(255,255,255,.5)' }}>You will deposit</span>
-              <span style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'-.03em' }}>${selAmount.toFixed(2)}</span>
+              ))}
             </div>
-          )}
-
-          <button className="dep-submit" onClick={() => selAmount > 0 ? setStep(2) : toast.error('Please select an amount')}>
-            Continue to Payment <ArrowRight size={17} />
-          </button>
+            <div style={{ position:'relative', marginBottom:20 }}>
+              <span style={{ position:'absolute', left:16, top:'50%', transform:'translateY(-50%)', color:'rgba(255,255,255,.35)', fontWeight:700, fontSize:18, pointerEvents:'none' }}>$</span>
+              <input type="number" className="ab-input" placeholder="Custom amount…" value={custom} onChange={e=>setCustom(e.target.value)} style={{ paddingLeft:36, fontSize:16, fontWeight:700 }}/>
+            </div>
+            <button className="ab-submit" onClick={()=>selAmount>0?setStep(2):toast.error('Please select an amount')}>
+              Continue to Payment <ArrowRight size={17}/>
+            </button>
+            <div style={{ display:'flex', justifyContent:'center', gap:18, marginTop:14 }}>
+              {['🔒 Secure','⚡ Instant Credit','✉️ Admin Verified'].map(s=>(
+                <span key={s} style={{ fontSize:10, color:'rgba(255,255,255,.22)', fontWeight:600 }}>{s}</span>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ══ STEP 2: Method + Details + Form ══ */}
-      {step === 2 && (
-        <div className="dep-wrap dep-card">
-          {/* ── Top bar: Back + Method chips + Amount ── */}
-          <div style={{ padding:'20px 24px 18px', borderBottom:'1px solid rgba(255,255,255,.07)', background:'rgba(255,255,255,.02)' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-              <button onClick={() => setStep(1)} style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 13px', borderRadius:10, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.09)', cursor:'pointer', color:'rgba(255,255,255,.55)', fontSize:12, fontFamily:'inherit', fontWeight:600, transition:'all .15s' }}
-                onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.09)';(e.currentTarget as HTMLButtonElement).style.color='#fff';}}
-                onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.05)';(e.currentTarget as HTMLButtonElement).style.color='rgba(255,255,255,.55)';}}>
-                <ArrowLeft size={13}/> Back
-              </button>
-              <span style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.28)' }}>Select Payment Method</span>
-              <div style={{ marginLeft:'auto', padding:'7px 16px', borderRadius:999, background:'rgba(139,92,246,.15)', border:'1px solid rgba(139,92,246,.28)', fontSize:14, fontWeight:900, color:'#c4b5fd' }}>${selAmount.toFixed(2)}</div>
+      {/* ══ STEP 2 ══ */}
+      {step===2 && (
+        <div className="ab-card">
+          <div style={{ padding:'20px 24px 18px', borderBottom:'1px solid rgba(255,255,255,.07)', display:'flex', alignItems:'center', gap:12 }}>
+            <button onClick={()=>setStep(1)} style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 13px', borderRadius:10, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.09)', cursor:'pointer', color:'rgba(255,255,255,.5)', fontSize:12, fontFamily:'inherit', fontWeight:600 }}><ArrowLeft size={13}/> Back</button>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.25)' }}>Choose Payment Method</div>
             </div>
+            <div style={{ padding:'8px 18px', borderRadius:99, background:'rgba(139,92,246,.15)', border:'1px solid rgba(139,92,246,.25)', fontSize:16, fontWeight:900, color:'#c4b5fd' }}>${selAmount.toFixed(2)}</div>
+          </div>
 
-            {/* Method chips — scrollable row */}
-            <div style={{ display:'flex', gap:8, overflowX:'auto', paddingBottom:4 }}>
-              {PAYMENT_METHODS.map(m => {
-                const active = methodId === m.id;
+          {/* Split */}
+          <div className="ab-split" style={{ display:'grid', gridTemplateColumns:'1fr 1.3fr' }}>
+
+            {/* LEFT — method list */}
+            <div className="ab-left-border" style={{ padding:'18px', borderRight:'1px solid rgba(255,255,255,.06)', display:'flex', flexDirection:'column', gap:5 }}>
+              <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.25)', marginBottom:8 }}>Select Method</div>
+              {PAYMENT_METHODS.map(m=>{
+                const active = methodId===m.id;
                 return (
-                  <button key={m.id} className="dep-method-chip"
-                    onClick={() => setMethodId(m.id)}
-                    style={{
-                      border: `1px solid ${active ? m.color : 'rgba(255,255,255,.09)'}`,
-                      background: active ? `linear-gradient(135deg,${m.bgColor},rgba(255,255,255,.04))` : 'rgba(255,255,255,.04)',
-                      color: active ? m.color : 'rgba(255,255,255,.5)',
-                      boxShadow: active ? `0 0 20px ${m.glow}` : 'none',
-                    }}>
-                    <span style={{ width:18, height:18, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{m.icon}</span>
-                    {m.label}
-                    {active && <div style={{ width:5, height:5, borderRadius:'50%', background:m.color, boxShadow:`0 0 6px ${m.color}` }} />}
+                  <button key={m.id} className={`ab-method-row${active?' ab-m-on':''}`}
+                    style={({'--mc':m.color,'--mg':m.glow} as React.CSSProperties)}
+                    onClick={()=>setMethodId(m.id)}>
+                    <div style={{ width:34, height:34, borderRadius:10, flexShrink:0, background:active?m.bgColor:'rgba(255,255,255,.05)', border:`1px solid ${active?m.color:'rgba(255,255,255,.08)'}`, display:'flex', alignItems:'center', justifyContent:'center', transition:'all .2s' }}>
+                      {m.icon}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:active?'#fff':'rgba(255,255,255,.55)', lineHeight:1.2 }}>{m.label}</div>
+                      {active && lc && <div style={{ fontSize:10, color:m.color, fontWeight:600, marginTop:1 }}>{lc}</div>}
+                    </div>
+                    <div style={{ width:24, height:24, borderRadius:7, flexShrink:0, background:active?m.color:'rgba(255,255,255,.06)', display:'flex', alignItems:'center', justifyContent:'center', transition:'all .2s' }}>
+                      <ChevronRight size={12} color={active?'#000':'rgba(255,255,255,.35)'}/>
+                    </div>
                   </button>
                 );
               })}
             </div>
-          </div>
 
-          {/* ── Split: Left info | Right form ── */}
-          <div className="dep-split" style={{ display:'grid', gridTemplateColumns:'1fr 1fr' }}>
+            {/* RIGHT — payment details */}
+            <div style={{ padding:'20px 22px', display:'flex', flexDirection:'column', gap:14 }}>
 
-            {/* LEFT — order summary + QR + payment details */}
-            <div style={{ padding:'28px 26px', borderRight:'1px solid rgba(255,255,255,.06)' }}>
-
-              {/* Local currency chip */}
-              {lc && (
-                <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:12, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', marginBottom:16 }}>
-                  <span style={{ fontSize:18 }}>{LOCAL[methodId as keyof typeof LOCAL]?.flag ?? '🌐'}</span>
-                  <div>
-                    <div style={{ fontSize:10, color:'rgba(255,255,255,.3)', letterSpacing:'.1em', textTransform:'uppercase', fontWeight:700, marginBottom:1 }}>Local Equivalent</div>
-                    <div style={{ fontSize:15, fontWeight:800, color:'#fff' }}>{lc}</div>
-                  </div>
-                </div>
-              )}
-
-              {/* Order summary card */}
-              <div style={{ padding:'18px 20px', borderRadius:16, background:`linear-gradient(135deg,${selMethod.bgColor},rgba(0,0,0,.3))`, border:`1px solid ${selMethod.borderColor}`, marginBottom:20 }}>
-                <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:6 }}>Order Summary</div>
-                <div style={{ fontSize:15, fontWeight:700, color:'rgba(255,255,255,.7)', marginBottom:4 }}>{selMethod.label}</div>
-                <div style={{ fontSize:36, fontWeight:900, color:'#fff', letterSpacing:'-.04em', lineHeight:1, marginBottom:10 }}>${selAmount.toFixed(2)}</div>
-                <div style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'5px 11px', borderRadius:999, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', fontSize:11, fontWeight:700, color:'#fff' }}>
-                  <span style={{ display:'flex', alignItems:'center', justifyContent:'center', width:14, height:14 }}>{selMethod.icon}</span>
-                  Ready to pay
-                </div>
+              {/* Order summary */}
+              <div style={{ padding:'16px 18px', borderRadius:16, background:`linear-gradient(135deg,${selMethod.bgColor},rgba(0,0,0,.2))`, border:`1px solid ${selMethod.borderColor}` }}>
+                <div style={{ fontSize:9, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.3)', marginBottom:3 }}>Paying via {selMethod.label}</div>
+                <div style={{ fontSize:36, fontWeight:900, color:'#fff', letterSpacing:'-.05em', lineHeight:1, marginBottom:4 }}>${selAmount.toFixed(2)}</div>
+                {lc && <div style={{ fontSize:11, color:selMethod.color, fontWeight:700 }}>{lc}</div>}
               </div>
 
-              {/* QR Code */}
+              {/* QR */}
               {selMethod.hasQr && selMethod.qr && !selMethod.qr.startsWith('YOUR_') && (
-                <div style={{ padding:'18px', borderRadius:16, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', marginBottom:18, textAlign:'center' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
-                    <span style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.12em', color:'rgba(255,255,255,.3)' }}>Scan Code</span>
-                    <span style={{ fontSize:11, color:'rgba(255,255,255,.3)' }}>Tap to zoom</span>
+                <div style={{ textAlign:'center' }}>
+                  <div style={{ display:'inline-block', padding:10, borderRadius:18, background:'#fff', cursor:'zoom-in', transition:'transform .2s', boxShadow:`0 0 32px ${selMethod.glow}` }}
+                    onClick={()=>setQrZoom(true)}
+                    onMouseEnter={e=>(e.currentTarget as HTMLDivElement).style.transform='scale(1.03)'}
+                    onMouseLeave={e=>(e.currentTarget as HTMLDivElement).style.transform='none'}>
+                    <img src={selMethod.qr} alt="QR" style={{ width:120, height:120, objectFit:'contain', borderRadius:10, display:'block' }} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
                   </div>
-                  <div className="dep-qr-wrap" onClick={() => setQrZoom(true)}
-                    style={{ boxShadow:`0 0 40px ${selMethod.glow}, 0 16px 40px rgba(0,0,0,.4)` }}>
-                    <img src={selMethod.qr} alt="QR" style={{ width:160, height:160, objectFit:'contain', borderRadius:14, display:'block' }}
-                      onError={e=>{(e.target as HTMLImageElement).style.display='none';}} />
-                    <div style={{ position:'absolute', bottom:10, right:10, width:24, height:24, borderRadius:'50%', background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <ZoomIn size={11} color="white" />
-                    </div>
-                  </div>
-                  <p style={{ fontSize:11, color:'rgba(255,255,255,.25)', marginTop:10, marginBottom:0 }}>Fast checkout via QR</p>
+                  <div style={{ fontSize:10, color:'rgba(255,255,255,.25)', marginTop:6 }}>Tap to zoom • Scan to pay</div>
                 </div>
               )}
 
-              {/* Payment details fields */}
-              {selMethod.fields.length > 0 && (
-                <div style={{ borderRadius:14, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', overflow:'hidden' }}>
-                  <div style={{ padding:'12px 16px 10px', borderBottom:'1px solid rgba(255,255,255,.06)' }}>
-                    <span style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.12em', color:'rgba(255,255,255,.3)' }}>Payment Details</span>
-                  </div>
-                  {selMethod.fields.map((f, i) => (
-                    <div key={i} style={{ padding:'12px 16px', borderBottom: i < selMethod.fields.length-1 ? '1px solid rgba(255,255,255,.05)' : 'none' }}>
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:4 }}>
-                        <span style={{ fontSize:10, color:'rgba(255,255,255,.3)', textTransform:'uppercase', letterSpacing:'.1em', fontWeight:700 }}>{f.label}</span>
-                        {f.note && <span style={{ fontSize:10, color:selMethod.color, fontWeight:700 }}>{f.note}</span>}
+              {/* Payment fields */}
+              {selMethod.fields.length > 0 && selMethod.id!=='paypal' && selMethod.id!=='truewallet' && (
+                <div style={{ borderRadius:12, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', overflow:'hidden' }}>
+                  {selMethod.fields.map((f,i)=>(
+                    <div key={i} style={{ padding:'10px 14px', borderBottom:i<selMethod.fields.length-1?'1px solid rgba(255,255,255,.05)':'none' }}>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:3 }}>
+                        <span style={{ fontSize:9, color:'rgba(255,255,255,.3)', textTransform:'uppercase' as const, letterSpacing:'.1em', fontWeight:700 }}>{f.label}</span>
+                        {f.note && <span style={{ fontSize:9, color:selMethod.color, fontWeight:700 }}>{f.note}</span>}
                       </div>
                       <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                        <code style={{ flex:1, fontSize:13, fontFamily:'monospace', color:'#fff', fontWeight:700, wordBreak:'break-all' }}>{f.value}</code>
+                        <code style={{ flex:1, fontSize:12, fontFamily:'monospace', color:'#fff', fontWeight:700, wordBreak:'break-all' }}>{f.value}</code>
                         {!f.value.startsWith('http') && !f.value.startsWith('YOUR_') && (
-                          <button onClick={() => { navigator.clipboard.writeText(f.value); toast.success(`${f.label} copied!`); }}
-                            style={{ padding:'4px 8px', borderRadius:7, background:'rgba(255,255,255,.06)', border:`1px solid ${selMethod.borderColor}`, cursor:'pointer', color:'rgba(255,255,255,.5)', display:'flex', alignItems:'center', flexShrink:0 }}>
-                            <Copy size={12} />
-                          </button>
+                          <button onClick={()=>{navigator.clipboard.writeText(f.value);toast.success(`${f.label} copied!`);}} style={{ padding:'4px 8px', borderRadius:7, background:'rgba(255,255,255,.06)', border:`1px solid ${selMethod.borderColor}`, cursor:'pointer', color:'rgba(255,255,255,.5)', display:'flex', alignItems:'center', flexShrink:0 }}><Copy size={11}/></button>
                         )}
                       </div>
                     </div>
@@ -1119,89 +909,36 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
                 </div>
               )}
 
-              {/* PayPal / TrueWallet inline components */}
-              {selMethod.id === 'paypal' && (
-                <div style={{ marginTop:16 }}>
-                    <PayPalButton amount={selAmount} user={user} onSuccess={onSuccess} referralEmail={referralEmail} />
-                </div>
-              )}
-              {selMethod.id === 'truewallet' && (
-                <div style={{ marginTop:16 }}>
-                    <TrueWalletRedeem user={user} onSuccess={onSuccess} expectedUsdAmount={selAmount} referralEmail={referralEmail} />
-                </div>
-              )}
+              {/* PayPal */}
+              {selMethod.id==='paypal' && <PayPalButton amount={selAmount} user={user} onSuccess={onSuccess} referralEmail={referralEmail}/>}
+
+              {/* TrueWallet */}
+              {selMethod.id==='truewallet' && <TrueWalletRedeem user={user} onSuccess={onSuccess} expectedUsdAmount={selAmount} referralEmail={referralEmail}/>}
 
               {/* Instruction */}
-              <div style={{ display:'flex', gap:10, alignItems:'flex-start', padding:'12px 14px', borderRadius:12, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.06)', marginTop:16 }}>
-                <span style={{ fontSize:15, flexShrink:0 }}>💡</span>
-                <p style={{ fontSize:11, color:'rgba(255,255,255,.4)', lineHeight:1.65, margin:0 }}>{selMethod.instruction}</p>
+              <div style={{ padding:'10px 14px', borderRadius:11, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.06)', display:'flex', gap:8, alignItems:'flex-start' }}>
+                <span style={{ fontSize:14, flexShrink:0 }}>💡</span>
+                <p style={{ fontSize:11, color:'rgba(255,255,255,.38)', lineHeight:1.6, margin:0 }}>{selMethod.instruction}</p>
               </div>
-            </div>
 
-            {/* RIGHT — checkout form */}
-            <div style={{ padding:'28px 26px' }}>
-
-              {selMethod.id === 'paypal' ? (
-                <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-                  <div style={{ padding:'16px 18px', borderRadius:14, background:'rgba(16,232,152,.08)', border:'1px solid rgba(16,232,152,.18)' }}>
-                    <div style={{ fontSize:14, fontWeight:800, color:'var(--green)', marginBottom:6 }}>⚡ Fully Automatic</div>
-                    <p style={{ fontSize:12, color:'rgba(255,255,255,.5)', margin:0, lineHeight:1.65 }}>Click the PayPal button on the left. Balance is credited <strong style={{ color:'#fff' }}>instantly</strong> after payment. No form needed.</p>
-                  </div>
-                  {[{step:'1',text:'Click the PayPal button on the left'},{step:'2',text:'Log in and complete payment in PayPal popup'},{step:'3',text:'Balance added instantly — no action needed'}].map(s=>(
-                    <div key={s.step} style={{ display:'flex', alignItems:'center', gap:12 }}>
-                      <div style={{ width:24, height:24, borderRadius:'50%', background:'linear-gradient(135deg,#003087,#009cde)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:900, color:'#fff', flexShrink:0 }}>{s.step}</div>
-                      <span style={{ fontSize:12, color:'rgba(255,255,255,.6)' }}>{s.text}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : selMethod.id === 'truewallet' ? (
-                <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-                  <div style={{ padding:'16px 18px', borderRadius:14, background:'rgba(249,115,22,.1)', border:'1px solid rgba(249,115,22,.2)' }}>
-                    <div style={{ fontSize:14, fontWeight:800, color:'#fb923c', marginBottom:6 }}>Automatic Voucher Flow</div>
-                    <p style={{ fontSize:12, color:'rgba(255,255,255,.5)', margin:0, lineHeight:1.65 }}>Paste a TrueWallet gift link on the left. We redeem the THB value, apply a 3% fee, and convert to USD balance instantly.</p>
-                  </div>
-                </div>
-              ) : (
+              {/* Form for manual methods */}
+              {selMethod.id!=='paypal' && selMethod.id!=='truewallet' && (
                 <>
-                  <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', marginBottom:6 }}>Checkout</div>
-                  <div style={{ fontSize:26, fontWeight:900, color:'#fff', letterSpacing:'-.03em', marginBottom:26 }}>Complete Your Payment</div>
-
-                  {/* Email */}
-                  <div style={{ marginBottom:18 }}>
-                    <label className="dep-label">Your Email</label>
-                    <input type="email" className="dep-field" placeholder="you@example.com"
-                      value={email} onChange={e => setEmail(e.target.value)} />
+                  <div>
+                    <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase' as const, letterSpacing:'.12em', color:'rgba(255,255,255,.3)', display:'block', marginBottom:6 }}>Your Email</label>
+                    <input type="email" className="ab-input" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}/>
                   </div>
-
-                  {/* TXN ID */}
-                  <div style={{ marginBottom:18 }}>
-                    <label className="dep-label">Transaction ID</label>
-                    <input type="text" className="dep-field" placeholder="Paste your TXN / reference ID..."
-                      value={txnId} onChange={e => setTxnId(e.target.value)}
-                      style={{ fontFamily:'monospace', letterSpacing:'0.5px' }} />
-                    <p style={{ fontSize:11, color:'rgba(255,255,255,.28)', marginTop:6, marginBottom:0 }}>From your payment receipt or confirmation</p>
+                  <div>
+                    <label style={{ fontSize:10, fontWeight:700, textTransform:'uppercase' as const, letterSpacing:'.12em', color:'rgba(255,255,255,.3)', display:'block', marginBottom:6 }}>Transaction ID</label>
+                    <input type="text" className="ab-input" placeholder="Paste TXN / reference ID…" value={txnId} onChange={e=>setTxnId(e.target.value)} style={{ fontFamily:'monospace' }}/>
+                    <p style={{ fontSize:10, color:'rgba(255,255,255,.2)', marginTop:5, marginBottom:0 }}>From your payment receipt</p>
                   </div>
-
-                  {/* Screenshot */}
-                  {/* Summary pill */}
-                  <div style={{ display:'flex', alignItems:'center', gap:12, padding:'13px 16px', borderRadius:14, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', marginBottom:20 }}>
-                    <div style={{ width:36, height:36, borderRadius:10, background:selMethod.bgColor, border:`1px solid ${selMethod.borderColor}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{selMethod.icon}</div>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:1 }}>{selMethod.label}</div>
-                      <div style={{ fontSize:18, fontWeight:900, color:'#fff', letterSpacing:'-.02em' }}>${selAmount.toFixed(2)}</div>
-                    </div>
-                    <div style={{ textAlign:'right' }}>
-                      <div style={{ fontSize:10, color:'rgba(255,255,255,.3)' }}>Pending admin</div>
-                      <div style={{ fontSize:11, fontWeight:700, color:'var(--amber)', marginTop:2 }}>~1–10 min</div>
-                    </div>
-                  </div>
-
-                  <button className="dep-submit" onClick={() => {
+                  <button className="ab-submit" onClick={()=>{
                     if (!txnId.trim()) { toast.error('Enter your transaction ID'); return; }
                     if (!email.trim()) { toast.error('Enter your email'); return; }
                     setStep(3);
                   }}>
-                    I've Sent Payment <ArrowRight size={16} />
+                    I've Sent Payment <ArrowRight size={16}/>
                   </button>
                 </>
               )}
@@ -1210,17 +947,15 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
         </div>
       )}
 
-      {/* ══ STEP 3: Review + Final Submit ══ */}
-      {step === 3 && (
-        <div className="dep-wrap dep-card" style={{ padding:'32px' }}>
-          <button onClick={() => setStep(2)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,.4)', fontSize:13, fontFamily:'inherit', marginBottom:22, padding:0, fontWeight:600 }}>
+      {/* ══ STEP 3 ══ */}
+      {step===3 && (
+        <div className="ab-card" style={{ padding:'32px' }}>
+          <button onClick={()=>setStep(2)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,.4)', fontSize:13, fontFamily:'inherit', marginBottom:22, padding:0, fontWeight:600 }}>
             <ArrowLeft size={14}/> Back
           </button>
-
-          <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', marginBottom:6 }}>Review</div>
-          <div style={{ fontSize:24, fontWeight:900, color:'#fff', letterSpacing:'-.03em', marginBottom:24 }}>Confirm Submission</div>
-
-          <div style={{ borderRadius:16, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', overflow:'hidden', marginBottom:20 }}>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', marginBottom:4 }}>Review Order</div>
+          <div style={{ fontSize:26, fontWeight:900, color:'#fff', letterSpacing:'-.03em', marginBottom:24 }}>Confirm Submission</div>
+          <div style={{ borderRadius:16, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', overflow:'hidden', marginBottom:18 }}>
             {[{l:'Method',v:selMethod.label},{l:'Amount',v:`$${selAmount.toFixed(2)}`},{l:'Email',v:email},{l:'Transaction ID',v:txnId}].map((r,i)=>(
               <div key={r.l} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 18px', borderBottom:i<3?'1px solid rgba(255,255,255,.05)':'none' }}>
                 <span style={{ fontSize:12, color:'rgba(255,255,255,.4)' }}>{r.l}</span>
@@ -1228,15 +963,11 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
               </div>
             ))}
           </div>
-
-          <div style={{ display:'flex', alignItems:'flex-start', gap:12, padding:'14px 18px', borderRadius:13, background:'rgba(251,191,36,.05)', border:'1px solid rgba(251,191,36,.15)', marginBottom:22 }}>
+          <div style={{ display:'flex', alignItems:'flex-start', gap:12, padding:'14px 18px', borderRadius:13, background:'rgba(251,191,36,.05)', border:'1px solid rgba(251,191,36,.15)', marginBottom:20 }}>
             <span style={{ fontSize:18, flexShrink:0 }}>⚡</span>
-            <p style={{ fontSize:12, color:'rgba(255,255,255,.5)', lineHeight:1.65, margin:0 }}>
-              After submission, admin will verify and credit <strong style={{ color:'var(--green)' }}>${selAmount.toFixed(2)}</strong> to your balance within minutes.
-            </p>
+            <p style={{ fontSize:12, color:'rgba(255,255,255,.5)', lineHeight:1.65, margin:0 }}>After submission, admin will verify and credit <strong style={{ color:'var(--green)' }}>${selAmount.toFixed(2)}</strong> to your balance within minutes.</p>
           </div>
-
-          <button className="dep-submit" onClick={handleSubmit} disabled={submitting}>
+          <button className="ab-submit" onClick={handleSubmit} disabled={submitting}>
             {submitting ? <><Loader2 size={18} className="animate-spin"/> Submitting…</> : <><CheckCircle size={17}/> Confirm &amp; Submit</>}
           </button>
         </div>
@@ -1245,7 +976,6 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
   );
 }
 
-// ══════════════════════════════════════════════════════════════
 //  Main WalletPage
 // ══════════════════════════════════════════════════════════════
 export default function WalletPage() {
