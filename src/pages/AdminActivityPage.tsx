@@ -17,6 +17,20 @@ interface Log {
   created_at: string;
 }
 
+interface ResellerSummary {
+  user_id: string;
+  user_email: string;
+  total_earned: number;
+  total_fee: number;
+  total_fee_paid: number;
+  fee_due: number;
+  wallet_balance: number;
+  sales_count: number;
+  latest_fee_payment_status: string;
+  latest_fee_payment_at: string | null;
+  last_sale_at: string | null;
+}
+
 const IMPORTANT_ACTIONS = [
   'hwid_reset',
   'purchase',
@@ -55,11 +69,14 @@ export default function AdminActivityPage() {
   const isAdmin = canAccessActivity(user?.role);
   const [logs, setLogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('');
+  const [resellerSummary, setResellerSummary] = useState<ResellerSummary[]>([]);
 
   const load = async () => {
     setLoading(true);
+    setSummaryLoading(true);
     let q = supabase
       .from('activity_logs')
       .select('*')
@@ -76,7 +93,10 @@ export default function AdminActivityPage() {
 
     const { data } = await q;
     setLogs((data as Log[]) ?? []);
+    const { data: summaryData } = await supabase.rpc('get_owner_reseller_activity');
+    setResellerSummary((summaryData as ResellerSummary[]) ?? []);
     setLoading(false);
+    setSummaryLoading(false);
   };
 
   useEffect(() => {
@@ -145,6 +165,45 @@ export default function AdminActivityPage() {
             <div style={{ fontSize:11, color:'rgba(255,255,255,.38)', textTransform:'uppercase', letterSpacing:'.12em', marginTop:4 }}>{card.label}</div>
           </div>
         ))}
+      </div>
+
+      <div className="g" style={{ padding:0, overflow:'hidden' }}>
+        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,padding:'14px 18px',borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+          <div>
+            <div style={{ fontSize:15, fontWeight:800, color:'#fff' }}>Reseller Summary</div>
+            <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>Email, earnings, fee due, and withdrawal lock status</div>
+          </div>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'1.2fr .8fr .8fr .8fr .8fr .8fr', gap:8, padding:'12px 18px', borderBottom:'1px solid rgba(255,255,255,.07)', background:'rgba(255,255,255,.02)' }}>
+          {['Reseller', 'Earned', 'Fee', 'Paid', 'Due', 'Status'].map(label => (
+            <div key={label} style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,.35)', textTransform:'uppercase', letterSpacing:'.1em' }}>{label}</div>
+          ))}
+        </div>
+        <div style={{ maxHeight:320, overflowY:'auto' }}>
+          {summaryLoading ? (
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'36px 0',color:'var(--muted)' }}>
+              <RefreshCw size={16} className="animate-spin" /><span style={{ fontSize:13 }}>Loading reseller summary...</span>
+            </div>
+          ) : resellerSummary.length === 0 ? (
+            <div style={{ textAlign:'center', padding:'36px 0', fontSize:13, color:'var(--muted)' }}>No reseller sales yet</div>
+          ) : resellerSummary.map(item => (
+            <div key={item.user_id || item.user_email} style={{ display:'grid', gridTemplateColumns:'1.2fr .8fr .8fr .8fr .8fr .8fr', gap:8, padding:'13px 18px', borderBottom:'1px solid rgba(255,255,255,.04)' }}>
+              <div style={{ minWidth:0 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.user_email}</div>
+                <div style={{ fontSize:11, color:'var(--muted)' }}>{item.sales_count} sales · Wallet ${Number(item.wallet_balance ?? 0).toFixed(2)}</div>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', fontSize:12, color:'#10e898', fontWeight:800 }}>${Number(item.total_earned ?? 0).toFixed(2)}</div>
+              <div style={{ display:'flex', alignItems:'center', fontSize:12, color:'#fbbf24', fontWeight:800 }}>${Number(item.total_fee ?? 0).toFixed(2)}</div>
+              <div style={{ display:'flex', alignItems:'center', fontSize:12, color:'#c4b5fd', fontWeight:800 }}>${Number(item.total_fee_paid ?? 0).toFixed(2)}</div>
+              <div style={{ display:'flex', alignItems:'center', fontSize:12, color:Number(item.fee_due ?? 0) > 0 ? '#f87171' : '#10e898', fontWeight:900 }}>${Number(item.fee_due ?? 0).toFixed(2)}</div>
+              <div style={{ display:'flex', alignItems:'center' }}>
+                <span style={{ display:'inline-flex',alignItems:'center',padding:'4px 10px',borderRadius:999,background:Number(item.fee_due ?? 0) > 0 ? 'rgba(248,113,113,.08)' : 'rgba(16,232,152,.08)',border:`1px solid ${Number(item.fee_due ?? 0) > 0 ? 'rgba(248,113,113,.22)' : 'rgba(16,232,152,.22)'}`,fontSize:11,fontWeight:800,color:Number(item.fee_due ?? 0) > 0 ? '#f87171' : '#10e898' }}>
+                  {Number(item.fee_due ?? 0) > 0 ? `Locked · ${item.latest_fee_payment_status}` : 'Ready'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="g" style={{ padding:'14px 16px' }}>

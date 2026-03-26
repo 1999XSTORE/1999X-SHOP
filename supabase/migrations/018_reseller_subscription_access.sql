@@ -17,6 +17,7 @@ create table if not exists public.reseller_subscriptions (
 
 alter table public.reseller_subscriptions add column if not exists user_id uuid references auth.users(id) on delete cascade;
 alter table public.reseller_subscriptions add column if not exists email text;
+alter table public.reseller_subscriptions add column if not exists user_email text;
 alter table public.reseller_subscriptions add column if not exists plan text;
 alter table public.reseller_subscriptions add column if not exists price numeric(10,2) not null default 0;
 alter table public.reseller_subscriptions add column if not exists fee_rate numeric(10,4) not null default 0;
@@ -31,6 +32,10 @@ set email = lower(trim(coalesce(au.email, rs.email, '')))
 from auth.users au
 where rs.user_id = au.id
   and (rs.email is null or trim(rs.email) = '');
+
+update public.reseller_subscriptions
+set user_email = coalesce(user_email, email)
+where user_email is null;
 
 create index if not exists reseller_subscriptions_user_id_idx on public.reseller_subscriptions(user_id);
 create index if not exists reseller_subscriptions_email_idx on public.reseller_subscriptions(lower(email));
@@ -144,9 +149,9 @@ begin
     and status = 'active';
 
   insert into public.reseller_subscriptions (
-    user_id, email, plan, price, fee_rate, status, started_at, expires_at, updated_at
+    user_id, email, user_email, plan, price, fee_rate, status, started_at, expires_at, updated_at
   ) values (
-    p_user_id, normalized_email, p_plan, coalesce(p_price, 0), coalesce(p_fee_rate, 0), 'active', now(), p_expires_at, now()
+    p_user_id, normalized_email, normalized_email, p_plan, coalesce(p_price, 0), coalesce(p_fee_rate, 0), 'active', now(), p_expires_at, now()
   )
   returning id into new_subscription_id;
 
