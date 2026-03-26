@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 
 const SUPABASE_URL  = 'https://awjouzwzdkrevvnlenvn.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3am91end6ZGtyZXZ2bmxlbnZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTg4MjEsImV4cCI6MjA5MDAzNDgyMX0._I_I-WA_8-YqDfaRzKiVgpEAhkH9faxlEIV6e766A0M';
+const OWNER_BINANCE_PAY_ID = '1104953117';
 
 const HERO_IMAGE = 'https://www.dropbox.com/scl/fi/gshxatzs1yojn8ix697v6/image-removebg-preview-1.png?rlkey=q8419he741co7pfhgp9mtxeiq&st=8g6cthpy&raw=1';
 
@@ -56,14 +57,12 @@ function FeePaymentModal({ dueAmount, userId, userEmail, onClose, onSuccess }: {
   onClose: () => void; onSuccess: () => void;
 }) {
   const [amount, setAmount] = useState(dueAmount.toFixed(2));
-  const [binanceId, setBinanceId] = useState('');
   const [binanceTxId, setBinanceTxId] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
     const amt = roundMoney(Number(amount));
     if (!amt || amt <= 0) { toast.error('Enter a valid fee amount'); return; }
-    if (!binanceId.trim()) { toast.error('Enter your Binance Pay ID'); return; }
     if (!binanceTxId.trim()) { toast.error('Enter Binance transaction ID'); return; }
 
     setLoading(true);
@@ -72,7 +71,7 @@ function FeePaymentModal({ dueAmount, userId, userEmail, onClose, onSuccess }: {
         p_user_id: userId,
         p_email: userEmail,
         p_amount: amt,
-        p_binance_pay_id: binanceId.trim(),
+        p_binance_pay_id: OWNER_BINANCE_PAY_ID,
         p_binance_tx_id: binanceTxId.trim(),
       })
     );
@@ -87,11 +86,11 @@ function FeePaymentModal({ dueAmount, userId, userEmail, onClose, onSuccess }: {
       action_type: 'reseller_fee_payment',
       product: 'Reseller Fee Payment',
       amount: amt,
-      meta: { binance_id: binanceId.trim(), binance_tx_id: binanceTxId.trim() },
+      meta: { binance_id: OWNER_BINANCE_PAY_ID, binance_tx_id: binanceTxId.trim() },
       status: 'success',
     }).maybeSingle();
 
-    toast.success('Fee payment submitted. Withdrawal is now unlocked after refresh.');
+    toast.success('Fee payment submitted. Admin approval is required before withdrawal unlocks.');
     onSuccess();
     onClose();
   };
@@ -115,14 +114,14 @@ function FeePaymentModal({ dueAmount, userId, userEmail, onClose, onSuccess }: {
 
         <div style={{ display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:12,background:'rgba(240,185,11,.06)',border:'1px solid rgba(240,185,11,.18)',marginBottom:16 }}>
           <span style={{ fontSize:14,flexShrink:0 }}>🟡</span>
-          <span style={{ fontSize:12,color:'rgba(255,255,255,.5)' }}>Send the reseller fee with <strong style={{ color:'#F0B90B' }}>Binance Pay</strong>, then paste your payment details below.</span>
+          <span style={{ fontSize:12,color:'rgba(255,255,255,.5)' }}>Send the reseller fee to the owner <strong style={{ color:'#F0B90B' }}>Binance Pay ID</strong>, then submit only your transaction ID below.</span>
         </div>
 
         <div style={{ marginBottom:12 }}>
-          <div style={{ fontSize:9,fontWeight:800,letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(255,255,255,.3)',marginBottom:8 }}>Binance Pay ID</div>
-          <input type="text" placeholder="Enter your Binance Pay ID..." value={binanceId} onChange={e=>setBinanceId(e.target.value)}
-            style={{ width:'100%',background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.1)',borderRadius:13,padding:'14px 16px',color:'#fff',fontFamily:'inherit',fontSize:14,outline:'none',boxSizing:'border-box' }}
-          />
+          <div style={{ fontSize:9,fontWeight:800,letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(255,255,255,.3)',marginBottom:8 }}>Owner Binance Pay ID</div>
+          <div style={{ width:'100%',background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.1)',borderRadius:13,padding:'14px 16px',color:'#F0B90B',fontFamily:'inherit',fontSize:16,fontWeight:900,boxSizing:'border-box' }}>
+            {OWNER_BINANCE_PAY_ID}
+          </div>
         </div>
 
         <div style={{ marginBottom:12 }}>
@@ -441,7 +440,7 @@ export default function ResellerPage() {
   const walletBalance = Number(resellerWallet?.balance ?? 0);
   const allTimeEarned = Number(resellerWallet?.total_earned ?? 0);
   const submittedFeeTotal = feePayments
-    .filter(p => p.status === 'pending' || p.status === 'verified')
+    .filter(p => p.status === 'verified')
     .reduce((s, p) => s + Number(p.amount ?? 0), 0);
 
   const planConfig = sub ? PLANS.find(p => p.id === sub.plan) : null;
@@ -731,13 +730,20 @@ export default function ResellerPage() {
                 <div style={{ padding:'8px 16px',borderRadius:99,background:'rgba(139,92,246,.1)',border:'1px solid rgba(139,92,246,.22)',fontSize:12,fontWeight:700,color:'#a78bfa' }}>
                   {planConfig?.displayFee}
                 </div>
+                <div style={{ padding:'8px 16px',borderRadius:99,background:'rgba(251,191,36,.1)',border:'1px solid rgba(251,191,36,.22)',fontSize:12,fontWeight:700,color:'#fbbf24' }}>
+                  Shop balance: ${balance.toFixed(2)}
+                </div>
               </div>
+            </div>
+
+            <div style={{ padding:'12px 16px',borderRadius:14,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)',fontSize:12,color:'rgba(255,255,255,.5)' }}>
+              The reseller dashboard balance is your referral earnings wallet. Your subscription cost is deducted from your main shop balance shown above and in the top bar.
             </div>
 
             {/* ── Stats row ── */}
             <div className="rs-stats-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14 }}>
               {[
-                { label:'Available Balance', value:`$${walletBalance.toFixed(2)}`, color:'#10e898', bg:'rgba(16,232,152,.08)', border:'rgba(16,232,152,.18)', icon:<DollarSign size={18}/> },
+                { label:'Reseller Balance', value:`$${walletBalance.toFixed(2)}`, color:'#10e898', bg:'rgba(16,232,152,.08)', border:'rgba(16,232,152,.18)', icon:<DollarSign size={18}/> },
                 { label:'Total Earned', value:`$${allTimeEarned.toFixed(2)}`, color:'#818cf8', bg:'rgba(129,140,248,.08)', border:'rgba(129,140,248,.18)', icon:<TrendingUp size={18}/> },
                 { label:'Total Sales', value:resellerTxns.length, color:'#38bdf8', bg:'rgba(56,189,248,.08)', border:'rgba(56,189,248,.18)', icon:<Users size={18}/> },
                 { label:'Total Fees', value:`$${totalFees.toFixed(2)}`, color:'#fbbf24', bg:'rgba(251,191,36,.08)', border:'rgba(251,191,36,.18)', icon:<BarChart3 size={18}/> },
@@ -816,12 +822,12 @@ export default function ResellerPage() {
                   <div style={{ fontSize:24,fontWeight:900,color:'#fbbf24' }}>${feeDue.toFixed(2)}</div>
                 </div>
                 <div style={{ padding:'12px 14px',borderRadius:14,background:'rgba(139,92,246,.07)',border:'1px solid rgba(139,92,246,.18)' }}>
-                  <div style={{ fontSize:10,fontWeight:800,letterSpacing:'.12em',textTransform:'uppercase',color:'rgba(167,139,250,.65)',marginBottom:6 }}>Submitted</div>
+                  <div style={{ fontSize:10,fontWeight:800,letterSpacing:'.12em',textTransform:'uppercase',color:'rgba(167,139,250,.65)',marginBottom:6 }}>Approved Fee</div>
                   <div style={{ fontSize:24,fontWeight:900,color:'#c4b5fd' }}>${submittedFeeTotal.toFixed(2)}</div>
                 </div>
               </div>
               <p style={{ fontSize:12,color:'rgba(255,255,255,.42)',margin:'12px 0 0' }}>
-                Withdrawals stay locked while fee due is above $0. Submit your Binance payment details first.
+                Withdrawals stay locked while fee due is above $0. Submit the Binance transaction ID after paying the owner Binance ID, then wait for admin approval.
               </p>
             </div>
 

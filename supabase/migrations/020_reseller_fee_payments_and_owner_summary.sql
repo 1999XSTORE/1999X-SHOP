@@ -84,9 +84,54 @@ begin
   into submitted_fee
   from public.reseller_fee_payments fp
   where fp.user_id = p_user_id
-    and fp.status in ('pending', 'verified');
+    and fp.status = 'verified';
 
   return greatest(round(total_fee - submitted_fee, 2), 0);
+end;
+$$;
+
+create or replace function public.handle_reseller_fee_payment(p_payment_id uuid, p_status text)
+returns public.reseller_fee_payments
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  payment_row public.reseller_fee_payments%rowtype;
+begin
+  if lower(coalesce(p_status, '')) not in ('verified', 'rejected') then
+    raise exception 'Invalid fee payment status';
+  end if;
+
+  if not exists (
+    select 1
+    from public.user_roles ur
+    where lower(ur.email) = lower(auth.jwt() ->> 'email')
+      and ur.role in ('owner', 'admin')
+  ) then
+    raise exception 'Only owner or admin can manage reseller fee payments';
+  end if;
+
+  select * into payment_row
+  from public.reseller_fee_payments
+  where id = p_payment_id
+  for update;
+
+  if not found then
+    raise exception 'Fee payment not found';
+  end if;
+
+  if payment_row.status <> 'pending' then
+    return payment_row;
+  end if;
+
+  update public.reseller_fee_payments
+  set status = lower(p_status),
+      updated_at = now()
+  where id = p_payment_id
+  returning * into payment_row;
+
+  return payment_row;
 end;
 $$;
 

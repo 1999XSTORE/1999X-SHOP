@@ -90,7 +90,7 @@ async function fetchRole(email: string): Promise<AppRole> {
 }
 
 export default function Index() {
-  const { isAuthenticated, user, login, logout, setBalance, setUserRole } = useAppStore();
+  const { isAuthenticated, user, login, logout, addBalance, setUserRole } = useAppStore();
 
   // ── Restore last page from sessionStorage ─────────────────
   const [currentPath, setCurrentPath] = useState(getSavedPath);
@@ -236,17 +236,12 @@ export default function Index() {
         if (error || !data || disposed) return;
 
         const rows = data as Array<{ id: string; amount: number; status: string }>;
-        const approvedTotal = rows
-          .filter((tx) => tx.status === 'approved')
-          .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
-
-        setBalance(approvedTotal);
-
         for (const tx of rows) {
           if (tx.status === 'approved') {
             const credited = readIds(creditedKey);
             if (!credited.has(tx.id)) {
               writeId(creditedKey, tx.id);
+              addBalance(Number(tx.amount) || 0);
               toast.success(`Payment approved! $${Number(tx.amount || 0).toFixed(2)} added!`);
               logActivity({
                 userId: user.id,
@@ -293,7 +288,7 @@ export default function Index() {
       window.removeEventListener('focus', onFocus);
       supabase.removeChannel(channel);
     };
-  }, [setBalance, user?.id, user?.role]);
+  }, [addBalance, user?.id, user?.role]);
 
   // ── Loading screen — only shown if NOT already authenticated ──
   // If Zustand has isAuthenticated=true, skip straight to app

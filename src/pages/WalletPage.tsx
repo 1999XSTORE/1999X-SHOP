@@ -329,6 +329,7 @@ function TrueWalletRedeem({ user, onSuccess, expectedUsdAmount, referralEmail }:
 function AdminPanel() {
   const { user: adminUser } = useAppStore();
   const [txns,setTxns]         = useState<any[]>([]);
+  const [feePayments,setFeePayments] = useState<any[]>([]);
   const [loading,setL]         = useState(false);
   const [filter,setFilter]     = useState<'pending'|'approved'|'rejected'|'all'>('pending');
   const [search,setSearch]     = useState('');
@@ -343,8 +344,16 @@ function AdminPanel() {
       .limit(search.trim() ? 50 : filter === 'pending' ? 40 : 25);
     if (search.trim()) q = (q as any).or(`user_email.ilike.%${search.trim()}%,user_name.ilike.%${search.trim()}%,transaction_id.ilike.%${search.trim()}%`);
     else if (filter !== 'all') q = (q as any).eq('status', filter);
-    const { data, error } = await safeQuery(() => q);
+    const [{ data, error }, { data: feeData }] = await Promise.all([
+      safeQuery(() => q),
+      safeQuery(() => supabase
+        .from('reseller_fee_payments')
+        .select('id,user_id,user_email,amount,binance_pay_id,binance_tx_id,status,created_at,updated_at')
+        .order('created_at', { ascending:false })
+        .limit(30)),
+    ]);
     if (!error && data) setTxns(data);
+    setFeePayments(feeData ?? []);
     setL(false);
   };
   useEffect(() => {
@@ -378,9 +387,43 @@ function AdminPanel() {
     logActivity({ userId:adminUser?.id??'', userEmail:adminUser?.email??'', userName:adminUser?.name??'', action:'payment_rejected', amount:Number(tx.amount), status:'success', meta:{ for_user:tx.user_email } });
     notifyUser(tx.user_id, { type:'payment', title:`❌ Payment Rejected — $${Number(tx.amount).toFixed(2)}`, body:`Your ${tx.method} payment was rejected.`, linkPath:'/wallet' });
   };
+  const approveFeePayment = async (payment: any) => {
+    const { error } = await safeQuery(() => supabase.rpc('handle_reseller_fee_payment', { p_payment_id: payment.id, p_status: 'verified' }));
+    if (error) { toast.error('Failed: '+error.message); return; }
+    toast.success(`✅ Fee payment approved for ${payment.user_email}`);
+    setFeePayments(p => p.map(fp => fp.id===payment.id ? { ...fp, status:'verified', updated_at:new Date().toISOString() } : fp));
+    logActivity({
+      userId: adminUser?.id ?? '',
+      userEmail: adminUser?.email ?? '',
+      userName: adminUser?.name ?? '',
+      action: 'payment_approved',
+      amount: Number(payment.amount),
+      status: 'success',
+      meta: { for_user: payment.user_email, method: 'reseller_fee', transaction_id: payment.binance_tx_id },
+    });
+    notifyUser(payment.user_id, {
+      type: 'payment',
+      title: `✅ Reseller Fee Approved — $${Number(payment.amount).toFixed(2)}`,
+      body: 'Your reseller fee payment was approved. You can now request withdrawal if no fee is due.',
+      linkPath: '/reseller',
+    });
+  };
+  const rejectFeePayment = async (payment: any) => {
+    const { error } = await safeQuery(() => supabase.rpc('handle_reseller_fee_payment', { p_payment_id: payment.id, p_status: 'rejected' }));
+    if (error) { toast.error('Failed: '+error.message); return; }
+    toast.success(`❌ Fee payment rejected for ${payment.user_email}`);
+    setFeePayments(p => p.map(fp => fp.id===payment.id ? { ...fp, status:'rejected', updated_at:new Date().toISOString() } : fp));
+    notifyUser(payment.user_id, {
+      type: 'payment',
+      title: `❌ Reseller Fee Rejected — $${Number(payment.amount).toFixed(2)}`,
+      body: 'Your reseller fee payment was rejected. Please contact support and submit a valid Binance transaction ID.',
+      linkPath: '/reseller',
+    });
+  };
   const filtered = filter==='all' ? txns : txns.filter(t=>t.status===filter);
   const pending  = txns.filter(t=>t.status==='pending').length;
   const appTotal = txns.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount),0);
+  const pendingFeePayments = feePayments.filter(fp => fp.status === 'pending');
 
   return (
     <div style={{ display:'flex',flexDirection:'column',gap:14 }}>
@@ -402,6 +445,50 @@ function AdminPanel() {
             <div className="label" style={{ marginTop:3 }}>{s.label}</div>
           </div>
         ))}
+      </div>
+
+      <div className="g" style={{ padding:'16px 18px' }}>
+        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12,flexWrap:'wrap',gap:10 }}>
+          <div>
+            <div style={{ fontSize:15,fontWeight:800,color:'#fff' }}>Reseller Fee Approvals</div>
+            <div style={{ fontSize:12,color:'var(--muted)',marginTop:2 }}>Approve fee receipts to unlock reseller withdrawals</div>
+          </div>
+          <span className="badge badge-amber">{pendingFeePayments.length} pending</span>
+        </div>
+        {pendingFeePayments.length === 0 ? (
+          <div style={{ textAlign:'center',padding:'20px 0',fontSize:13,color:'var(--muted)' }}>No pending reseller fee payments</div>
+        ) : (
+          <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+            {pendingFeePayments.map(payment => (
+              <div key={payment.id} className="g" style={{ padding:16,background:'rgba(240,185,11,.04)',borderColor:'rgba(240,185,11,.14)' }}>
+                <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:10,marginBottom:12 }}>
+                  <div>
+                    <div style={{ fontSize:14,fontWeight:800,color:'#fff' }}>{payment.user_email}</div>
+                    <div style={{ fontSize:11,color:'var(--muted)',marginTop:4 }}>Owner Binance ID: {payment.binance_pay_id || '1104953117'}</div>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <div style={{ fontSize:22,fontWeight:900,color:'#F0B90B' }}>${Number(payment.amount).toFixed(2)}</div>
+                    <div style={{ fontSize:10,color:'var(--dim)' }}>{new Date(payment.created_at).toLocaleString()}</div>
+                  </div>
+                </div>
+                <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:8,marginBottom:12 }}>
+                  <div style={{ background:'rgba(255,255,255,.03)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 10px' }}>
+                    <div className="label" style={{ marginBottom:3 }}>Binance Transaction ID</div>
+                    <div style={{ fontSize:11,fontWeight:700,color:'#fff',wordBreak:'break-all' }}>{payment.binance_tx_id}</div>
+                  </div>
+                  <div style={{ background:'rgba(255,255,255,.03)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 10px' }}>
+                    <div className="label" style={{ marginBottom:3 }}>Status</div>
+                    <div style={{ fontSize:11,fontWeight:700,color:'#fbbf24' }}>{payment.status}</div>
+                  </div>
+                </div>
+                <div style={{ display:'flex',gap:8 }}>
+                  <button onClick={()=>approveFeePayment(payment)} className="btn btn-g btn-sm" style={{ flex:1 }}><Check size={13}/> Approve Fee</button>
+                  <button onClick={()=>rejectFeePayment(payment)} className="btn btn-danger btn-sm" style={{ flex:1 }}><X size={13}/> Reject Fee</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Search bar */}
