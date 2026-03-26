@@ -68,9 +68,7 @@ export default function LoginPage() {
 
           {/* Logo */}
           <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:36}}>
-            <div style={{width:56,height:56,borderRadius:15,background:'linear-gradient(135deg,#8b5cf6,#6d28d9)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 32px rgba(109,40,217,.45)',marginBottom:18}}>
-              <Zap size={28} color="#fff"/>
-            </div>
+            <img src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?rlkey=b1a3nx3wav2jnd7ooce0qmhfp&st=n25kfxvg&raw=1" alt="1999X" style={{width:70,height:70,objectFit:'contain',marginBottom:0,filter:'drop-shadow(0 0 28px rgba(139,92,246,.65))'}}/>
             <h1 style={{fontSize:26,fontWeight:800,color:'#fff',letterSpacing:'-.02em',margin:0,marginBottom:8}}>{t('auth.signIn')}</h1>
             <p style={{fontSize:14,color:'var(--muted)',margin:0,textAlign:'center',lineHeight:1.5}}>{t('auth.subtitle')}</p>
           </div>

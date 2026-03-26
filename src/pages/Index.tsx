@@ -444,7 +444,7 @@ export default function Index() {
 
         {/* Branding below */}
         <div style={{ marginTop:72, textAlign:'center', animation:'ld-fade-in .7s ease both', animationDelay:'.2s' }}>
-          <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:'.06em', marginBottom:6 }}>1999X</div>
+          <img src="https://www.dropbox.com/scl/fi/uv2artcam1x5w1afg7ecc/1999XX-Png.png?rlkey=b1a3nx3wav2jnd7ooce0qmhfp&st=n25kfxvg&raw=1" alt="1999X" style={{ height:52, objectFit:'contain', marginBottom:6, filter:'drop-shadow(0 0 20px rgba(139,92,246,.55))' }}/>
           <div style={{ fontSize:12, letterSpacing:'.2em', textTransform:'uppercase', color:'rgba(255,255,255,.35)', fontWeight:600 }}>
             Loading your panel…
           </div>
