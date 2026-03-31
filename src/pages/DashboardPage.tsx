@@ -1,7 +1,7 @@
 import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { logActivity, notifyAll, sendNotificationEmail } from '@/lib/activity';
-import { Wallet, Key, Gift, Clock, TrendingUp, Zap, Copy, CheckCircle, Loader2, Sparkles, ChevronRight, ChevronLeft, Download, Crown, Activity, Wrench, RefreshCw, Users, Globe, Plus, Trash2, Send, X } from 'lucide-react';
+import { Wallet, Key, Gift, Clock, TrendingUp, Zap, Copy, CheckCircle, Eye, EyeOff, Loader2, Sparkles, Wrench, RefreshCw, Users, Globe, Plus, Trash2, Send, X, Activity } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -20,9 +20,9 @@ interface BonusRow {
 interface DBAnn { id:string; title:string; content:string; type:'update'|'maintenance'|'feature'; created_at:string; created_by?:string; }
 
 const TYPE_CFG = {
-  update:      { Icon: Sparkles, c:'text-emerald-400',  bg:'bg-emerald-500/10',  bc:'border-emerald-500/20', badge:'bg-emerald-500/20 text-emerald-400'  },
-  maintenance: { Icon: Wrench,   c:'text-indigo-400',   bg:'bg-indigo-500/10',   bc:'border-indigo-500/20',  badge:'bg-indigo-500/20 text-indigo-400' },
-  feature:     { Icon: Zap,      c:'text-cyan-400',     bg:'bg-cyan-500/10',     bc:'border-cyan-500/20',    badge:'bg-cyan-500/20 text-cyan-400'   },
+  update:      { Icon: Sparkles, c:'var(--green)',  bg:'rgba(16,232,152,.07)',  bc:'rgba(16,232,152,.16)',  badge:'badge-green'  },
+  maintenance: { Icon: Wrench,   c:'var(--purple)', bg:'rgba(109,40,217,.07)', bc:'rgba(139,92,246,.16)', badge:'badge-purple' },
+  feature:     { Icon: Zap,      c:'var(--blue)',   bg:'rgba(56,189,248,.06)',  bc:'rgba(56,189,248,.14)',  badge:'badge-blue'   },
 } as const;
 
 const OFFLINE  = { status:'offline', numUsers:'0', numKeys:'0', onlineUsers:'0', version:'—' };
@@ -38,61 +38,82 @@ async function upsertBonusRow(userId: string, userEmail: string, bonusPoints: nu
   return supabase.from('user_bonus').upsert({ user_id: userId, user_email: userEmail, bonus_points: bonusPoints, last_claim_time: lastClaimTime, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
 }
 
+function Ticker({ expiresAt }: { expiresAt: string }) {
+  const { t } = useTranslation();
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id); }, []);
+
+  const diff = new Date(expiresAt).getTime() - now;
+  if (diff <= 0) return <span style={{ color:'var(--red)', fontWeight:700, fontSize:13 }}>{t('common.expired')}</span>;
+
+  const d = Math.floor(diff / 86400000);
+  const h = String(Math.floor((diff % 86400000) / 3600000)).padStart(2, '0');
+  const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+  const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+
+  return (
+    <div style={{ display:'flex', alignItems:'baseline', gap:3 }} className="mono">
+      {d > 0 && <><span style={{ fontSize:28, fontWeight:800, color:'#fff' }}>{d}</span><span style={{ fontSize:11, color:'var(--muted)', marginRight:4 }}>d</span></>}
+      <span style={{ fontSize:28, fontWeight:800, color:'#fff' }}>{h}</span>
+      <span style={{ fontSize:16, color:'var(--muted)' }}>:</span>
+      <span style={{ fontSize:28, fontWeight:800, color:'#fff' }}>{m}</span>
+      <span style={{ fontSize:16, color:'var(--muted)' }}>:</span>
+      <span style={{ fontSize:28, fontWeight:800, color:'rgba(255,255,255,.4)' }}>{s}</span>
+    </div>
+  );
+}
+
 function MiniCountdown({ ms }: { ms: number }) {
   const [txt, setTxt] = useState('');
   useEffect(() => {
     const tick = () => {
       const left = ms - Date.now();
-      if (left <= 0) { setTxt('00:00:00'); return; }
-      const h = String(Math.floor(left / 3600000)).padStart(2, '0');
+      if (left <= 0) { setTxt(''); return; }
+      const d = Math.floor(left / 86400000);
+      const h = String(Math.floor((left % 86400000) / 3600000)).padStart(2, '0');
       const m = String(Math.floor((left % 3600000) / 60000)).padStart(2, '0');
       const s = String(Math.floor((left % 60000) / 1000)).padStart(2, '0');
-      setTxt(`${h}:${m}:${s}`);
+      setTxt(d > 0 ? `${d}d ${h}:${m}:${s}` : `${h}:${m}:${s}`);
     };
     tick(); const id = setInterval(tick, 1000); return () => clearInterval(id);
   }, [ms]);
-  return <span className="font-mono font-medium tracking-wider">{txt}</span>;
+  return <span className="mono" style={{ fontWeight:700, color:'rgba(255,255,255,.7)' }}>{txt}</span>;
 }
 
-function LicenseCarouselCard({ lic }: { lic: any }) {
+function LicCard({ lic, accent }: { lic: any; accent: 'p' | 'b' }) {
   const key = lic.key.replace('_INTERNAL', '');
   const dLeft = Math.max(0, Math.floor((new Date(lic.expiresAt).getTime() - Date.now()) / 86400000));
   const total = Math.max(30, Math.ceil((new Date(lic.expiresAt).getTime() - new Date(lic.lastLogin).getTime()) / 86400000));
   const pct = Math.min(100, (dLeft / total) * 100);
+  const isPurple = accent === 'p';
+  const color = isPurple ? '#8b5cf6' : '#38bdf8';
+  const glow  = isPurple ? 'rgba(139,92,246,.3)' : 'rgba(56,189,248,.3)';
+  const bg    = isPurple ? 'rgba(109,40,217,.08)' : 'rgba(56,189,248,.07)';
+  const bc    = isPurple ? 'rgba(139,92,246,.2)'  : 'rgba(56,189,248,.18)';
+  const barBg = isPurple ? 'linear-gradient(90deg,#6d28d9,#8b5cf6)' : 'linear-gradient(90deg,#0ea5e9,#38bdf8)';
 
   return (
-    <div className="snap-start shrink-0 w-[280px] md:w-[320px] h-[400px] rounded-[2rem] bg-[#110822]/60 backdrop-blur-2xl border border-white/5 overflow-hidden relative group flex flex-col shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-transform hover:-translate-y-2">
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-purple-500/10 opacity-50 group-hover:opacity-100 transition-opacity duration-500 z-0"/>
-      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 blur-[50px] rounded-full z-0 pointer-events-none"/>
-      
-      <div className="p-6 relative z-10 flex-1 flex flex-col">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 shadow-inner">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse"/>
-            <span className="text-[10px] font-semibold text-white/70 uppercase tracking-widest">Active</span>
-          </div>
-          <Crown size={18} className="text-white/20 group-hover:text-indigo-400 transition-colors" />
+    <div className="dash-lic-card" style={{ background:`linear-gradient(160deg,rgba(13,13,22,.97) 0%,rgba(9,9,16,.97) 100%)`, border:`1px solid ${bc}`, boxShadow:`0 24px 48px rgba(0,0,0,.45), 0 0 40px ${glow}` }}>
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg,transparent,${color},transparent)` }} />
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ width:8, height:8, borderRadius:'50%', background:color, boxShadow:`0 0 10px ${color}`, animation:'blink 2s infinite' }} />
+          <span style={{ fontSize:13, fontWeight:700, color, letterSpacing:'.01em' }}>{lic.productName}</span>
         </div>
-
-        <div className="mt-auto mb-6">
-          <h3 className="text-2xl font-bold text-white tracking-tight leading-none mb-2">{lic.productName}</h3>
-          <p className="text-sm text-slate-400 leading-relaxed max-w-[200px]">Empowering your gameplay with cutting edge telemetry.</p>
-        </div>
-
-        <div className="mb-6 space-y-2">
-          <div className="flex justify-between text-xs font-semibold text-slate-400 tracking-wider">
-            <span>{dLeft} DAYS REMAINING</span>
-            <span className="text-indigo-400">{Math.round(pct)}%</span>
-          </div>
-          <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden flex inset-shadow-sm">
-            <div className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full" style={{ width: `${pct}%` }} />
-          </div>
-        </div>
-
-        <div className="p-3 rounded-xl bg-black/40 border border-white/5 font-mono text-xs text-slate-300 text-center truncate tracking-widest select-all shadow-inner">
-          {key}
-        </div>
+        <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:20, background:bg, border:`1px solid ${bc}`, fontSize:10, fontWeight:800, color, letterSpacing:'.06em', textTransform:'uppercase' }}>
+          • Active
+        </span>
       </div>
+      <Ticker expiresAt={lic.expiresAt} />
+      <p style={{ fontSize:11, color:'rgba(255,255,255,.28)', margin:'5px 0 16px' }}>until {new Date(lic.expiresAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}</p>
+      <div style={{ height:4, borderRadius:999, background:'rgba(255,255,255,.07)', overflow:'hidden', marginBottom:14 }}>
+        <div style={{ height:'100%', width:`${pct}%`, borderRadius:999, background:barBg, boxShadow:`0 0 8px ${glow}`, transition:'width .8s cubic-bezier(.22,1,.36,1)' }} />
+      </div>
+      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:14 }}>
+        <span style={{ fontSize:10, color:'rgba(255,255,255,.25)', fontWeight:600 }}>{dLeft} days left</span>
+        <span style={{ fontSize:10, color:'rgba(255,255,255,.25)' }}>{Math.round(pct)}% remaining</span>
+      </div>
+      <code style={{ fontSize:10, fontFamily:'monospace', color:'rgba(255,255,255,.18)', wordBreak:'break-all', letterSpacing:'.05em' }}>{key}</code>
     </div>
   );
 }
@@ -100,11 +121,10 @@ function LicenseCarouselCard({ lic }: { lic: any }) {
 export default function DashboardPage() {
   const { t } = useTranslation();
   const { balance, licenses, transactions, user, systemStatus } = useAppStore();
-  
-  const isMod = canManageAnnouncements(user?.role);
   const isSystemOnline = systemStatus === 'online';
+  const isMod = canManageAnnouncements(user?.role);
 
-  // State: Bonus
+  // Bonus
   const [bonusPoints, setBonusPoints] = useState(0);
   const [lastBonusClaim, setLastBonusClaim] = useState<string | null>(null);
   const [bonusCooldown, setBonusCooldown] = useState('');
@@ -112,34 +132,32 @@ export default function DashboardPage() {
   const [claimingBonus, setClaimingBonus] = useState(false);
   const [bonusLoaded, setBonusLoaded] = useState(false);
 
-  // State: Status Page (Live Stats)
+  // Status variables
   const [lag, setLag] = useState(OFFLINE);
   const [int, setInt] = useState(OFFLINE);
   const [statsLoading, setStatsLoading] = useState(false);
   const [lastStatsUpdate, setLastStatsUpdate] = useState(new Date());
 
-  // State: Status Page (Announcements)
+  // Announcements
   const [anns, setAnns] = useState<DBAnn[]>([]);
   const [annLoading, setAnnLoading] = useState(true);
   
-  // State: Status Page (Admin Form)
+  // Announcement Admin Form
   const [showForm, setShowForm] = useState(false);
   const [fTitle, setFTitle] = useState('');
   const [fContent, setFContent] = useState('');
   const [fType, setFType] = useState<'update'|'maintenance'|'feature'>('update');
   const [publishing, setPublishing] = useState(false);
 
-  // Load Bonus
   useEffect(() => {
     if (!user?.id) return;
     setBonusLoaded(false);
-    fetchBonusRow(user.id).then((r) => {
-      if (r) { setBonusPoints(r.bonus_points ?? 0); setLastBonusClaim(r.last_claim_time ?? null); }
+    fetchBonusRow(user.id).then((row) => {
+      if (row) { setBonusPoints(row.bonus_points ?? 0); setLastBonusClaim(row.last_claim_time ?? null); }
       setBonusLoaded(true);
     });
   }, [user?.id]);
 
-  // Bonus Ticker
   useEffect(() => {
     const tick = () => {
       if (!lastBonusClaim) { setCanClaimBonus(true); setBonusCooldown(''); return; }
@@ -154,7 +172,7 @@ export default function DashboardPage() {
     tick(); const id = setInterval(tick, 1000); return () => clearInterval(id);
   }, [lastBonusClaim]);
 
-  // Live Stats Loader
+  // Load live stats
   const loadKeyAuthStats = async () => {
     setStatsLoading(true);
     try {
@@ -170,7 +188,7 @@ export default function DashboardPage() {
     return () => clearInterval(i);
   }, []);
 
-  // Announcements Loader & Realtime
+  // Announcements Loader
   useEffect(() => {
     supabase.from('announcements').select('*').order('created_at', { ascending:false }).limit(10)
       .then(({ data }) => { if (data) setAnns(data as DBAnn[]); setAnnLoading(false); });
@@ -183,7 +201,6 @@ export default function DashboardPage() {
         setAnns(prev => prev.filter(a => a.id !== (r as any).id));
       })
       .subscribe();
-
     return () => { supabase.removeChannel(ch); };
   }, []);
 
@@ -193,16 +210,14 @@ export default function DashboardPage() {
     const latest = await fetchBonusRow(user.id);
     if (latest?.last_claim_time) {
       if (BONUS_COOLDOWN - (Date.now() - new Date(latest.last_claim_time).getTime()) > 0) {
-        setLastBonusClaim(latest.last_claim_time); setCanClaimBonus(false); setClaimingBonus(false); toast.error('Already claimed recently.'); return;
+        setLastBonusClaim(latest.last_claim_time); setCanClaimBonus(false); setClaimingBonus(false); toast.error('Already claimed recently. Please wait.'); return;
       }
     }
     const nextPoints = (latest?.bonus_points ?? bonusPoints) + 10;
     const claimTime = new Date().toISOString();
     const { error } = await upsertBonusRow(user.id, user.email, nextPoints, claimTime);
     if (error) { toast.error(t('common.error')); setClaimingBonus(false); return; }
-    
-    setBonusPoints(nextPoints); setLastBonusClaim(claimTime); setClaimingBonus(false);
-    toast.success(t('bonus.claimed'));
+    setBonusPoints(nextPoints); setLastBonusClaim(claimTime); setClaimingBonus(false); toast.success(t('bonus.claimed'));
     logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'bonus_claim', status:'success', meta:{ points:10, total:nextPoints } });
   };
 
@@ -227,230 +242,260 @@ export default function DashboardPage() {
   };
 
   const active = licenses.filter((license) => new Date(license.expiresAt).getTime() > Date.now());
+  const lagLicenses = active.filter((license) => license.productId === 'keyauth-lag');
+  const internalLicenses = active.filter((license) => license.productId === 'keyauth-internal' || license.key.endsWith('_INTERNAL'));
   const approved = (transactions as any[]).filter((tx: any) => tx.status === 'approved').length;
 
   const totalOnline = safeNum(lag.onlineUsers) + safeNum(int.onlineUsers);
   const totalUsers  = safeNum(lag.numUsers)    + safeNum(int.numUsers);
-  const typeLabel = (tp: string) => tp === 'update' ? t('status.update') : tp === 'maintenance' ? t('status.maintenanceType') : t('status.feature');
+  const typeLabel   = (tp: string) => tp === 'update' ? t('status.update') : tp === 'maintenance' ? t('status.maintenanceType') : t('status.feature');
 
   const stats = [
-    { label: t('dashboard.balance'), val: `$${balance.toFixed(2)}`, icon: Wallet, color: 'text-indigo-400', shadow: 'shadow-indigo-500/20', hover: 'hover:shadow-[0_0_40px_rgba(99,102,241,0.3)] hover:border-indigo-400/30' },
-    { label: t('dashboard.activeKeys'), val: active.length, icon: Key, color: 'text-emerald-400', shadow: 'shadow-emerald-500/20', hover: 'hover:shadow-[0_0_40px_rgba(16,232,152,0.3)] hover:border-emerald-400/30' },
-    { label: t('dashboard.approved'), val: approved, icon: TrendingUp, color: 'text-cyan-400', shadow: 'shadow-cyan-500/20', hover: 'hover:shadow-[0_0_40px_rgba(34,211,238,0.3)] hover:border-cyan-400/30' },
-    { label: t('dashboard.bonusPoints'), val: bonusPoints, icon: Gift, color: 'text-fuchsia-400', shadow: 'shadow-fuchsia-500/20', hover: 'hover:shadow-[0_0_40px_rgba(217,70,239,0.3)] hover:border-fuchsia-400/30' },
+    { label:t('dashboard.balance'), val:`$${balance.toFixed(2)}`, icon:Wallet, c:'var(--purple)', bg:'rgba(109,40,217,.08)', bc:'rgba(139,92,246,.16)' },
+    { label:t('dashboard.activeKeys'), val:active.length, icon:Key, c:'var(--green)', bg:'rgba(16,232,152,.06)', bc:'rgba(16,232,152,.14)' },
+    { label:t('dashboard.approved'), val:approved, icon:TrendingUp, c:'var(--blue)', bg:'rgba(56,189,248,.06)', bc:'rgba(56,189,248,.14)' },
+    { label:t('dashboard.bonusPoints'), val:bonusPoints, icon:Gift, c:'var(--amber)', bg:'rgba(251,191,36,.06)', bc:'rgba(251,191,36,.14)' },
   ];
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-
   return (
-    <div className="relative min-h-screen text-slate-200 overflow-x-hidden pt-12 pb-32 font-sans selection:bg-indigo-500/30">
-      
-      {/* CLYPTO BACKGROUND - Deep Indigo, Purple, Spatial Glass Overlay */}
-      <div className="fixed inset-0 z-[-1] pointer-events-none bg-[#0a0518]">
-        <div className="absolute inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
-        
-        {/* Massive Space Glows */}
-        <div className="absolute top-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-indigo-600/15 blur-[160px] mix-blend-screen animate-pulse duration-[8000ms]"></div>
-        <div className="absolute top-[40%] left-[-20%] w-[50vw] h-[50vw] rounded-full bg-fuchsia-600/10 blur-[140px] mix-blend-screen animate-pulse duration-[10000ms]"></div>
-        <div className="absolute bottom-[-20%] right-[10%] w-[40vw] h-[40vw] rounded-full bg-blue-600/10 blur-[130px] mix-blend-screen"></div>
-        
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0518]/90 via-transparent to-[#0a0518]/60"></div>
+    <div style={{ display:'flex', flexDirection:'column', gap:20, paddingBottom: 60 }}>
+      <style>{`
+        @keyframes dash-in  { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+        @keyframes dash-glow{ 0%,100%{opacity:.7} 50%{opacity:1} }
+        @keyframes dash-bar  { from{width:0} to{width:var(--w)} }
+        .dash-card {
+          background: linear-gradient(160deg,rgba(13,13,22,.97) 0%,rgba(8,8,16,.97) 100%);
+          border: 1px solid rgba(255,255,255,.07); border-radius: 22px;
+          box-shadow: 0 24px 48px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.03) inset;
+          backdrop-filter: blur(20px); animation: dash-in .4s cubic-bezier(.22,1,.36,1) both;
+        }
+        .dash-stat {
+          background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07); border-radius: 18px; padding: 22px 20px;
+          transition: all .22s cubic-bezier(.22,1,.36,1); animation: dash-in .4s cubic-bezier(.22,1,.36,1) both;
+        }
+        .dash-stat:hover { background: rgba(255,255,255,.055); border-color: rgba(255,255,255,.12); transform: translateY(-2px); box-shadow: 0 16px 40px rgba(0,0,0,.3); }
+        .dash-lic-card {
+          border-radius: 20px; overflow: hidden; padding: 24px; transition: all .25s cubic-bezier(.22,1,.36,1);
+          animation: dash-in .4s cubic-bezier(.22,1,.36,1) both; position: relative;
+        }
+        .dash-lic-card:hover { transform: translateY(-3px); }
+        .dash-key-row { border-radius: 12px; padding: 12px 14px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(12px); margin-bottom: 8px; }
+        .dash-bonus-bar { height: 3px; border-radius: 999px; background: rgba(255,255,255,.06); overflow:hidden; margin-top:16px; }
+        .status-container { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; animation: dash-in .4s cubic-bezier(.22,1,.36,1) both; animation-delay: 50ms; }
+        @media (max-width: 1024px) { .status-container { grid-template-columns: 1fr; } }
+      `}</style>
+
+      {/* ══ HERO WELCOME ══ */}
+      <div className="dash-card" style={{ padding:'28px 32px', position:'relative', overflow:'hidden', background:'linear-gradient(135deg,rgba(15,10,30,.98) 0%,rgba(8,8,18,.98) 60%,rgba(5,12,8,.98) 100%)', border:'1px solid rgba(139,92,246,.16)', boxShadow:'0 40px 80px rgba(0,0,0,.55), 0 0 80px rgba(109,40,217,.07)' }}>
+        <div style={{ position:'absolute', top:-60, right:-60, width:220, height:220, borderRadius:'50%', background:'radial-gradient(circle,rgba(109,40,217,.2) 0%,transparent 70%)', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', bottom:-40, left:-20, width:160, height:160, borderRadius:'50%', background:'radial-gradient(circle,rgba(16,232,152,.1) 0%,transparent 70%)', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:1, background:'linear-gradient(90deg,transparent,rgba(139,92,246,.5) 40%,rgba(16,232,152,.3) 70%,transparent)', pointerEvents:'none' }} />
+        <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+            <div style={{ position:'relative', flexShrink:0 }}>
+              {user?.avatar ? <img src={user.avatar} style={{ width:54, height:54, borderRadius:16, objectFit:'cover', border:'2px solid rgba(139,92,246,.35)', boxShadow:'0 0 24px rgba(109,40,217,.3)' }} />
+                : <div style={{ width:54, height:54, borderRadius:16, background:'linear-gradient(135deg,#6d28d9,#4c1d95)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:900, color:'#fff', boxShadow:'0 0 24px rgba(109,40,217,.4)' }}>{user?.name?.charAt(0) || 'U'}</div>}
+              <div style={{ position:'absolute', bottom:-3, right:-3, width:14, height:14, borderRadius:'50%', background:'#10e898', border:'2px solid rgba(8,8,18,.95)', boxShadow:'0 0 10px rgba(16,232,152,.7)' }} />
+            </div>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', marginBottom:5 }}>{t('dashboard.welcomeBack')}</div>
+              <div style={{ fontSize:24, fontWeight:900, color:'#fff', letterSpacing:'-.02em', lineHeight:1 }}>{user?.name?.split(' ')[0] || 'User'} 👋</div>
+            </div>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:20, background:'rgba(16,232,152,.08)', border:'1px solid rgba(16,232,152,.2)' }}>
+              <div className="dot dot-green" style={{ width:5, height:5 }} />
+              <span style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>{t('dashboard.undetected')}</span>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:20, background:'rgba(139,92,246,.08)', border:'1px solid rgba(139,92,246,.2)' }}>
+              <span style={{ fontSize:11, fontWeight:700, color:'#c4b5fd' }}>OB52 Ready</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 space-y-16 relative z-10">
+      {/* ══ STATUS + ANNOUNCEMENTS (Merged Logic into Dash Layout) ══ */}
+      <div className="status-container">
         
-        {/* 1. HUGE WELCOME HERO (Side-aligned) */}
-        <div className="flex flex-col gap-1.5 animate-in fade-in slide-in-from-left-8 duration-1000">
-          <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tighter mix-blend-overlay opacity-90">Welcome back,</h1>
-          <h1 className="text-6xl md:text-[5.5rem] font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-fuchsia-300 to-indigo-300 leading-none">
-            {user?.name?.split(' ')[0] || 'User'}
-          </h1>
-        </div>
-
-        {/* 2. THE TOP CONTENT WIDGETS (Stats & Announcements) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-          
-          {/* System Control / Live Stats (Left 1 Col) */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="p-6 rounded-[2rem] bg-indigo-950/20 backdrop-blur-2xl border border-white/5 flex flex-col shadow-[0_10px_40px_rgba(0,0,0,0.5)] shadow-inner">
-              <div className="flex items-center gap-4 mb-6">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border ${isSystemOnline ? 'bg-emerald-500/10 border-emerald-500/20 shadow-[0_0_20px_rgba(16,232,152,0.15)]' : 'bg-amber-500/10 border-amber-500/20 shadow-[0_0_20px_rgba(251,191,36,0.15)]'}`}>
-                  <CheckCircle size={28} className={isSystemOnline ? 'text-emerald-400' : 'text-amber-400'} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white tracking-tight">{isSystemOnline ? t('status.allOps') : t('status.maintenance')}</h3>
-                  <div className="flex items-center gap-2 mt-1 px-3 py-1 rounded-full bg-white/5 border border-white/10 w-fit">
-                    <div className={`w-1.5 h-1.5 rounded-full ${isSystemOnline ? 'bg-emerald-400' : 'bg-amber-400'} animate-pulse`}/>
-                    <span className="text-[10px] font-semibold text-white/70 uppercase tracking-widest">{t('status.systemStatus')}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between mb-4 mt-2">
-                <span className="text-sm font-semibold text-white/50">{t('status.liveStats')}</span>
-                <button onClick={loadKeyAuthStats} disabled={statsLoading} className="text-white/30 hover:text-white/70 transition-colors">
-                  <RefreshCw size={14} className={statsLoading ? 'animate-spin text-white' : ''} />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-black/40 border border-white/5 shadow-inner text-center">
-                  <div className="text-3xl font-bold text-indigo-400 mb-1">{statsLoading ? <span className="opacity-50">...</span> : totalUsers.toLocaleString()}</div>
-                  <div className="text-[10px] uppercase font-semibold tracking-widest text-slate-500">{t('status.totalUsers')}</div>
-                </div>
-                <div className="p-4 rounded-xl bg-black/40 border border-white/5 shadow-inner text-center">
-                  <div className="text-3xl font-bold text-emerald-400 mb-1">{statsLoading ? <span className="opacity-50">...</span> : totalOnline.toLocaleString()}</div>
-                  <div className="text-[10px] uppercase font-semibold tracking-widest text-slate-500">{t('status.onlineNow')}</div>
-                </div>
-              </div>
+        {/* Live System Status (Left) */}
+        <div className="dash-card" style={{ padding:'24px' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:20 }}>
+            <div style={{ width:46, height:46, borderRadius:12, background:isSystemOnline?'rgba(16,232,152,.1)':'rgba(251,191,36,.1)', border:`1px solid ${isSystemOnline?'rgba(16,232,152,.2)':'rgba(251,191,36,.2)'}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <CheckCircle size={22} color={isSystemOnline?'#10e898':'#fbbf24'} />
+            </div>
+            <div>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', textTransform:'uppercase', letterSpacing:'.1em', fontWeight:700, marginBottom:4 }}>{t('status.systemStatus')}</div>
+              <div style={{ fontSize:16, fontWeight:800, color:'#fff', letterSpacing:'-.01em' }}>{isSystemOnline ? t('status.allOps') : t('status.maintenance')}</div>
             </div>
           </div>
 
-          {/* Announcements (Right 2 Cols) */}
-          <div className="lg:col-span-2 p-6 rounded-[2rem] bg-[#110822]/40 backdrop-blur-2xl border border-white/5 flex flex-col shadow-[0_10px_40px_rgba(0,0,0,0.5)] shadow-inner">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                <Sparkles size={18} className="text-fuchsia-400" /> {t('status.announcements')}
-              </h2>
-              {isMod && (
-                <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-300 text-xs font-semibold hover:bg-fuchsia-500/20 transition-colors">
-                  {showForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> New</>}
-                </button>
-              )}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <Users size={15} color="#c4b5fd" />
+              <span style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{t('status.liveStats')}</span>
             </div>
-
-            {isMod && showForm && (
-              <div className="p-5 rounded-2xl bg-fuchsia-950/20 border border-fuchsia-500/20 mb-6 shadow-inner space-y-4">
-                <div className="flex gap-2 flex-wrap">
-                  {(['update','feature','maintenance'] as const).map(tp => {
-                    const cfg = TYPE_CFG[tp];
-                    return (
-                      <button key={tp} onClick={() => setFType(tp)} className={`px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border transition-colors ${fType === tp ? `${cfg.bg} ${cfg.c} border-${cfg.c.split('-')[1]}-500/30` : 'bg-white/5 border-transparent text-white/50 hover:bg-white/10'}`}>
-                        {typeLabel(tp)}
-                      </button>
-                    );
-                  })}
-                </div>
-                <input value={fTitle} onChange={e => setFTitle(e.target.value)} placeholder={t('status.annTitle')} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-fuchsia-500/50 outline-none shadow-inner transition-colors" />
-                <textarea value={fContent} onChange={e => setFContent(e.target.value)} placeholder={t('status.annContent')} rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-fuchsia-500/50 outline-none shadow-inner resize-y transition-colors" />
-                <button onClick={handlePublishAnn} disabled={publishing} className="w-full py-3 rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-semibold transition-colors flex justify-center items-center gap-2 shadow-[0_0_20px_rgba(217,70,239,0.3)]">
-                  {publishing ? <><Loader2 size={16} className="animate-spin" /> {t('status.publishing')}</> : <><Send size={16} /> {t('status.publish')}</>}
-                </button>
-              </div>
-            )}
-
-            <div className="flex-1 overflow-y-auto pr-2 pb-2 space-y-4 max-h-[300px] [scrollbar-color:rgba(255,255,255,0.1)_transparent] [scrollbar-width:thin]">
-              {annLoading ? (
-                <div className="py-12 text-center text-white/40 text-sm">{t('common.loading')}</div>
-              ) : anns.length === 0 ? (
-                <div className="py-12 text-center border border-dashed border-white/10 rounded-2xl mx-2">
-                  <p className="text-white/50 font-medium">{t('status.noAnnouncements')}</p>
-                </div>
-              ) : (
-                anns.map((ann) => {
-                  const cfg = TYPE_CFG[ann.type] ?? TYPE_CFG.update;
-                  return (
-                    <div key={ann.id} className="p-4 rounded-2xl bg-black/20 border border-white/5 hover:bg-white/5 transition-colors group relative shadow-inner">
-                      <div className="flex gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cfg.bg}`}>
-                          <cfg.Icon size={18} className={cfg.c} />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-1.5 flex-wrap">
-                            <span className="text-sm font-bold text-white">{ann.title}</span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${cfg.badge}`}>{typeLabel(ann.type)}</span>
-                            <span className="text-[10px] text-white/30 ml-auto">{new Date(ann.created_at).toLocaleDateString()}</span>
-                          </div>
-                          <p className="text-sm text-slate-400 leading-relaxed">{ann.content}</p>
-                        </div>
-                        {isMod && (
-                          <button onClick={() => handleDeleteAnn(ann.id)} className="absolute top-4 right-4 p-2 rounded-lg bg-red-500/10 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+            <button onClick={loadKeyAuthStats} disabled={statsLoading} style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,.3)', display:'flex', padding:4 }}>
+              <RefreshCw size={13} className={statsLoading ? 'animate-spin' : ''} />
+            </button>
           </div>
-        </div>
 
-        {/* 3. FOUR DASHBOARD STATS (Premium Glass Floating Style) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 animate-in fade-in zoom-in-95 duration-1000 delay-200">
-          {stats.map((stat, i) => (
-            <div key={i} className={`group flex items-center gap-5 p-5 rounded-[1.5rem] bg-indigo-950/20 backdrop-blur-2xl border border-white/5 shadow-inner transition-all duration-300 cursor-default ${stat.hover}`}>
-              <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-black/40 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
-                <stat.icon size={20} className={stat.color} />
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:20 }}>
+            {[{ label:t('status.totalUsers'), val:totalUsers, c:'#c4b5fd', bg:'rgba(109,40,217,.08)', bc:'rgba(139,92,246,.16)' }, { label:t('status.onlineNow'),  val:totalOnline, c:'#10e898', bg:'rgba(16,232,152,.06)', bc:'rgba(16,232,152,.14)' }].map(s => (
+              <div key={s.label} style={{ background:s.bg, border:`1px solid ${s.bc}`, borderRadius:12, padding:'14px 10px', textAlign:'center' }}>
+                <div className="mono" style={{ fontSize:22, fontWeight:900, color:s.c, marginBottom:4 }}>{statsLoading ? <span style={{ opacity:.4 }}>···</span> : s.val.toLocaleString()}</div>
+                <div style={{ fontSize:10, color:'rgba(255,255,255,.4)', textTransform:'uppercase', fontWeight:700, letterSpacing:'.05em' }}>{s.label}</div>
               </div>
-              <div className="min-w-0">
-                <div className="text-2xl md:text-3xl font-bold text-white tracking-tight mb-0.5 truncate">{stat.val}</div>
-                <div className="text-[10px] md:text-xs font-semibold text-slate-400 uppercase tracking-widest truncate">{stat.label}</div>
+            ))}
+          </div>
+
+          <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', textTransform:'uppercase', letterSpacing:'.1em', fontWeight:700, marginBottom:8 }}>{t('status.services')}</div>
+          {['Authentication Server', 'License Server', 'Chat Server'].map(svc => (
+            <div key={svc} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid rgba(255,255,255,.05)' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <Globe size={13} style={{ color:'rgba(255,255,255,.2)' }} />
+                <span style={{ fontSize:12, color:'rgba(255,255,255,.6)' }}>{svc}</span>
               </div>
+              <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, fontWeight:600, color:'#10e898' }}>
+                <div className="dot dot-green" style={{ width:5, height:5 }} />{t('status.online')}
+              </span>
             </div>
           ))}
         </div>
 
-        {/* 4. ACTIVE SUBSCRIPTIONS CAROUSEL */}
-        {active.length > 0 && (
-          <div className="w-full animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold tracking-tight text-white">{t('dashboard.activeSubscriptions')}</h2>
-              <div className="hidden md:flex gap-2">
-                <button onClick={() => scrollRef.current?.scrollBy({ left: -320, behavior: 'smooth' })} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors backdrop-blur-sm shadow-inner"><ChevronLeft size={18}/></button>
-                <button onClick={() => scrollRef.current?.scrollBy({ left: 320, behavior: 'smooth' })} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors backdrop-blur-sm shadow-inner"><ChevronRight size={18}/></button>
+        {/* Announcements Stream (Right) */}
+        <div className="dash-card" style={{ padding:'24px', display:'flex', flexDirection:'column' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+            <div style={{ fontSize:14, fontWeight:800, color:'#fff', display:'flex', alignItems:'center', gap:8 }}>
+              <Sparkles size={16} color="#fbbf24" /> {t('status.announcements')}
+            </div>
+            {isMod && (
+              <button onClick={() => setShowForm(!showForm)} style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:10, background:showForm?'rgba(139,92,246,.18)':'rgba(139,92,246,.1)', border:'1px solid rgba(139,92,246,.25)', cursor:'pointer', color:'#c4b5fd', fontSize:11, fontWeight:700, transition:'all .15s' }}>
+                {showForm ? <><X size={12} /> Cancel</> : <><Plus size={12} /> {t('status.pushAnnouncement')}</>}
+              </button>
+            )}
+          </div>
+
+          {isMod && showForm && (
+            <div style={{ padding:'16px', borderRadius:14, background:'rgba(139,92,246,.05)', border:'1px solid rgba(139,92,246,.18)', marginBottom:16 }}>
+              <div style={{ display:'flex', gap:6, marginBottom:10, flexWrap:'wrap' }}>
+                {(['update','feature','maintenance'] as const).map(tp => {
+                  const cfg = TYPE_CFG[tp];
+                  return (
+                    <button key={tp} onClick={() => setFType(tp)} style={{ padding:'4px 10px', borderRadius:20, fontSize:10, fontWeight:700, cursor:'pointer', border:`1px solid ${fType===tp?cfg.c:'rgba(255,255,255,.1)'}`, background:fType===tp?cfg.bg:'rgba(255,255,255,.03)', color:fType===tp?cfg.c:'rgba(255,255,255,.4)', textTransform:'uppercase' }}>
+                      {typeLabel(tp)}
+                    </button>
+                  );
+                })}
               </div>
-            </div>
-            
-            <div ref={scrollRef} className="flex overflow-x-auto gap-6 snap-x pb-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-              {active.map(lic => <LicenseCarouselCard key={lic.id} lic={lic} />)}
-            </div>
-          </div>
-        )}
-
-        {/* 5. DAILY BONUS BLOCK */}
-        <div className="w-full md:w-[60%] lg:w-[45%] rounded-[2rem] bg-[#110822]/40 backdrop-blur-2xl border border-fuchsia-500/10 p-8 flex flex-col hover:border-fuchsia-500/30 transition-colors shadow-[0_20px_50px_rgba(0,0,0,0.5)] shadow-inner relative group animate-in fade-in zoom-in-95 duration-1000 delay-300">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-fuchsia-500/5 blur-[80px] rounded-full pointer-events-none group-hover:bg-fuchsia-500/10 transition-colors"/>
-          
-          <div className="flex items-center gap-4 mb-10">
-            <div className="w-14 h-14 rounded-2xl bg-fuchsia-500/10 flex items-center justify-center border border-fuchsia-500/20 shadow-inner">
-              <Gift size={28} className="text-fuchsia-400" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-white tracking-tight">{t('dashboard.dailyBonus')}</h3>
-              <p className="text-sm text-slate-400">{t('dashboard.dailyBonusDesc')}</p>
-            </div>
-          </div>
-
-          <div className="flex items-baseline gap-3 mb-10 mt-auto">
-            <span className="text-[4rem] font-bold text-white tracking-tighter leading-none">{bonusPoints}</span>
-            <span className="text-sm font-semibold text-slate-500 uppercase tracking-widest">{t('bonus.title')}</span>
-          </div>
-
-          <div>
-            <div className="h-2 w-full bg-black/40 shadow-inner rounded-full overflow-hidden mb-4 border border-white/5">
-              <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500 shadow-[0_0_15px_rgba(217,70,239,0.5)] rounded-full transition-all duration-1000" style={{ width: `${bonusPoints % 100}%` }} />
-            </div>
-            
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-400 tracking-wider mb-8">
-              <span>{Math.max(0, 100 - (bonusPoints % 100))} POINTS NEXT</span>
-              <span className="text-fuchsia-400">LEVEL {Math.floor(bonusPoints / 100) + 1}</span>
-            </div>
-
-            {bonusLoaded && canClaimBonus ? (
-              <button onClick={handleClaimBonus} disabled={claimingBonus} className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:from-indigo-500 hover:to-fuchsia-500 font-bold text-white tracking-wide transition-all shadow-[0_0_20px_rgba(217,70,239,0.3)] hover:shadow-[0_0_30px_rgba(217,70,239,0.5)] flex justify-center items-center gap-2">
-                {claimingBonus ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                {t('dashboard.claimNow')}
+              <input value={fTitle} onChange={e => setFTitle(e.target.value)} placeholder={t('status.annTitle')} style={{ width:'100%', background:'rgba(0,0,0,.2)', border:'1px solid rgba(255,255,255,.1)', borderRadius:8, padding:'9px 12px', color:'#fff', fontSize:13, outline:'none', marginBottom:8 }}/>
+              <textarea value={fContent} onChange={e => setFContent(e.target.value)} placeholder={t('status.annContent')} rows={2} style={{ width:'100%', background:'rgba(0,0,0,.2)', border:'1px solid rgba(255,255,255,.1)', borderRadius:8, padding:'9px 12px', color:'#fff', fontSize:13, outline:'none', resize:'vertical', marginBottom:10 }}/>
+              <button onClick={handlePublishAnn} disabled={publishing} className="btn btn-p btn-full" style={{ padding:'9px 0', fontSize:13, height:'auto' }}>
+                {publishing ? <><RefreshCw size={14} className="animate-spin" /> {t('status.publishing')}</> : <><Send size={14} /> {t('status.publish')}</>}
               </button>
+            </div>
+          )}
+
+          <div style={{ flex:1, display:'flex', flexDirection:'column', gap:8, overflowY:'auto', maxHeight:'280px', paddingRight:'6px' }} className="custom-scroll">
+            {annLoading ? (
+               <div style={{ textAlign:'center', color:'rgba(255,255,255,.3)', fontSize:12, padding:'20px 0' }}>{t('common.loading')}</div>
+            ) : anns.length === 0 ? (
+               <div style={{ textAlign:'center', color:'rgba(255,255,255,.3)', fontSize:12, padding:'20px 0', border:'1px dashed rgba(255,255,255,.1)', borderRadius:12 }}>{t('status.noAnnouncements')}</div>
             ) : (
-              <button disabled className="w-full py-4 rounded-xl bg-black/40 border border-white/5 shadow-inner font-semibold text-slate-500 tracking-wide flex justify-center items-center gap-2 cursor-not-allowed">
-                <Clock size={16} /> <MiniCountdown ms={new Date(lastBonusClaim!).getTime() + BONUS_COOLDOWN} />
-              </button>
+              anns.map((ann, i) => {
+                const cfg = TYPE_CFG[ann.type] ?? TYPE_CFG.update;
+                return (
+                  <div key={ann.id} style={{ display:'flex', gap:12, padding:'14px', borderRadius:12, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.05)', position:'relative' }}>
+                     <cfg.Icon size={16} color={cfg.c} style={{ marginTop:2, flexShrink:0 }} />
+                     <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:4 }}>
+                           <span style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{ann.title}</span>
+                           <span className={`badge ${cfg.badge}`} style={{ fontSize:9, padding:'2px 6px' }}>{typeLabel(ann.type)}</span>
+                           <span style={{ fontSize:10, color:'rgba(255,255,255,.3)', marginLeft:'auto' }}>{new Date(ann.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <p style={{ fontSize:12, color:'rgba(255,255,255,.5)', lineHeight:1.5, margin:0 }}>{ann.content}</p>
+                     </div>
+                     {isMod && (
+                        <button onClick={() => handleDeleteAnn(ann.id)} style={{ position:'absolute', top:14, right:14, color:'rgba(255,255,255,.2)', background:'none', border:'none', cursor:'pointer' }}>
+                          <Trash2 size={13}/>
+                        </button>
+                     )}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
 
+      </div>
+
+      {/* ══ STATS GRID ══ */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12, animationDelay:'100ms' }} className="dash-in">
+        {stats.map((stat, i) => (
+          <div key={stat.label} className="dash-stat">
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+              <div style={{ width:38, height:38, borderRadius:11, background:stat.bg, border:`1px solid ${stat.bc}`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 0 16px ${stat.bc}` }}>
+                <stat.icon size={17} style={{ color:stat.c }} />
+              </div>
+              <div style={{ width:6, height:6, borderRadius:'50%', background:stat.c, boxShadow:`0 0 8px ${stat.c}`, animation:'dash-glow 2s ease-in-out infinite' }} />
+            </div>
+            <div style={{ fontSize:32, fontWeight:900, color:'#fff', letterSpacing:'-.04em', lineHeight:1, marginBottom:5 }}>{stat.val}</div>
+            <div style={{ fontSize:11, fontWeight:600, color:'rgba(255,255,255,.35)', textTransform:'uppercase', letterSpacing:'.1em' }}>{stat.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ══ ACTIVE SUBSCRIPTIONS ══ */}
+      {active.length > 0 ? (
+        <div style={{ animationDelay:'120ms' }} className="dash-in">
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+            <div style={{ width:3, height:16, borderRadius:999, background:'linear-gradient(180deg,#8b5cf6,#6d28d9)' }} />
+            <span style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.12em', color:'rgba(255,255,255,.4)' }}>{t('dashboard.activeSubscriptions')}</span>
+          </div>
+          <div style={{ display:'grid', gap:14, gridTemplateColumns: internalLicenses.length > 0 && lagLicenses.length > 0 ? 'repeat(auto-fit,minmax(280px,1fr))' : '1fr' }}>
+            {internalLicenses.map((license) => <LicCard key={license.id} lic={license} accent="b" />)}
+            {lagLicenses.map((license) => <LicCard key={license.id} lic={license} accent="p" />)}
+          </div>
+        </div>
+      ) : (
+        <div className="dash-card dash-in" style={{ padding:'52px 24px', textAlign:'center', borderStyle:'dashed', borderColor:'rgba(255,255,255,.08)', animationDelay:'120ms' }}>
+          <div style={{ width:56, height:56, borderRadius:16, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+            <Key size={24} style={{ color:'rgba(255,255,255,.2)' }} />
+          </div>
+          <p style={{ fontSize:15, fontWeight:700, color:'rgba(255,255,255,.45)', marginBottom:6 }}>{t('dashboard.noLicense')}</p>
+          <p style={{ fontSize:13, color:'rgba(255,255,255,.22)' }}>{t('dashboard.noLicenseDesc')}</p>
+        </div>
+      )}
+
+      {/* ══ DAILY BONUS ══ */}
+      <div className="dash-card dash-in" style={{ padding:'22px 24px', background:'linear-gradient(135deg,rgba(18,14,4,.98) 0%,rgba(10,8,4,.98) 100%)', border:'1px solid rgba(251,191,36,.14)', boxShadow:'0 24px 48px rgba(0,0,0,.4), 0 0 40px rgba(251,191,36,.05)', animationDelay:'150ms' }}>
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:1, borderRadius:'22px 22px 0 0', background:'linear-gradient(90deg,transparent,rgba(251,191,36,.4),transparent)', pointerEvents:'none' }} />
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:14, flex:1 }}>
+            <div style={{ width:46, height:46, borderRadius:14, background:'rgba(251,191,36,.1)', border:'1px solid rgba(251,191,36,.22)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 20px rgba(251,191,36,.15)', flexShrink:0 }}>
+              <Gift size={22} color="#fbbf24" />
+            </div>
+            <div>
+              <div style={{ fontSize:15, fontWeight:800, color:'#fff', marginBottom:3 }}>{t('dashboard.dailyBonus')}</div>
+              <div style={{ fontSize:12, color:'rgba(255,255,255,.35)' }}>{t('dashboard.dailyBonusDesc')}</div>
+            </div>
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:8, flexShrink:0 }}>
+            <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
+              <span style={{ fontSize:28, fontWeight:900, color:'#fbbf24', letterSpacing:'-.03em' }}>{bonusPoints}</span>
+              <span style={{ fontSize:11, color:'rgba(255,255,255,.3)', fontWeight:500 }}>{t('bonus.title')}</span>
+            </div>
+            {!bonusLoaded ? <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'rgba(255,255,255,.25)' }}><Loader2 size={11} className="animate-spin" /> Loading…</div>
+              : canClaimBonus ? <button className="btn btn-sm" style={{ background:'linear-gradient(135deg,#fbbf24,#f59e0b)', color:'#3a1a00', fontWeight:800, border:'none', boxShadow:'0 0 20px rgba(245,158,11,.4)', padding:'9px 18px', borderRadius:11, fontSize:13 }} onClick={handleClaimBonus} disabled={claimingBonus}>{claimingBonus ? <><Loader2 size={12} className="animate-spin" /> Claiming…</> : t('dashboard.claimNow')}</button>
+              : <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'rgba(255,255,255,.3)', fontWeight:600 }}><Clock size={11} style={{ color:'rgba(255,255,255,.25)' }} /> {bonusCooldown}</div>}
+          </div>
+        </div>
+        <div className="dash-bonus-bar">
+          <div style={{ height:'100%', width:`${bonusPoints % 100}%`, borderRadius:999, background:'linear-gradient(90deg,#f59e0b,#fbbf24)', boxShadow:'0 0 8px rgba(251,191,36,.5)', transition:'width .6s cubic-bezier(.22,1,.36,1)' }} />
+        </div>
+        <div style={{ display:'flex', justifyContent:'space-between', marginTop:6 }}>
+          <span style={{ fontSize:10, color:'rgba(255,255,255,.2)', fontWeight:600 }}>{bonusPoints % 100}/100 to next reward</span>
+          <span style={{ fontSize:10, color:'rgba(255,255,255,.2)' }}>Level {Math.floor(bonusPoints / 100) + 1}</span>
+        </div>
       </div>
     </div>
   );
