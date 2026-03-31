@@ -507,8 +507,8 @@ export default function DashboardPage() {
               top: Math.random() * 100 + '%',
               left: Math.random() * 100 + '%',
               opacity: Math.random() * 0.4 + 0.1,
-              animation: \`float-particle \${Math.random() * 30 + 15}s linear infinite\`,
-              animationDelay: \`-\${Math.random() * 30}s\`
+              animation: `float-particle ${Math.random() * 30 + 15}s linear infinite`,
+              animationDelay: `-${Math.random() * 30}s`
             }}
           />
         ))}
@@ -560,12 +560,12 @@ export default function DashboardPage() {
       {/* ══ STATS GRID ══ */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12 }}>
         {stats.map((stat, i) => (
-          <div key={stat.label} className="dash-stat liquid-glass" style={{ animationDelay:\`\${i * 60}ms\` }}>
+          <div key={stat.label} className="dash-stat liquid-glass" style={{ animationDelay:`${i * 60}ms` }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-              <div style={{ width:38, height:38, borderRadius:11, background:stat.bg, border:\`1px solid \${stat.bc}\`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:\`0 0 16px \${stat.bc}\` }}>
+              <div style={{ width:38, height:38, borderRadius:11, background:stat.bg, border:`1px solid ${stat.bc}`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 0 16px ${stat.bc}` }}>
                 <stat.icon size={17} style={{ color:stat.c }} />
               </div>
-              <div style={{ width:6, height:6, borderRadius:'50%', background:stat.c, boxShadow:\`0 0 8px \${stat.c}\`, animation:'dash-glow 2s ease-in-out infinite' }} />
+              <div style={{ width:6, height:6, borderRadius:'50%', background:stat.c, boxShadow:`0 0 8px ${stat.c}`, animation:'dash-glow 2s ease-in-out infinite' }} />
             </div>
             <div style={{ fontSize:32, fontWeight:900, color:'#fff', letterSpacing:'-.04em', lineHeight:1, marginBottom:5 }}>{stat.val}</div>
             <div style={{ fontSize:11, fontWeight:600, color:'rgba(255,255,255,.45)', textTransform:'uppercase', letterSpacing:'.1em' }}>{stat.label}</div>
