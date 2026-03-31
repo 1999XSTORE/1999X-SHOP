@@ -21,6 +21,7 @@ interface Msg {
   is_private?: boolean;
   private_target_user_id?: string | null;
   target_role?: AppRole | null;
+  image_url?: string | null;
 }
 
 interface OnlineUser {
@@ -629,7 +630,7 @@ export default function ChatPage() {
 
         {/* ── Online Users Sidebar ── */}
         {showSidebar && (
-          <div className={`chat-sidebar-panel${isMobile?'' : ''}`}
+          <div className={`chat-sidebar-panel ${showSidebar ? 'visible' : ''}`}
             style={{ width:isMobile?'min(180px,42vw)':200, display:'flex', flexDirection:'column', background:'rgba(255,255,255,.02)', border:'1px solid rgba(255,255,255,.06)', borderRadius:isMobile?16:20, overflow:'hidden', flexShrink:0 }}>
             <div style={{ padding:'10px 12px', borderBottom:'1px solid rgba(255,255,255,.06)', flexShrink:0 }}>
               <div style={{ fontSize:10,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.1em' }}>

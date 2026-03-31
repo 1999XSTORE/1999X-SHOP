@@ -11,7 +11,7 @@ export default function AppLayout({ children, currentPath, onNavigate, onLogout 
   const isChat = currentPath === '/chat';
 
   return (
-    <div style={{ minHeight: '100svh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ height: isChat ? '100svh' : undefined, minHeight: isChat ? undefined : '100svh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <Topbar currentPath={currentPath} onNavigate={onNavigate} onLogout={onLogout} />
       <main
         style={{
