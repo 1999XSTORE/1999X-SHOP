@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { safeQuery } from '@/lib/safeFetch';
 import { logActivity } from '@/lib/activity';
 import { buildReferralLink, sanitizeReferralCode, normalizeResellerEmail, captureReferralFromUrl, getStoredReferralEmail, normalizeReferralValue, clearStoredReferralEmail } from '@/lib/reseller';
+import { isOwner } from '@/lib/roles';
 import { Copy, CheckCircle, Loader2, ArrowRight, TrendingUp, DollarSign, Link2, ChevronDown, Wallet, Users, BarChart3, ExternalLink, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -48,6 +49,23 @@ interface Subscription {
   status: string;
   started_at: string;
   expires_at: string;
+}
+
+interface OwnerResellerSubscription {
+  subscription_id: string;
+  user_id: string;
+  user_email: string;
+  plan: string;
+  price: number;
+  fee_rate: number;
+  status: string;
+  started_at: string;
+  expires_at: string;
+  referral_code: string;
+  wallet_balance: number;
+  total_earned: number;
+  sales_count: number;
+  last_sale_at: string | null;
 }
 
 function roundMoney(n: number) { return Math.round(n * 100) / 100; }
@@ -272,10 +290,13 @@ export default function ResellerPage() {
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showFeePayment, setShowFeePayment] = useState(false);
   const [dashLoading, setDashLoading] = useState(false);
+  const [ownerLoading, setOwnerLoading] = useState(false);
+  const [ownerSubscriptions, setOwnerSubscriptions] = useState<OwnerResellerSubscription[]>([]);
   const [copied, setCopied] = useState(false);
 
   const planDropRef = useRef<HTMLDivElement>(null);
   const selectedPlanData = PLANS.find(p => p.id === selectedPlan)!;
+  const ownerMode = isOwner(user?.role);
 
   // ── Load subscription ────────────────────────────────────────
   const loadSubscription = async () => {
@@ -330,6 +351,14 @@ export default function ResellerPage() {
     setDashLoading(false);
   };
 
+  const loadOwnerOverview = async () => {
+    if (!ownerMode) return;
+    setOwnerLoading(true);
+    const { data } = await safeQuery(() => supabase.rpc('get_owner_reseller_overview'));
+    setOwnerSubscriptions((data as OwnerResellerSubscription[]) ?? []);
+    setOwnerLoading(false);
+  };
+
   useEffect(() => {
     loadSubscription();
   }, [user?.id]);
@@ -348,6 +377,29 @@ export default function ResellerPage() {
   useEffect(() => {
     if (sub) loadDashboard();
   }, [sub, user?.id]);
+
+  useEffect(() => {
+    if (!sub || !user?.id) return;
+    const interval = window.setInterval(() => { void loadDashboard(); }, 15000);
+    const onFocus = () => { void loadDashboard(); };
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [sub?.id, user?.id]);
+
+  useEffect(() => {
+    if (!ownerMode) return;
+    void loadOwnerOverview();
+    const interval = window.setInterval(() => { void loadOwnerOverview(); }, 15000);
+    const onFocus = () => { void loadOwnerOverview(); };
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [ownerMode]);
 
   // Close plan dropdown on outside click
   useEffect(() => {
@@ -402,7 +454,7 @@ export default function ResellerPage() {
       status:    'success',
     });
 
-    toast.success(`🎉 Reseller subscription activated!`);
+    toast.success(`🎉 Reseller subscription activated! $${plan.price.toFixed(2)} deducted from main balance.`);
     if (user.role === 'user' || user.role === 'reseller') setUserRole('reseller');
     await loadSubscription();
     setPurchasing(false);
@@ -432,6 +484,21 @@ export default function ResellerPage() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast.success('Referral link copied!');
+  };
+
+  const manageOwnerSubscription = async (subscriptionId: string, action: 'pause' | 'resume' | 'delete') => {
+    const { error } = await safeQuery(() =>
+      supabase.rpc('owner_manage_reseller_subscription', {
+        p_subscription_id: subscriptionId,
+        p_action: action,
+      })
+    );
+    if (error) {
+      toast.error(error.message || `Failed to ${action} subscription`);
+      return;
+    }
+    toast.success(`Reseller subscription ${action}d.`);
+    await loadOwnerOverview();
   };
 
   // ── Stats ────────────────────────────────────────────────────
@@ -582,7 +649,64 @@ export default function ResellerPage() {
           </p>
         </div>
 
-        {subLoading ? (
+        {ownerMode ? (
+          <div style={{ display:'flex',flexDirection:'column',gap:20 }}>
+            <div className="rs-panel" style={{ padding:'22px 20px' }}>
+              <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginBottom:16 }}>
+                <div>
+                  <div style={{ fontSize:10,fontWeight:800,letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(251,191,36,.6)',marginBottom:4 }}>Owner Controls</div>
+                  <div style={{ fontSize:20,fontWeight:900,color:'#fff' }}>All Reseller Subscriptions</div>
+                </div>
+                <button onClick={loadOwnerOverview} disabled={ownerLoading} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.09)',borderRadius:10,padding:'9px 12px',cursor:'pointer',color:'rgba(255,255,255,.65)',display:'flex',alignItems:'center',gap:6,fontFamily:'inherit',fontSize:12,fontWeight:700 }}>
+                  <RefreshCw size={13} className={ownerLoading?'animate-spin':''}/> Refresh
+                </button>
+              </div>
+              {ownerLoading && ownerSubscriptions.length === 0 ? (
+                <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:'48px 0',color:'rgba(255,255,255,.3)' }}>
+                  <Loader2 size={18} className="animate-spin"/><span style={{ fontSize:13 }}>Loading reseller subscriptions…</span>
+                </div>
+              ) : ownerSubscriptions.length === 0 ? (
+                <div style={{ textAlign:'center',padding:'32px 0',fontSize:13,color:'rgba(255,255,255,.3)' }}>No reseller subscriptions found.</div>
+              ) : (
+                <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+                  {ownerSubscriptions.map(item => (
+                    <div key={item.subscription_id} style={{ padding:'16px 18px',borderRadius:16,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)' }}>
+                      <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12,marginBottom:12,flexWrap:'wrap' }}>
+                        <div>
+                          <div style={{ fontSize:14,fontWeight:800,color:'#fff' }}>{item.user_email}</div>
+                          <div style={{ fontSize:11,color:'rgba(255,255,255,.35)',marginTop:3 }}>
+                            {item.plan} · {item.status} · Referral: {item.referral_code || 'none'}
+                          </div>
+                        </div>
+                        <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
+                          <button onClick={()=>manageOwnerSubscription(item.subscription_id, item.status === 'paused' ? 'resume' : 'pause')} style={{ padding:'10px 14px',borderRadius:11,border:'1px solid rgba(251,191,36,.24)',background:'rgba(251,191,36,.08)',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,color:'#fbbf24' }}>
+                            {item.status === 'paused' ? 'Resume' : 'Pause'}
+                          </button>
+                          <button onClick={()=>manageOwnerSubscription(item.subscription_id, 'delete')} style={{ padding:'10px 14px',borderRadius:11,border:'1px solid rgba(248,113,113,.24)',background:'rgba(248,113,113,.08)',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,color:'#f87171' }}>
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(120px,1fr))',gap:8 }}>
+                        {[
+                          { label:'Wallet', value:`$${Number(item.wallet_balance ?? 0).toFixed(2)}`, color:'#10e898' },
+                          { label:'Earned', value:`$${Number(item.total_earned ?? 0).toFixed(2)}`, color:'#818cf8' },
+                          { label:'Sales', value:String(item.sales_count ?? 0), color:'#38bdf8' },
+                          { label:'Fee Rate', value:`${Math.round(Number(item.fee_rate ?? 0) * 100)}%`, color:'#fbbf24' },
+                        ].map(card => (
+                          <div key={card.label} style={{ padding:'10px 12px',borderRadius:12,background:'rgba(255,255,255,.025)',border:'1px solid rgba(255,255,255,.05)' }}>
+                            <div style={{ fontSize:10,fontWeight:700,color:'rgba(255,255,255,.32)',textTransform:'uppercase',letterSpacing:'.1em',marginBottom:4 }}>{card.label}</div>
+                            <div style={{ fontSize:18,fontWeight:900,color:card.color }}>{card.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : subLoading ? (
           <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'80px 0', color:'rgba(255,255,255,.3)' }}>
             <Loader2 size={20} className="animate-spin"/>
             <span style={{ fontSize:14 }}>Loading…</span>
