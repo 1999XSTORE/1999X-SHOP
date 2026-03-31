@@ -215,8 +215,8 @@ function LicenseInput({ value, onChange }: { value: string; onChange: (v: string
 
 function DownloadSection() {
   return (
-    <div className="g" style={{ overflow:'hidden',borderRadius:20 }}>
-      <div style={{ position:'relative',height:180,overflow:'hidden' }}>
+    <div className="g" style={{ borderRadius:20 }}>
+      <div style={{ position:'relative',height:180,borderTopLeftRadius:20,borderTopRightRadius:20,overflow:'hidden' }}>
         <img src={FF_IMAGE} alt="Free Fire" style={{ width:'100%',height:'100%',objectFit:'cover',objectPosition:'center',filter:'brightness(.8)' }} />
         <div style={{ position:'absolute',inset:0,background:'linear-gradient(to right,rgba(0,0,0,.85) 0%,rgba(0,0,0,.3) 60%,transparent 100%)' }} />
         <div style={{ position:'absolute',inset:0,background:'linear-gradient(to top,rgba(0,0,0,.8) 0%,transparent 60%)' }} />
@@ -229,7 +229,7 @@ function DownloadSection() {
           <p style={{ fontSize:12,color:'rgba(255,255,255,.45)',marginTop:3 }}>Your license is ready. Download and watch the setup guide.</p>
         </div>
       </div>
-      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr', gap: '20px', padding: '24px 20px', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr', gap: '20px', padding: '24px 20px 48px', backgroundColor: 'rgba(255,255,255,0.01)', borderBottomLeftRadius: 20, borderBottomRightRadius: 20 }}>
         <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" className="download-button" style={{ width: '100%' }}>
           <div className="docs">
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">

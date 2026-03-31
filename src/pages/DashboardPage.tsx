@@ -1,8 +1,8 @@
 import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { logActivity, notifyAll, sendNotificationEmail } from '@/lib/activity';
-import { Wallet, Key, Gift, Clock, TrendingUp, Zap, Copy, CheckCircle, Eye, EyeOff, Loader2, Sparkles, Wrench, RefreshCw, Users, Globe, Plus, Trash2, Send, X, Activity } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { Wallet, Key, Gift, Clock, TrendingUp, Zap, Copy, CheckCircle, Eye, EyeOff, Loader2, Sparkles, Wrench, RefreshCw, Users, Globe, Plus, Trash2, Send, X, Activity, ArrowRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { canManageAnnouncements } from '@/lib/roles';
@@ -20,9 +20,9 @@ interface BonusRow {
 interface DBAnn { id:string; title:string; content:string; type:'update'|'maintenance'|'feature'; created_at:string; created_by?:string; }
 
 const TYPE_CFG = {
-  update:      { Icon: Sparkles, c:'var(--green)',  bg:'rgba(16,232,152,.07)',  bc:'rgba(16,232,152,.16)',  badge:'badge-green'  },
-  maintenance: { Icon: Wrench,   c:'var(--purple)', bg:'rgba(109,40,217,.07)', bc:'rgba(139,92,246,.16)', badge:'badge-purple' },
-  feature:     { Icon: Zap,      c:'var(--blue)',   bg:'rgba(56,189,248,.06)',  bc:'rgba(56,189,248,.14)',  badge:'badge-blue'   },
+  update:      { Icon: Sparkles, c:'#5EF7A6', bg:'rgba(94,247,166,0.1)' },
+  maintenance: { Icon: Wrench,   c:'#544388', bg:'rgba(84,67,136,0.1)' },
+  feature:     { Icon: Zap,      c:'#EA226B', bg:'rgba(234,34,107,0.1)' },
 } as const;
 
 const OFFLINE  = { status:'offline', numUsers:'0', numKeys:'0', onlineUsers:'0', version:'—' };
@@ -44,7 +44,7 @@ function Ticker({ expiresAt }: { expiresAt: string }) {
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id); }, []);
 
   const diff = new Date(expiresAt).getTime() - now;
-  if (diff <= 0) return <span style={{ color:'var(--red)', fontWeight:700, fontSize:13 }}>{t('common.expired')}</span>;
+  if (diff <= 0) return <span style={{ color:'var(--red)', fontWeight:500, fontSize:12 }}>{t('common.expired')}</span>;
 
   const d = Math.floor(diff / 86400000);
   const h = String(Math.floor((diff % 86400000) / 3600000)).padStart(2, '0');
@@ -52,32 +52,15 @@ function Ticker({ expiresAt }: { expiresAt: string }) {
   const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
 
   return (
-    <div style={{ display:'flex', alignItems:'baseline', gap:3 }} className="mono">
-      {d > 0 && <><span style={{ fontSize:28, fontWeight:800, color:'#fff' }}>{d}</span><span style={{ fontSize:11, color:'var(--muted)', marginRight:4 }}>d</span></>}
-      <span style={{ fontSize:28, fontWeight:800, color:'#fff' }}>{h}</span>
-      <span style={{ fontSize:16, color:'var(--muted)' }}>:</span>
-      <span style={{ fontSize:28, fontWeight:800, color:'#fff' }}>{m}</span>
-      <span style={{ fontSize:16, color:'var(--muted)' }}>:</span>
-      <span style={{ fontSize:28, fontWeight:800, color:'rgba(255,255,255,.4)' }}>{s}</span>
+    <div style={{ display:'flex', alignItems:'baseline', gap:2 }} className="mono">
+      {d > 0 && <><span style={{ fontSize:15, fontWeight:500, color:'#fff' }}>{d}</span><span style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginRight:4 }}>d</span></>}
+      <span style={{ fontSize:15, fontWeight:500, color:'#fff' }}>{h}</span>
+      <span style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>:</span>
+      <span style={{ fontSize:15, fontWeight:500, color:'#fff' }}>{m}</span>
+      <span style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>:</span>
+      <span style={{ fontSize:14, fontWeight:500, color:'rgba(255,255,255,0.5)' }}>{s}</span>
     </div>
   );
-}
-
-function MiniCountdown({ ms }: { ms: number }) {
-  const [txt, setTxt] = useState('');
-  useEffect(() => {
-    const tick = () => {
-      const left = ms - Date.now();
-      if (left <= 0) { setTxt(''); return; }
-      const d = Math.floor(left / 86400000);
-      const h = String(Math.floor((left % 86400000) / 3600000)).padStart(2, '0');
-      const m = String(Math.floor((left % 3600000) / 60000)).padStart(2, '0');
-      const s = String(Math.floor((left % 60000) / 1000)).padStart(2, '0');
-      setTxt(d > 0 ? `${d}d ${h}:${m}:${s}` : `${h}:${m}:${s}`);
-    };
-    tick(); const id = setInterval(tick, 1000); return () => clearInterval(id);
-  }, [ms]);
-  return <span className="mono" style={{ fontWeight:700, color:'rgba(255,255,255,.7)' }}>{txt}</span>;
 }
 
 function LicCard({ lic, accent }: { lic: any; accent: 'p' | 'b' }) {
@@ -85,35 +68,32 @@ function LicCard({ lic, accent }: { lic: any; accent: 'p' | 'b' }) {
   const dLeft = Math.max(0, Math.floor((new Date(lic.expiresAt).getTime() - Date.now()) / 86400000));
   const total = Math.max(30, Math.ceil((new Date(lic.expiresAt).getTime() - new Date(lic.lastLogin).getTime()) / 86400000));
   const pct = Math.min(100, (dLeft / total) * 100);
-  const isPurple = accent === 'p';
-  const color = isPurple ? '#8b5cf6' : '#38bdf8';
-  const glow  = isPurple ? 'rgba(139,92,246,.3)' : 'rgba(56,189,248,.3)';
-  const bg    = isPurple ? 'rgba(109,40,217,.08)' : 'rgba(56,189,248,.07)';
-  const bc    = isPurple ? 'rgba(139,92,246,.2)'  : 'rgba(56,189,248,.18)';
-  const barBg = isPurple ? 'linear-gradient(90deg,#6d28d9,#8b5cf6)' : 'linear-gradient(90deg,#0ea5e9,#38bdf8)';
-
+  
   return (
-    <div className="dash-lic-card" style={{ background:`linear-gradient(160deg,rgba(13,13,22,.97) 0%,rgba(9,9,16,.97) 100%)`, border:`1px solid ${bc}`, boxShadow:`0 24px 48px rgba(0,0,0,.45), 0 0 40px ${glow}` }}>
-      <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg,transparent,${color},transparent)` }} />
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <div style={{ width:8, height:8, borderRadius:'50%', background:color, boxShadow:`0 0 10px ${color}`, animation:'blink 2s infinite' }} />
-          <span style={{ fontSize:13, fontWeight:700, color, letterSpacing:'.01em' }}>{lic.productName}</span>
+    <div className="aq-card" style={{ padding: '24px', display:'flex', flexDirection:'column', gap:'12px', transition:'transform 0.2s', cursor:'pointer' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ width:34, height:34, borderRadius:'50%', background:'linear-gradient(135deg, rgba(84,67,136,0.3), rgba(67,37,110,0.1))', display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid rgba(255,255,255,0.05)' }}>
+            <Key size={14} color="#A0A0A5" />
+          </div>
+          <div>
+            <div style={{ fontSize:14, fontWeight:500, color:'#fff', letterSpacing:'-0.01em' }}>{lic.productName}</div>
+            <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)' }}>Active Instance</div>
+          </div>
         </div>
-        <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:20, background:bg, border:`1px solid ${bc}`, fontSize:10, fontWeight:800, color, letterSpacing:'.06em', textTransform:'uppercase' }}>
-          • Active
-        </span>
+        <div style={{ background:'rgba(255,255,255,0.03)', padding:'4px 10px', borderRadius:20, fontSize:10, color:'#fff', fontWeight:500, border:'1px solid rgba(255,255,255,0.06)' }}>
+          {dLeft} Days Left
+        </div>
       </div>
-      <Ticker expiresAt={lic.expiresAt} />
-      <p style={{ fontSize:11, color:'rgba(255,255,255,.28)', margin:'5px 0 16px' }}>until {new Date(lic.expiresAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}</p>
-      <div style={{ height:4, borderRadius:999, background:'rgba(255,255,255,.07)', overflow:'hidden', marginBottom:14 }}>
-        <div style={{ height:'100%', width:`${pct}%`, borderRadius:999, background:barBg, boxShadow:`0 0 8px ${glow}`, transition:'width .8s cubic-bezier(.22,1,.36,1)' }} />
+      
+      <div style={{ height:3, borderRadius:999, background:'rgba(255,255,255,0.04)', overflow:'hidden', marginTop:10 }}>
+        <div style={{ height:'100%', width:`${pct}%`, borderRadius:999, background:'linear-gradient(90deg, #544388, #8b5cf6)', boxShadow:'0 0 10px rgba(139,92,246,0.5)' }} />
       </div>
-      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:14 }}>
-        <span style={{ fontSize:10, color:'rgba(255,255,255,.25)', fontWeight:600 }}>{dLeft} days left</span>
-        <span style={{ fontSize:10, color:'rgba(255,255,255,.25)' }}>{Math.round(pct)}% remaining</span>
+
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:4 }}>
+        <Ticker expiresAt={lic.expiresAt} />
+        <code style={{ fontSize:10, fontFamily:'monospace', color:'rgba(255,255,255,0.3)', letterSpacing:'0.05em' }}>{key.slice(0,18)}…</code>
       </div>
-      <code style={{ fontSize:10, fontFamily:'monospace', color:'rgba(255,255,255,.18)', wordBreak:'break-all', letterSpacing:'.05em' }}>{key}</code>
     </div>
   );
 }
@@ -208,10 +188,8 @@ export default function DashboardPage() {
     if (!user || !canClaimBonus || claimingBonus || !bonusLoaded) return;
     setClaimingBonus(true);
     const latest = await fetchBonusRow(user.id);
-    if (latest?.last_claim_time) {
-      if (BONUS_COOLDOWN - (Date.now() - new Date(latest.last_claim_time).getTime()) > 0) {
-        setLastBonusClaim(latest.last_claim_time); setCanClaimBonus(false); setClaimingBonus(false); toast.error('Already claimed recently. Please wait.'); return;
-      }
+    if (latest?.last_claim_time && (BONUS_COOLDOWN - (Date.now() - new Date(latest.last_claim_time).getTime()) > 0)) {
+        setLastBonusClaim(latest.last_claim_time); setCanClaimBonus(false); setClaimingBonus(false); toast.error('Already claimed recently.'); return;
     }
     const nextPoints = (latest?.bonus_points ?? bonusPoints) + 10;
     const claimTime = new Date().toISOString();
@@ -248,175 +226,171 @@ export default function DashboardPage() {
 
   const totalOnline = safeNum(lag.onlineUsers) + safeNum(int.onlineUsers);
   const totalUsers  = safeNum(lag.numUsers)    + safeNum(int.numUsers);
-  const typeLabel   = (tp: string) => tp === 'update' ? t('status.update') : tp === 'maintenance' ? t('status.maintenanceType') : t('status.feature');
 
   const stats = [
-    { label:t('dashboard.balance'), val:`$${balance.toFixed(2)}`, icon:Wallet, c:'var(--purple)', bg:'rgba(109,40,217,.08)', bc:'rgba(139,92,246,.16)' },
-    { label:t('dashboard.activeKeys'), val:active.length, icon:Key, c:'var(--green)', bg:'rgba(16,232,152,.06)', bc:'rgba(16,232,152,.14)' },
-    { label:t('dashboard.approved'), val:approved, icon:TrendingUp, c:'var(--blue)', bg:'rgba(56,189,248,.06)', bc:'rgba(56,189,248,.14)' },
-    { label:t('dashboard.bonusPoints'), val:bonusPoints, icon:Gift, c:'var(--amber)', bg:'rgba(251,191,36,.06)', bc:'rgba(251,191,36,.14)' },
+    { label:t('dashboard.balance'), val:`$${balance.toFixed(2)}` },
+    { label:t('dashboard.activeKeys'), val:active.length },
+    { label:t('dashboard.approved'), val:approved },
+    { label:t('dashboard.bonusPoints'), val:bonusPoints },
   ];
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:20, paddingBottom: 60 }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:28, paddingBottom: 60, fontFamily:'Inter, sans-serif' }}>
       <style>{`
-        @keyframes dash-in  { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
-        @keyframes dash-glow{ 0%,100%{opacity:.7} 50%{opacity:1} }
-        @keyframes dash-bar  { from{width:0} to{width:var(--w)} }
-        .dash-card {
-          background: linear-gradient(160deg,rgba(13,13,22,.97) 0%,rgba(8,8,16,.97) 100%);
-          border: 1px solid rgba(255,255,255,.07); border-radius: 22px;
-          box-shadow: 0 24px 48px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.03) inset;
-          backdrop-filter: blur(20px); animation: dash-in .4s cubic-bezier(.22,1,.36,1) both;
+        /* AquaFi Aesthetic */
+        @keyframes fadeUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:none } }
+        
+        .aqua-card {
+          background: linear-gradient(160deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.01) 100%);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 20px;
+          backdrop-filter: blur(28px);
+          -webkit-backdrop-filter: blur(28px);
+          position: relative; overflow: hidden;
+          animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both;
         }
-        .dash-stat {
-          background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07); border-radius: 18px; padding: 22px 20px;
-          transition: all .22s cubic-bezier(.22,1,.36,1); animation: dash-in .4s cubic-bezier(.22,1,.36,1) both;
+        .aqua-card::before {
+          content: ""; position: absolute; top:0; left:0; right:0; height:1px;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+          opacity: 0.6;
         }
-        .dash-stat:hover { background: rgba(255,255,255,.055); border-color: rgba(255,255,255,.12); transform: translateY(-2px); box-shadow: 0 16px 40px rgba(0,0,0,.3); }
-        .dash-lic-card {
-          border-radius: 20px; overflow: hidden; padding: 24px; transition: all .25s cubic-bezier(.22,1,.36,1);
-          animation: dash-in .4s cubic-bezier(.22,1,.36,1) both; position: relative;
+        .aqua-card:hover { border-color: rgba(255,255,255,0.1); }
+        
+        .aqua-stat { display:flex; flex-direction:column; align-items:flex-start; animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both; }
+        .aqua-stat-val { font-size: 38px; font-weight: 400; color: #FFFFFF; letter-spacing: -0.03em; line-height: 1; margin-bottom: 6px; }
+        .aqua-stat-lbl { font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.5); letter-spacing: -0.01em; }
+        
+        .aqua-btn {
+          background: rgba(255,255,255,0.05); color: #fff;
+          border: 1px solid rgba(255,255,255,0.1); border-radius: 99px;
+          padding: 8px 20px; font-size: 13px; font-weight: 500;
+          cursor: pointer; transition: all 0.2s; display:inline-flex; align-items:center; gap:8px;
         }
-        .dash-lic-card:hover { transform: translateY(-3px); }
-        .dash-key-row { border-radius: 12px; padding: 12px 14px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(12px); margin-bottom: 8px; }
-        .dash-bonus-bar { height: 3px; border-radius: 999px; background: rgba(255,255,255,.06); overflow:hidden; margin-top:16px; }
-        .status-container { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; animation: dash-in .4s cubic-bezier(.22,1,.36,1) both; animation-delay: 50ms; }
-        @media (max-width: 1024px) { .status-container { grid-template-columns: 1fr; } }
+        .aqua-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); transform:scale(1.02); }
+        .aqua-btn-primary { background: #544388; border-color: #6C5AA6; }
+        .aqua-btn-primary:hover { background: #6C5AA6; border-color: #8D7ABF; box-shadow: 0 0 20px rgba(84,67,136,0.4); }
+
+        .aqua-grid { display: grid; grid-template-columns: 240px 1fr 240px; gap: 32px; align-items: center; min-height: 380px; position: relative; }
+        @media (max-width: 1024px) { .aqua-grid { grid-template-columns: 1fr; gap:24px; min-height: auto; } }
       `}</style>
 
-      {/* ══ HERO WELCOME ══ */}
-      <div className="dash-card" style={{ padding:'28px 32px', position:'relative', overflow:'hidden', background:'linear-gradient(135deg,rgba(15,10,30,.98) 0%,rgba(8,8,18,.98) 60%,rgba(5,12,8,.98) 100%)', border:'1px solid rgba(139,92,246,.16)', boxShadow:'0 40px 80px rgba(0,0,0,.55), 0 0 80px rgba(109,40,217,.07)' }}>
-        <div style={{ position:'absolute', top:-60, right:-60, width:220, height:220, borderRadius:'50%', background:'radial-gradient(circle,rgba(109,40,217,.2) 0%,transparent 70%)', pointerEvents:'none' }} />
-        <div style={{ position:'absolute', bottom:-40, left:-20, width:160, height:160, borderRadius:'50%', background:'radial-gradient(circle,rgba(16,232,152,.1) 0%,transparent 70%)', pointerEvents:'none' }} />
-        <div style={{ position:'absolute', top:0, left:0, right:0, height:1, background:'linear-gradient(90deg,transparent,rgba(139,92,246,.5) 40%,rgba(16,232,152,.3) 70%,transparent)', pointerEvents:'none' }} />
-        <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-            <div style={{ position:'relative', flexShrink:0 }}>
-              {user?.avatar ? <img src={user.avatar} style={{ width:54, height:54, borderRadius:16, objectFit:'cover', border:'2px solid rgba(139,92,246,.35)', boxShadow:'0 0 24px rgba(109,40,217,.3)' }} />
-                : <div style={{ width:54, height:54, borderRadius:16, background:'linear-gradient(135deg,#6d28d9,#4c1d95)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:900, color:'#fff', boxShadow:'0 0 24px rgba(109,40,217,.4)' }}>{user?.name?.charAt(0) || 'U'}</div>}
-              <div style={{ position:'absolute', bottom:-3, right:-3, width:14, height:14, borderRadius:'50%', background:'#10e898', border:'2px solid rgba(8,8,18,.95)', boxShadow:'0 0 10px rgba(16,232,152,.7)' }} />
+      {/* ══ THE AMAZING AQUA-FI HERO SECTION ══ */}
+      <div style={{ position:'relative', borderRadius:28, background:'#161316', border:'1px solid rgba(255,255,255,0.04)', overflow:'hidden', boxShadow:'inset 0 0 100px rgba(0,0,0,0.5)' }} className="aqua-card">
+        {/* Background Lights */}
+        <div style={{ position:'absolute', top:'-10%', left:'15%', width:'600px', height:'600px', background:'radial-gradient(circle, rgba(84,67,136,0.2) 0%, transparent 60%)', filter:'blur(40px)', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', bottom:'-20%', right:'0%', width:'500px', height:'500px', background:'radial-gradient(circle, rgba(67,37,110,0.3) 0%, transparent 60%)', filter:'blur(40px)', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', inset:0, background:'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.02\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")', opacity:0.7, pointerEvents:'none'}} />
+
+        <div className="aqua-grid" style={{ padding:'48px 40px', zIndex:10, position:'relative' }}>
+          
+          {/* Left Stats Column */}
+          <div style={{ display:'flex', flexDirection:'column', gap:32 }}>
+            <div className="aqua-stat" style={{ animationDelay:'50ms' }}>
+              <div className="aqua-stat-val">{stats[0].val}</div>
+              <div className="aqua-stat-lbl">{stats[0].label}</div>
             </div>
-            <div>
-              <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', marginBottom:5 }}>{t('dashboard.welcomeBack')}</div>
-              <div style={{ fontSize:24, fontWeight:900, color:'#fff', letterSpacing:'-.02em', lineHeight:1 }}>{user?.name?.split(' ')[0] || 'User'} 👋</div>
+            <div className="aqua-stat" style={{ animationDelay:'100ms' }}>
+              <div className="aqua-stat-val">{stats[1].val}</div>
+              <div className="aqua-stat-lbl">{stats[1].label}</div>
+            </div>
+            <div className="aqua-stat" style={{ animationDelay:'150ms' }}>
+              <div className="aqua-stat-val">{stats[2].val}</div>
+              <div className="aqua-stat-lbl">{stats[2].label}</div>
             </div>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:20, background:'rgba(16,232,152,.08)', border:'1px solid rgba(16,232,152,.2)' }}>
-              <div className="dot dot-green" style={{ width:5, height:5 }} />
-              <span style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>{t('dashboard.undetected')}</span>
+
+          {/* Center Main Copy */}
+          <div style={{ textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center' }}>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:99px, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.02)', fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.7)', marginBottom:24, backdropFilter:'blur(10px)' }}>
+              <Sparkles size={12} color="#5EF7A6" /> Premium Architecture
             </div>
-            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:20, background:'rgba(139,92,246,.08)', border:'1px solid rgba(139,92,246,.2)' }}>
-              <span style={{ fontSize:11, fontWeight:700, color:'#c4b5fd' }}>OB52 Ready</span>
+            <h1 style={{ fontSize:42, fontWeight:400, color:'#FFF', letterSpacing:'-0.03em', lineHeight:1.15, marginBottom:16 }}>
+              Seamless Experience with <br/>
+              <span style={{ color:'#8b5cf6' }}>1999X Digital Finance</span>
+            </h1>
+            <p style={{ fontSize:14, fontWeight:400, color:'rgba(255,255,255,0.4)', lineHeight:1.6, maxWidth:400, margin:'0 auto 32px' }}>
+              An advanced AI-powered system that analyzes user preferences and delivers highly personalized content, ensuring a seamless and engaging experience.
+            </p>
+            {isSystemOnline ? (
+               <button className="aqua-btn aqua-btn-primary" style={{ padding:'12px 28px', fontSize:14 }}>Get Started <ArrowRight size={16} /></button>
+            ) : (
+               <button className="aqua-btn" style={{ padding:'12px 28px', fontSize:14, background:'rgba(234,34,107,0.1)', borderColor:'rgba(234,34,107,0.3)', color:'#EA226B' }}>Network Maintenance <Wrench size={16} /></button>
+            )}
+          </div>
+
+          {/* Right Network Column */}
+          <div style={{ display:'flex', flexDirection:'column', gap:32, alignItems:'flex-end', textAlign:'right' }}>
+            <div className="aqua-stat" style={{ alignItems:'flex-end', animationDelay:'200ms' }}>
+              <div className="aqua-stat-val">{totalUsers.toLocaleString()}+</div>
+              <div className="aqua-stat-lbl">Total Users</div>
+            </div>
+            <div className="aqua-stat" style={{ alignItems:'flex-end', animationDelay:'250ms' }}>
+              <div className="aqua-stat-val">{totalOnline.toLocaleString()}</div>
+              <div className="aqua-stat-lbl">Online Sessions</div>
+            </div>
+            <div className="aqua-stat" style={{ alignItems:'flex-end', animationDelay:'300ms' }}>
+              <div className="aqua-stat-val" style={{ color:'#5EF7A6' }}>Active</div>
+              <div className="aqua-stat-lbl">Network Status</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ══ STATUS + ANNOUNCEMENTS (Merged Logic into Dash Layout) ══ */}
-      <div className="status-container">
+      {/* ══ DIVIDED BOTTOM METRICS ══ */}
+      <div style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr', gap:28 }}>
         
-        {/* Live System Status (Left) */}
-        <div className="dash-card" style={{ padding:'24px' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:20 }}>
-            <div style={{ width:46, height:46, borderRadius:12, background:isSystemOnline?'rgba(16,232,152,.1)':'rgba(251,191,36,.1)', border:`1px solid ${isSystemOnline?'rgba(16,232,152,.2)':'rgba(251,191,36,.2)'}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <CheckCircle size={22} color={isSystemOnline?'#10e898':'#fbbf24'} />
-            </div>
-            <div>
-              <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', textTransform:'uppercase', letterSpacing:'.1em', fontWeight:700, marginBottom:4 }}>{t('status.systemStatus')}</div>
-              <div style={{ fontSize:16, fontWeight:800, color:'#fff', letterSpacing:'-.01em' }}>{isSystemOnline ? t('status.allOps') : t('status.maintenance')}</div>
-            </div>
-          </div>
-
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <Users size={15} color="#c4b5fd" />
-              <span style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{t('status.liveStats')}</span>
-            </div>
-            <button onClick={loadKeyAuthStats} disabled={statsLoading} style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,.3)', display:'flex', padding:4 }}>
-              <RefreshCw size={13} className={statsLoading ? 'animate-spin' : ''} />
-            </button>
-          </div>
-
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:20 }}>
-            {[{ label:t('status.totalUsers'), val:totalUsers, c:'#c4b5fd', bg:'rgba(109,40,217,.08)', bc:'rgba(139,92,246,.16)' }, { label:t('status.onlineNow'),  val:totalOnline, c:'#10e898', bg:'rgba(16,232,152,.06)', bc:'rgba(16,232,152,.14)' }].map(s => (
-              <div key={s.label} style={{ background:s.bg, border:`1px solid ${s.bc}`, borderRadius:12, padding:'14px 10px', textAlign:'center' }}>
-                <div className="mono" style={{ fontSize:22, fontWeight:900, color:s.c, marginBottom:4 }}>{statsLoading ? <span style={{ opacity:.4 }}>···</span> : s.val.toLocaleString()}</div>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,.4)', textTransform:'uppercase', fontWeight:700, letterSpacing:'.05em' }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', textTransform:'uppercase', letterSpacing:'.1em', fontWeight:700, marginBottom:8 }}>{t('status.services')}</div>
-          {['Authentication Server', 'License Server', 'Chat Server'].map(svc => (
-            <div key={svc} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid rgba(255,255,255,.05)' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <Globe size={13} style={{ color:'rgba(255,255,255,.2)' }} />
-                <span style={{ fontSize:12, color:'rgba(255,255,255,.6)' }}>{svc}</span>
-              </div>
-              <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, fontWeight:600, color:'#10e898' }}>
-                <div className="dot dot-green" style={{ width:5, height:5 }} />{t('status.online')}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Announcements Stream (Right) */}
-        <div className="dash-card" style={{ padding:'24px', display:'flex', flexDirection:'column' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
-            <div style={{ fontSize:14, fontWeight:800, color:'#fff', display:'flex', alignItems:'center', gap:8 }}>
-              <Sparkles size={16} color="#fbbf24" /> {t('status.announcements')}
-            </div>
+        {/* Announcments Aqua Card */}
+        <div className="aqua-card" style={{ padding:'32px', display:'flex', flexDirection:'column', animationDelay:'150ms' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
+            <h2 style={{ fontSize:20, fontWeight:400, color:'#FFF', letterSpacing:'-0.02em', margin:0 }}>System Broadcasts</h2>
             {isMod && (
-              <button onClick={() => setShowForm(!showForm)} style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:10, background:showForm?'rgba(139,92,246,.18)':'rgba(139,92,246,.1)', border:'1px solid rgba(139,92,246,.25)', cursor:'pointer', color:'#c4b5fd', fontSize:11, fontWeight:700, transition:'all .15s' }}>
-                {showForm ? <><X size={12} /> Cancel</> : <><Plus size={12} /> {t('status.pushAnnouncement')}</>}
-              </button>
+                <button onClick={() => setShowForm(!showForm)} className="aqua-btn" style={{ padding:'6px 14px', fontSize:12 }}>
+                  {showForm ? <><X size={12}/> Close</> : <><Plus size={12}/> Broadcast</>}
+                </button>
             )}
           </div>
 
-          {isMod && showForm && (
-            <div style={{ padding:'16px', borderRadius:14, background:'rgba(139,92,246,.05)', border:'1px solid rgba(139,92,246,.18)', marginBottom:16 }}>
-              <div style={{ display:'flex', gap:6, marginBottom:10, flexWrap:'wrap' }}>
-                {(['update','feature','maintenance'] as const).map(tp => {
-                  const cfg = TYPE_CFG[tp];
-                  return (
-                    <button key={tp} onClick={() => setFType(tp)} style={{ padding:'4px 10px', borderRadius:20, fontSize:10, fontWeight:700, cursor:'pointer', border:`1px solid ${fType===tp?cfg.c:'rgba(255,255,255,.1)'}`, background:fType===tp?cfg.bg:'rgba(255,255,255,.03)', color:fType===tp?cfg.c:'rgba(255,255,255,.4)', textTransform:'uppercase' }}>
-                      {typeLabel(tp)}
-                    </button>
-                  );
-                })}
-              </div>
-              <input value={fTitle} onChange={e => setFTitle(e.target.value)} placeholder={t('status.annTitle')} style={{ width:'100%', background:'rgba(0,0,0,.2)', border:'1px solid rgba(255,255,255,.1)', borderRadius:8, padding:'9px 12px', color:'#fff', fontSize:13, outline:'none', marginBottom:8 }}/>
-              <textarea value={fContent} onChange={e => setFContent(e.target.value)} placeholder={t('status.annContent')} rows={2} style={{ width:'100%', background:'rgba(0,0,0,.2)', border:'1px solid rgba(255,255,255,.1)', borderRadius:8, padding:'9px 12px', color:'#fff', fontSize:13, outline:'none', resize:'vertical', marginBottom:10 }}/>
-              <button onClick={handlePublishAnn} disabled={publishing} className="btn btn-p btn-full" style={{ padding:'9px 0', fontSize:13, height:'auto' }}>
-                {publishing ? <><RefreshCw size={14} className="animate-spin" /> {t('status.publishing')}</> : <><Send size={14} /> {t('status.publish')}</>}
-              </button>
+          {showForm && isMod && (
+            <div style={{ padding:'20px', borderRadius:16, background:'rgba(0,0,0,0.2)', border:'1px solid rgba(255,255,255,0.05)', marginBottom:20 }}>
+               <div style={{ display:'flex', gap:8, marginBottom:16 }}>
+                  {(['update','feature','maintenance'] as const).map(tp => (
+                     <button key={tp} onClick={() => setFType(tp)} style={{ padding:'6px 14px', borderRadius:20, fontSize:11, fontWeight:400, cursor:'pointer', border:`1px solid ${fType===tp?TYPE_CFG[tp].c:'rgba(255,255,255,0.05)'}`, background:fType===tp?TYPE_CFG[tp].bg:'transparent', color:fType===tp?TYPE_CFG[tp].c:'rgba(255,255,255,0.4)', textTransform:'capitalize' }}>
+                        {tp}
+                     </button>
+                  ))}
+               </div>
+               <input value={fTitle} onChange={e=>setFTitle(e.target.value)} placeholder="Forecast Title" style={{ width:'100%', background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:8, padding:'12px 14px', color:'#fff', fontSize:13, outline:'none', marginBottom:12 }}/>
+               <textarea value={fContent} onChange={e=>setFContent(e.target.value)} placeholder="Transmission details..." rows={2} style={{ width:'100%', background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:8, padding:'12px 14px', color:'#fff', fontSize:13, outline:'none', resize:'vertical', marginBottom:16 }}/>
+               <button onClick={handlePublishAnn} disabled={publishing} className="aqua-btn aqua-btn-primary" style={{ width:'100%', justifyContent:'center', padding:'10px' }}>
+                  {publishing ? <><Loader2 size={14} className="animate-spin" /> Transmitting...</> : <><Send size={14} /> Transmit Broadcast</>}
+               </button>
             </div>
           )}
 
-          <div style={{ flex:1, display:'flex', flexDirection:'column', gap:8, overflowY:'auto', maxHeight:'280px', paddingRight:'6px' }} className="custom-scroll">
+          <div style={{ flex:1, display:'flex', flexDirection:'column', gap:10, overflowY:'auto', maxHeight: showForm?'180px':'300px', paddingRight:'10px' }} className="custom-scroll">
             {annLoading ? (
-               <div style={{ textAlign:'center', color:'rgba(255,255,255,.3)', fontSize:12, padding:'20px 0' }}>{t('common.loading')}</div>
+               <div style={{ textAlign:'center', color:'rgba(255,255,255,0.3)', fontSize:13, padding:'30px 0' }}>Decrypting streams...</div>
             ) : anns.length === 0 ? (
-               <div style={{ textAlign:'center', color:'rgba(255,255,255,.3)', fontSize:12, padding:'20px 0', border:'1px dashed rgba(255,255,255,.1)', borderRadius:12 }}>{t('status.noAnnouncements')}</div>
+               <div style={{ textAlign:'center', color:'rgba(255,255,255,0.3)', fontSize:13, padding:'40px 0', border:'1px dashed rgba(255,255,255,0.08)', borderRadius:16 }}>No active broadcasts</div>
             ) : (
-              anns.map((ann, i) => {
+              anns.map((ann) => {
                 const cfg = TYPE_CFG[ann.type] ?? TYPE_CFG.update;
                 return (
-                  <div key={ann.id} style={{ display:'flex', gap:12, padding:'14px', borderRadius:12, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.05)', position:'relative' }}>
-                     <cfg.Icon size={16} color={cfg.c} style={{ marginTop:2, flexShrink:0 }} />
-                     <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:4 }}>
-                           <span style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{ann.title}</span>
-                           <span className={`badge ${cfg.badge}`} style={{ fontSize:9, padding:'2px 6px' }}>{typeLabel(ann.type)}</span>
-                           <span style={{ fontSize:10, color:'rgba(255,255,255,.3)', marginLeft:'auto' }}>{new Date(ann.created_at).toLocaleDateString()}</span>
+                  <div key={ann.id} style={{ display:'flex', gap:16, padding:'16px', borderRadius:16, background:'rgba(255,255,255,0.015)', border:'1px solid rgba(255,255,255,0.03)', position:'relative', transition:'background 0.2s', cursor:'default' }} onMouseOver={e => e.currentTarget.style.background='rgba(255,255,255,0.03)'} onMouseOut={e => e.currentTarget.style.background='rgba(255,255,255,0.015)'}>
+                     <div style={{ width:32, height:32, borderRadius:'50%', background:cfg.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                        <cfg.Icon size={14} color={cfg.c} />
+                     </div>
+                     <div style={{ flex:1, minWidth:0, paddingTop:2 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
+                           <span style={{ fontSize:15, fontWeight:500, color:'#fff', letterSpacing:'-0.01em' }}>{ann.title}</span>
+                           <span style={{ fontSize:10, color:cfg.c, border:`1px solid ${cfg.c}40`, padding:'2px 8px', borderRadius:20 }}>{ann.type}</span>
                         </div>
-                        <p style={{ fontSize:12, color:'rgba(255,255,255,.5)', lineHeight:1.5, margin:0 }}>{ann.content}</p>
+                        <p style={{ fontSize:13, color:'rgba(255,255,255,0.5)', lineHeight:1.6, margin:0 }}>{ann.content}</p>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:12 }}>{new Date(ann.created_at).toLocaleDateString()}</div>
                      </div>
                      {isMod && (
-                        <button onClick={() => handleDeleteAnn(ann.id)} style={{ position:'absolute', top:14, right:14, color:'rgba(255,255,255,.2)', background:'none', border:'none', cursor:'pointer' }}>
-                          <Trash2 size={13}/>
+                        <button onClick={() => handleDeleteAnn(ann.id)} style={{ position:'absolute', top:22, right:16, color:'rgba(255,255,255,0.2)', background:'none', border:'none', cursor:'pointer' }}>
+                          <Trash2 size={14}/>
                         </button>
                      )}
                   </div>
@@ -426,77 +400,48 @@ export default function DashboardPage() {
           </div>
         </div>
 
-      </div>
-
-      {/* ══ STATS GRID ══ */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12, animationDelay:'100ms' }} className="dash-in">
-        {stats.map((stat, i) => (
-          <div key={stat.label} className="dash-stat">
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-              <div style={{ width:38, height:38, borderRadius:11, background:stat.bg, border:`1px solid ${stat.bc}`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 0 16px ${stat.bc}` }}>
-                <stat.icon size={17} style={{ color:stat.c }} />
-              </div>
-              <div style={{ width:6, height:6, borderRadius:'50%', background:stat.c, boxShadow:`0 0 8px ${stat.c}`, animation:'dash-glow 2s ease-in-out infinite' }} />
+        {/* Bonus & Mini Network */}
+        <div style={{ display:'flex', flexDirection:'column', gap:28 }}>
+          
+          <div className="aqua-card" style={{ padding:'32px', display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', animationDelay:'200ms' }}>
+            <div style={{ width:64, height:64, borderRadius:'50%', background:'linear-gradient(135deg, rgba(84,67,136,0.2), rgba(234,34,107,0.1))', border:'1px solid rgba(255,255,255,0.08)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:20, boxShadow:'0 0 30px rgba(84,67,136,0.1)' }}>
+              <Gift size={26} color="#ffffff" />
             </div>
-            <div style={{ fontSize:32, fontWeight:900, color:'#fff', letterSpacing:'-.04em', lineHeight:1, marginBottom:5 }}>{stat.val}</div>
-            <div style={{ fontSize:11, fontWeight:600, color:'rgba(255,255,255,.35)', textTransform:'uppercase', letterSpacing:'.1em' }}>{stat.label}</div>
+            <h3 style={{ fontSize:20, fontWeight:400, color:'#FFF', letterSpacing:'-0.02em', margin:'0 0 8px 0' }}>Daily Reward Network</h3>
+            <p style={{ fontSize:13, color:'rgba(255,255,255,0.4)', margin:'0 0 24px 0', maxWidth:200 }}>Initialize your daily sync bonus to amplify credentials.</p>
+            
+            <div style={{ fontSize:32, fontWeight:400, color:'#fff', letterSpacing:'-0.03em', marginBottom:4 }}>{bonusPoints}<span style={{fontSize:18, color:'rgba(255,255,255,0.4)'}}> pts</span></div>
+
+            <div style={{ height:2, width:'100%', background:'rgba(255,255,255,0.05)', borderRadius:4, overflow:'hidden', margin:'16px 0 24px' }}>
+              <div style={{ height:'100%', width:`${bonusPoints % 100}%`, background:'#544388' }} />
+            </div>
+
+            {canClaimBonus ? (
+               <button onClick={handleClaimBonus} disabled={claimingBonus} className="aqua-btn aqua-btn-primary" style={{ width:'100%', justifyContent:'center', padding:'12px' }}>
+                  {claimingBonus ? <Loader2 size={16} className="animate-spin" /> : 'Sync Bonus Now'}
+               </button>
+            ) : (
+               <button className="aqua-btn" style={{ width:'100%', justifyContent:'center', padding:'12px', opacity:0.6, cursor:'not-allowed' }}>
+                  <Clock size={14} /> {bonusCooldown}
+               </button>
+            )}
           </div>
-        ))}
+
+        </div>
+
       </div>
 
       {/* ══ ACTIVE SUBSCRIPTIONS ══ */}
-      {active.length > 0 ? (
-        <div style={{ animationDelay:'120ms' }} className="dash-in">
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
-            <div style={{ width:3, height:16, borderRadius:999, background:'linear-gradient(180deg,#8b5cf6,#6d28d9)' }} />
-            <span style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.12em', color:'rgba(255,255,255,.4)' }}>{t('dashboard.activeSubscriptions')}</span>
-          </div>
-          <div style={{ display:'grid', gap:14, gridTemplateColumns: internalLicenses.length > 0 && lagLicenses.length > 0 ? 'repeat(auto-fit,minmax(280px,1fr))' : '1fr' }}>
-            {internalLicenses.map((license) => <LicCard key={license.id} lic={license} accent="b" />)}
-            {lagLicenses.map((license) => <LicCard key={license.id} lic={license} accent="p" />)}
-          </div>
-        </div>
-      ) : (
-        <div className="dash-card dash-in" style={{ padding:'52px 24px', textAlign:'center', borderStyle:'dashed', borderColor:'rgba(255,255,255,.08)', animationDelay:'120ms' }}>
-          <div style={{ width:56, height:56, borderRadius:16, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
-            <Key size={24} style={{ color:'rgba(255,255,255,.2)' }} />
-          </div>
-          <p style={{ fontSize:15, fontWeight:700, color:'rgba(255,255,255,.45)', marginBottom:6 }}>{t('dashboard.noLicense')}</p>
-          <p style={{ fontSize:13, color:'rgba(255,255,255,.22)' }}>{t('dashboard.noLicenseDesc')}</p>
-        </div>
+      {active.length > 0 && (
+         <div style={{ animationDelay:'250ms' }}>
+            <h2 style={{ fontSize:20, fontWeight:400, color:'#FFF', letterSpacing:'-0.02em', marginBottom:20, paddingLeft:4 }}>Connected Environments</h2>
+            <div style={{ display:'grid', gap:20, gridTemplateColumns: internalLicenses.length > 0 && lagLicenses.length > 0 ? 'repeat(auto-fit,minmax(280px,1fr))' : '1fr' }}>
+               {internalLicenses.map((license) => <LicCard key={license.id} lic={license} accent="b" />)}
+               {lagLicenses.map((license) => <LicCard key={license.id} lic={license} accent="p" />)}
+            </div>
+         </div>
       )}
 
-      {/* ══ DAILY BONUS ══ */}
-      <div className="dash-card dash-in" style={{ padding:'22px 24px', background:'linear-gradient(135deg,rgba(18,14,4,.98) 0%,rgba(10,8,4,.98) 100%)', border:'1px solid rgba(251,191,36,.14)', boxShadow:'0 24px 48px rgba(0,0,0,.4), 0 0 40px rgba(251,191,36,.05)', animationDelay:'150ms' }}>
-        <div style={{ position:'absolute', top:0, left:0, right:0, height:1, borderRadius:'22px 22px 0 0', background:'linear-gradient(90deg,transparent,rgba(251,191,36,.4),transparent)', pointerEvents:'none' }} />
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:14, flex:1 }}>
-            <div style={{ width:46, height:46, borderRadius:14, background:'rgba(251,191,36,.1)', border:'1px solid rgba(251,191,36,.22)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 20px rgba(251,191,36,.15)', flexShrink:0 }}>
-              <Gift size={22} color="#fbbf24" />
-            </div>
-            <div>
-              <div style={{ fontSize:15, fontWeight:800, color:'#fff', marginBottom:3 }}>{t('dashboard.dailyBonus')}</div>
-              <div style={{ fontSize:12, color:'rgba(255,255,255,.35)' }}>{t('dashboard.dailyBonusDesc')}</div>
-            </div>
-          </div>
-          <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:8, flexShrink:0 }}>
-            <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
-              <span style={{ fontSize:28, fontWeight:900, color:'#fbbf24', letterSpacing:'-.03em' }}>{bonusPoints}</span>
-              <span style={{ fontSize:11, color:'rgba(255,255,255,.3)', fontWeight:500 }}>{t('bonus.title')}</span>
-            </div>
-            {!bonusLoaded ? <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'rgba(255,255,255,.25)' }}><Loader2 size={11} className="animate-spin" /> Loading…</div>
-              : canClaimBonus ? <button className="btn btn-sm" style={{ background:'linear-gradient(135deg,#fbbf24,#f59e0b)', color:'#3a1a00', fontWeight:800, border:'none', boxShadow:'0 0 20px rgba(245,158,11,.4)', padding:'9px 18px', borderRadius:11, fontSize:13 }} onClick={handleClaimBonus} disabled={claimingBonus}>{claimingBonus ? <><Loader2 size={12} className="animate-spin" /> Claiming…</> : t('dashboard.claimNow')}</button>
-              : <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'rgba(255,255,255,.3)', fontWeight:600 }}><Clock size={11} style={{ color:'rgba(255,255,255,.25)' }} /> {bonusCooldown}</div>}
-          </div>
-        </div>
-        <div className="dash-bonus-bar">
-          <div style={{ height:'100%', width:`${bonusPoints % 100}%`, borderRadius:999, background:'linear-gradient(90deg,#f59e0b,#fbbf24)', boxShadow:'0 0 8px rgba(251,191,36,.5)', transition:'width .6s cubic-bezier(.22,1,.36,1)' }} />
-        </div>
-        <div style={{ display:'flex', justifyContent:'space-between', marginTop:6 }}>
-          <span style={{ fontSize:10, color:'rgba(255,255,255,.2)', fontWeight:600 }}>{bonusPoints % 100}/100 to next reward</span>
-          <span style={{ fontSize:10, color:'rgba(255,255,255,.2)' }}>Level {Math.floor(bonusPoints / 100) + 1}</span>
-        </div>
-      </div>
     </div>
   );
 }
