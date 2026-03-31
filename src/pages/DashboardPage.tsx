@@ -301,7 +301,7 @@ export default function DashboardPage() {
 
           {/* Center Main Copy */}
           <div style={{ textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center' }}>
-            <div style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:99px, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.02)', fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.7)', marginBottom:24, backdropFilter:'blur(10px)' }}>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:99, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.02)', fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.7)', marginBottom:24, backdropFilter:'blur(10px)' }}>
               <Sparkles size={12} color="#5EF7A6" /> Premium Architecture
             </div>
             <h1 style={{ fontSize:42, fontWeight:400, color:'#FFF', letterSpacing:'-0.03em', lineHeight:1.15, marginBottom:16 }}>
