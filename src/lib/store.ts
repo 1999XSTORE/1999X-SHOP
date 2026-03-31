@@ -67,6 +67,13 @@ export interface Announcement {
   type: 'update' | 'maintenance' | 'feature';
 }
 
+export interface OnlineUser {
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  userRole: string;
+}
+
 interface AppState {
   user: User | null;
   balance: number;
@@ -77,6 +84,7 @@ interface AppState {
   chatMessages: ChatMessage[];
   supportMessages: ChatMessage[];
   announcements: Announcement[];
+  onlineUsers: OnlineUser[];
   systemStatus: 'online' | 'maintenance';
   lastStatusUpdate: string;
   isAuthenticated: boolean;
@@ -100,6 +108,7 @@ interface AppState {
   addLicense: (license: License) => void;
   setLicenses: (licenses: License[]) => void;
   updateLicense: (licenseId: string, updates: Partial<License>) => void;
+  setOnlineUsers: (users: OnlineUser[]) => void;
 }
 
 const generateKey = () => {
@@ -272,6 +281,7 @@ export const useAppStore = create<AppState>()(
           type: 'update',
         },
       ],
+      onlineUsers: [],
       systemStatus: 'online',
       lastStatusUpdate: new Date().toISOString(),
       isAuthenticated: false,
@@ -469,6 +479,8 @@ export const useAppStore = create<AppState>()(
         }
         return true;
       },
+
+      setOnlineUsers: (users) => set({ onlineUsers: users }),
     }),
     {
       name: '1999x-store',

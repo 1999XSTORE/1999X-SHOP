@@ -660,7 +660,7 @@ const PANEL_GROUPS = [
   { id:'lag', name:'Fake Lag', tagline:'Network Domination', desc:'Lag-based advantages. Confuse and conquer.', emoji:'🔷', color:'#818cf8', glow:'rgba(129,140,248,.3)', gradFrom:'rgba(30,27,75,.55)', gradTo:'rgba(15,14,46,.35)', bc:'rgba(129,140,248,.22)', features:['Lag switch control','Packet manipulation','Adjustable delay','OB52 Undetected'], plans:[{id:'lag-7d',label:'Weekly',price:5,days:7,keyauthPanel:'lag' as const},{id:'lag-30d',label:'Monthly',price:10,days:30,keyauthPanel:'lag' as const}] },
 ];
 
-function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUPS[number]; balance: number; onBuy: (plan: any) => void }) {
+function PanelProductCard({ group, balance, onBuy, onAddBalance }: { group: typeof PANEL_GROUPS[number]; balance: number; onBuy: (plan: any) => void; onAddBalance: () => void }) {
   const { t } = useTranslation();
   const [sel, setSel] = useState(0);
   const plan = group.plans[sel];
@@ -834,13 +834,27 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
             </div>
           </button>
         ) : (
-          <div style={{
-            width:'100%', padding:'15px 20px', borderRadius:14, fontSize:13, fontWeight:700,
-            fontFamily:'inherit', background:'rgba(255,255,255,.03)',
-            color:'rgba(255,255,255,.2)', border:'1px solid rgba(255,255,255,.06)', textAlign:'center',
-          }}>
-            {t('shop.insufficientBalance')} — {t('wallet.addFunds')}
-          </div>
+          <button onClick={onAddBalance} style={{
+            width:'100%', padding:'15px 20px', borderRadius:14, fontSize:14, fontWeight:800,
+            fontFamily:'inherit', background:'linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.02))',
+            color:'#fff', border:'1px solid rgba(255,255,255,.15)', cursor:'pointer',
+            display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+            transition:'all .2s', boxShadow:'0 4px 12px rgba(0,0,0,.2)'
+          }}
+            onMouseEnter={e=>{
+              (e.currentTarget as HTMLButtonElement).style.background='linear-gradient(135deg,rgba(255,255,255,.12),rgba(255,255,255,.04))';
+              (e.currentTarget as HTMLButtonElement).style.borderColor='rgba(255,255,255,.25)';
+              (e.currentTarget as HTMLButtonElement).style.transform='translateY(-1px)';
+            }}
+            onMouseLeave={e=>{
+              (e.currentTarget as HTMLButtonElement).style.background='linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.02))';
+              (e.currentTarget as HTMLButtonElement).style.borderColor='rgba(255,255,255,.15)';
+              (e.currentTarget as HTMLButtonElement).style.transform='none';
+            }}
+          >
+            <span style={{ fontSize:15 }}>💳</span>
+            {t('shop.addBalanceToBuy', 'Add Balance To Buy')} <ArrowRight size={15}/>
+          </button>
         )}
 
       </div>
@@ -1759,9 +1773,9 @@ export default function WalletPage() {
                 </div>
               </div>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))', gap:20 }}>
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))', gap:20 }}>
               {PANEL_GROUPS.map(group=>(
-                <PanelProductCard key={group.id} group={group} balance={balance} onBuy={(p)=>setConfirmPending(p)}/>
+                <PanelProductCard key={group.id} group={group} balance={balance} onBuy={(p)=>setConfirmPending(p)} onAddBalance={() => setActiveTab('deposit')}/>
               ))}
             </div>
             <div style={{ marginTop:20, display:'flex', alignItems:'center', justifyContent:'center', gap:20, flexWrap:'wrap', padding:'14px 0', borderTop:'1px solid rgba(255,255,255,.05)' }}>

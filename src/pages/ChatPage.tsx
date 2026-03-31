@@ -24,13 +24,6 @@ interface Msg {
   image_url?: string | null;
 }
 
-interface OnlineUser {
-  userId: string;
-  userName: string;
-  userAvatar: string;
-  userRole: string;
-}
-
 function canSeeMessage(msg: Msg, currentUserId: string, currentRole: AppRole) {
   if (currentRole === 'owner') return true;
   if (msg.user_id === currentUserId) return true;
@@ -216,7 +209,7 @@ function TypingDots() {
 
 // ── Main ChatPage ─────────────────────────────────────────────
 export default function ChatPage() {
-  const { user } = useAppStore();
+  const { user, onlineUsers } = useAppStore();
   const { t } = useTranslation();
   const currentRole = normalizeRole(user?.role);
   const [messages,    setMessages]    = useState<Msg[]>([]);
@@ -225,7 +218,6 @@ export default function ChatPage() {
   const [editText,    setEditText]    = useState('');
   const [replyTo,     setReplyTo]     = useState<Msg|null>(null);
   const [typingUsers, setTypingUsers] = useState<Record<string,string>>({});
-  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [showSidebar, setShowSidebar] = useState(false); // collapsed by default on mobile
   const [loading,     setLoading]     = useState(true);
   const [isMobile,    setIsMobile]    = useState(window.innerWidth < 768);
@@ -310,20 +302,9 @@ export default function ChatPage() {
       typingTimer.current=setTimeout(()=>{
         setTypingUsers(p=>{const n={...p};delete n[payload.userId];return n;});
       },3000);
-    })
-    .on('presence',{event:'sync'},()=>{
-      const state=ch.presenceState();
-      const users:OnlineUser[]=Object.values(state).flatMap((s:any)=>s).map((s:any)=>({
-        userId:s.userId,userName:s.userName,userAvatar:s.userAvatar||'',userRole:s.userRole||'user',
-      }));
-      setOnlineUsers(users);
     });
 
-    ch.subscribe(async(status)=>{
-      if(status==='SUBSCRIBED'){
-        await ch.track({userId:user.id,userName:user.name,userAvatar:user.avatar||'',userRole:user.role||'user'});
-      }
-    });
+    ch.subscribe();
     channelRef.current=ch;
     return ()=>{ supabase.removeChannel(ch); };
   }, [currentRole, user?.id]);

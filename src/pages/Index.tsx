@@ -90,7 +90,7 @@ async function fetchRole(email: string): Promise<AppRole> {
 }
 
 export default function Index() {
-  const { isAuthenticated, user, login, logout, addBalance, setUserRole } = useAppStore();
+  const { isAuthenticated, user, login, logout, addBalance, setUserRole, setOnlineUsers } = useAppStore();
 
   // ── Restore last page from sessionStorage ─────────────────
   const [currentPath, setCurrentPath] = useState(getSavedPath);
@@ -289,6 +289,39 @@ export default function Index() {
       supabase.removeChannel(channel);
     };
   }, [addBalance, user?.id, user?.role]);
+
+  // ── Global Presence Tracking ────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+
+    const ch = supabase.channel('chat_presence', { config: { presence: { key: user.id } } });
+
+    ch.on('presence', { event: 'sync' }, () => {
+      const state = ch.presenceState();
+      const users = Object.values(state).flatMap((s: any) => s).map((s: any) => ({
+        userId: s.userId,
+        userName: s.userName,
+        userAvatar: s.userAvatar || '',
+        userRole: s.userRole || 'user',
+      }));
+      setOnlineUsers(users);
+    });
+
+    ch.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await ch.track({
+          userId: user.id,
+          userName: user.name,
+          userAvatar: user.avatar || '',
+          userRole: user.role || 'user',
+        });
+      }
+    });
+
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [user, setOnlineUsers]);
 
   // ── Loading screen — only shown if NOT already authenticated ──
   // If Zustand has isAuthenticated=true, skip straight to app
