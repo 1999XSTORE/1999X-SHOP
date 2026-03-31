@@ -229,25 +229,41 @@ function DownloadSection() {
           <p style={{ fontSize:12,color:'rgba(255,255,255,.45)',marginTop:3 }}>Your license is ready. Download and watch the setup guide.</p>
         </div>
       </div>
-      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr' }}>
-        {[
-          { href:DOWNLOAD_URL, icon:Download, label:'Download Panel', sub:'Latest 1999X build', c:'var(--green)', bg:'rgba(16,232,152,.08)', bc:'rgba(16,232,152,.15)' },
-          { href:TUTORIAL_URL, icon:Play,     label:'Watch Tutorial', sub:'Step-by-step guide',  c:'#818cf8',    bg:'rgba(99,102,241,.08)', bc:'rgba(99,102,241,.15)' },
-        ].map(({ href, icon: Icon, label, sub, c, bg, bc }) => (
-          <a key={label} href={href} target="_blank" rel="noopener noreferrer"
-            style={{ display:'flex',alignItems:'center',gap:14,padding:'18px 20px',textDecoration:'none',transition:'background .2s',borderTop:'1px solid var(--border)' }}
-            onMouseEnter={e=>(e.currentTarget.style.background='rgba(255,255,255,.03)')}
-            onMouseLeave={e=>(e.currentTarget.style.background='transparent')}>
-            <div style={{ width:44,height:44,borderRadius:12,background:bg,border:`1px solid ${bc}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
-              <Icon size={22} color={c} />
-            </div>
-            <div>
-              <div style={{ fontSize:14,fontWeight:700,color:'#fff',marginBottom:2 }}>{label}</div>
-              <div style={{ fontSize:11,color:'var(--muted)' }}>{sub}</div>
-            </div>
-            <ChevronRight size={16} style={{ color:'var(--dim)',marginLeft:'auto',flexShrink:0 }} />
-          </a>
-        ))}
+      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr', gap: '20px', padding: '24px 20px', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+        <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" className="download-button" style={{ width: '100%' }}>
+          <div className="docs">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg> 
+            Panel Download
+          </div>
+          <div className="download">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+          </div>
+        </a>
+        
+        <a href={TUTORIAL_URL} target="_blank" rel="noopener noreferrer" className="download-button" style={{ width: '100%' }}>
+          <div className="docs">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            Panel Tutorial
+          </div>
+          <div className="download tutorial" style={{ backgroundColor: 'var(--purple)', borderColor: 'rgba(139,92,246,0.3)' }}>
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polygon points="10 8 16 12 10 16 10 8"></polygon>
+            </svg>
+          </div>
+        </a>
       </div>
     </div>
   );

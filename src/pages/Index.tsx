@@ -67,12 +67,12 @@ async function fetchRole(email: string): Promise<AppRole> {
   if (!normalizedEmail) return 'user';
 
   const [{ data: roleRow }, { data: subscriptionRow }] = await Promise.all([
-    safeQuery(
-      () => supabase.from('user_roles').select('role').eq('email', normalizedEmail).maybeSingle(),
+    safeQuery<any>(
+      async () => await supabase.from('user_roles').select('role').eq('email', normalizedEmail).maybeSingle(),
       5000
     ),
-    safeQuery(
-      () => supabase
+    safeQuery<any>(
+      async () => await supabase
         .from('reseller_subscriptions')
         .select('id')
         .eq('email', normalizedEmail)
@@ -85,7 +85,7 @@ async function fetchRole(email: string): Promise<AppRole> {
   ]);
 
   const dbRole = normalizeRole(roleRow?.role);
-  if (dbRole === 'owner' || dbRole === 'admin' || dbRole === 'support') return dbRole;
+  if (dbRole === 'owner' || dbRole === 'admin' || dbRole === 'support') return dbRole as AppRole;
   return subscriptionRow ? 'reseller' : 'user';
 }
 
@@ -231,7 +231,7 @@ export default function Index() {
       checking = true;
       try {
         const { data, error } = await safeQuery(
-          () => supabase.from('transactions').select('id, amount, status').eq('user_id', user.id)
+          async () => await supabase.from('transactions').select('id, amount, status').eq('user_id', user.id)
         );
         if (error || !data || disposed) return;
 
@@ -298,13 +298,20 @@ export default function Index() {
 
     ch.on('presence', { event: 'sync' }, () => {
       const state = ch.presenceState();
-      const users = Object.values(state).flatMap((s: any) => s).map((s: any) => ({
-        userId: s.userId,
-        userName: s.userName,
-        userAvatar: s.userAvatar || '',
-        userRole: s.userRole || 'user',
-      }));
-      setOnlineUsers(users);
+      const uniqueUsers = new Map();
+      
+      Object.values(state).flatMap((s: any) => s).forEach((s: any) => {
+        if (!uniqueUsers.has(s.userId)) {
+          uniqueUsers.set(s.userId, {
+            userId: s.userId,
+            userName: s.userName,
+            userAvatar: s.userAvatar || '',
+            userRole: s.userRole || 'user',
+          });
+        }
+      });
+      
+      setOnlineUsers(Array.from(uniqueUsers.values()));
     });
 
     ch.subscribe(async (status) => {
@@ -321,7 +328,7 @@ export default function Index() {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [user, setOnlineUsers]);
+  }, [user?.id, user?.name, user?.avatar, user?.role, setOnlineUsers]);
 
   // ── Loading screen — only shown if NOT already authenticated ──
   // If Zustand has isAuthenticated=true, skip straight to app
