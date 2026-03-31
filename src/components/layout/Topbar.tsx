@@ -13,7 +13,6 @@ const navItems = [
   { key: 'licenses',    path: '/licenses',     tKey: 'nav.license', Icon: Key           },
   { key: 'chat',        path: '/chat',         tKey: 'nav.chat',    Icon: MessageCircle },
   { key: 'bonus',       path: '/bonus',        tKey: 'nav.bonus',   Icon: Gift          },
-  { key: 'panelStatus', path: '/panel-status', tKey: 'nav.status',  Icon: Activity      },
   { key: 'reseller',    path: '/reseller',     tKey: 'nav.reseller', Icon: Handshake     },
 ];
 
@@ -111,14 +110,14 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
     };
 
     if (currentPath === '/chat' && chatUnread > 0) markByTypeRead('chat');
-    if (currentPath === '/panel-status' && annUnread > 0) markByTypeRead('announcement');
+    if (currentPath === '/' && annUnread > 0) markByTypeRead('announcement');
   }, [currentPath, user?.id, chatUnread, annUnread]);
 
   const handleNav = (path: string) => {
     onNavigate(path);
     setMobileOpen(false);
     if (path === '/chat') setChatUnread(0);
-    if (path === '/panel-status') setAnnUnread(0);
+    if (path === '/') setAnnUnread(0);
   };
 
   return (
@@ -199,7 +198,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
                   <item.Icon size={13} className="nav-ic" />
                   {t(item.tKey)}
                   {item.path==='/chat' && chatUnread>0 && <span className="nav-badge">{chatUnread>9?'9+':chatUnread}</span>}
-                  {item.path==='/panel-status' && annUnread>0 && <span className="nav-badge">{annUnread>9?'9+':annUnread}</span>}
+                  {item.path==='/' && annUnread>0 && <span className="nav-badge">{annUnread>9?'9+':annUnread}</span>}
                 </button>
               ))}
             </div>
@@ -330,7 +329,7 @@ export default function Topbar({ currentPath, onNavigate, onLogout }: TopbarProp
           {visibleNavItems.map(item => (
             <button key={item.key} className={cn('mob-nav-btn', currentPath===item.path && 'mob-on')} onClick={() => handleNav(item.path)}>
               {item.path==='/chat' && chatUnread>0 && <span className="mob-badge">{chatUnread>9?'9+':chatUnread}</span>}
-              {item.path==='/panel-status' && annUnread>0 && <span className="mob-badge">{annUnread>9?'9+':annUnread}</span>}
+              {item.path==='/' && annUnread>0 && <span className="mob-badge">{annUnread>9?'9+':annUnread}</span>}
               <item.Icon size={22}/>
               <span className="mob-lbl">{t(item.tKey)}</span>
             </button>

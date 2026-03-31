@@ -14,7 +14,6 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const LicensesPage = lazy(() => import('@/pages/LicensesPage'));
 const ChatPage = lazy(() => import('@/pages/ChatPage'));
 const SupportPage = lazy(() => import('@/pages/SupportPage'));
-const PanelStatusPage = lazy(() => import('@/pages/PanelStatusPage'));
 const WalletPage = lazy(() => import('@/pages/WalletPage'));
 const BonusPage = lazy(() => import('@/pages/BonusPage'));
 const AnnouncementsPage = lazy(() => import('@/pages/AnnouncementsPage'));
@@ -26,7 +25,6 @@ const pageComponents: Record<string, React.LazyExoticComponent<React.ComponentTy
   '/licenses':        LicensesPage,
   '/chat':            ChatPage,
   '/support':         SupportPage,
-  '/panel-status':    PanelStatusPage,
   '/wallet':          WalletPage,
   '/bonus':           BonusPage,
   '/announcements':   AnnouncementsPage,
