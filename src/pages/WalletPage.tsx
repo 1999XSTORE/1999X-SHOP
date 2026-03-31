@@ -734,31 +734,18 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
           display:'flex', alignItems:'baseline', gap:4,
         }}>
           <span style={{
-            fontSize:36, fontWeight:900, color:'#fff', letterSpacing:'-.05em', lineHeight:1,
+            fontSize:42, fontWeight:900, color:'#fff', letterSpacing:'-.05em', lineHeight:1,
             textShadow:`0 0 30px ${group.glow}, 0 2px 8px rgba(0,0,0,.8)`,
           }}>${plan.price}</span>
-          <span style={{ fontSize:12, color:'rgba(255,255,255,.5)', fontWeight:600, marginBottom:4 }}>
-            / {getWalletPlanLabel(t, plan.label)}
-          </span>
         </div>
       </div>
 
       {/* ── Card Body ── */}
       <div style={{ padding:'20px 22px 22px' }}>
 
-        {/* Name + tagline */}
-        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-          <div style={{
-            width:42, height:42, borderRadius:13, flexShrink:0,
-            background:`radial-gradient(circle at 30% 30%, ${group.bc}, rgba(0,0,0,.4))`,
-            border:`1px solid ${group.bc}`,
-            display:'flex', alignItems:'center', justifyContent:'center',
-            fontSize:20, boxShadow:`0 0 18px ${group.glow}`,
-          }}>{group.emoji}</div>
-          <div>
-            <div style={{ fontSize:9, fontWeight:800, letterSpacing:'.18em', textTransform:'uppercase', color:group.color, opacity:.8, marginBottom:2 }}>{copy.tagline}</div>
-            <div style={{ fontSize:18, fontWeight:900, color:'#fff', letterSpacing:'-.02em', lineHeight:1.15 }}>{copy.name}</div>
-          </div>
+        {/* Name */}
+        <div style={{ marginBottom:16 }}>
+          <div style={{ fontSize:20, fontWeight:900, color:'#fff', letterSpacing:'-.02em', lineHeight:1.15 }}>{copy.name}</div>
         </div>
 
         {/* Plan selector — pill tabs */}
@@ -773,12 +760,12 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
             const pSavePct = i>0 ? Math.round((1-p.price/p.days/basePerDay)*100) : 0;
             return (
               <button key={p.id} onClick={()=>setSel(i)} style={{
-                position:'relative', padding:'10px 6px', borderRadius:10,
+                position:'relative', padding:'14px 6px', borderRadius:10,
                 border: active?`1px solid ${group.color}`:'1px solid transparent',
                 background: active?`linear-gradient(135deg,rgba(255,255,255,.09),rgba(255,255,255,.04))`:'transparent',
                 cursor:'pointer', fontFamily:'inherit', transition:'all .2s cubic-bezier(.22,1,.36,1)',
                 boxShadow: active?`0 0 18px ${group.glow}, inset 0 1px 0 rgba(255,255,255,.1)`:'none',
-                display:'flex', flexDirection:'column', alignItems:'center', gap:1,
+                display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
               }}>
                 {pSavePct>0 && (
                   <span style={{
@@ -788,9 +775,7 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
                     borderRadius:99, padding:'1px 5px',
                   }}>-{pSavePct}%</span>
                 )}
-                <span style={{ fontSize:12, fontWeight:700, color:active?group.color:'rgba(255,255,255,.45)' }}>{getWalletPlanLabel(t, p.label)}</span>
-                <span style={{ fontSize:16, fontWeight:900, color:active?'#fff':'rgba(255,255,255,.4)', letterSpacing:'-.03em' }}>${p.price}</span>
-                <span style={{ fontSize:9, color:'rgba(255,255,255,.25)', fontWeight:600 }}>${(p.price/p.days).toFixed(2)}/d</span>
+                <span style={{ fontSize:16, fontWeight:800, color:active?'#fff':'rgba(255,255,255,.45)', letterSpacing:'-.01em' }}>{getWalletPlanLabel(t, p.label)}</span>
               </button>
             );
           })}
@@ -837,8 +822,8 @@ function PanelProductCard({ group, balance, onBuy }: { group: typeof PANEL_GROUP
             }}
           >
             <span style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <span style={{ fontSize:15 }}>⚡</span>
-              {t('shop.buy')} {getWalletPlanLabel(t, plan.label)} — ${plan.price}
+              <span style={{ fontSize:15 }}>🔑</span>
+              {t('shop.purchaseKey')}
             </span>
             <div style={{
               width:32, height:32, borderRadius:10, background:group.color,

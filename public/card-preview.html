@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Card Preview — 1999X</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #07080f;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    gap: 32px;
+  }
+  h1 { color: #fff; font-size: 22px; font-weight: 800; opacity: .6; letter-spacing: -.02em; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    width: 100%;
+    max-width: 1050px;
+  }
+  .card {
+    position: relative;
+    border-radius: 24px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(9,10,18,.98) 0%, rgba(6,7,14,.99) 100%);
+    transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s;
+  }
+  .card:hover { transform: translateY(-6px); }
+
+  /* image banner */
+  .banner {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+  }
+  .banner img {
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: center top;
+    display: block;
+    transition: transform .5s cubic-bezier(.22,1,.36,1);
+  }
+  .card:hover .banner img { transform: scale(1.06); }
+  .banner-fade {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+    background: linear-gradient(to bottom, transparent, rgba(9,10,18,.98));
+    pointer-events: none;
+  }
+  .banner-topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    pointer-events: none;
+  }
+  .price-badge {
+    position: absolute; bottom: 14px; left: 16px; z-index: 2;
+    font-size: 42px; font-weight: 900; color: #fff;
+    letter-spacing: -.05em; line-height: 1;
+  }
+  .featured-badge {
+    position: absolute; top: 14px; right: 14px; z-index: 2;
+    display: flex; align-items: center; gap: 5px;
+    background: linear-gradient(135deg,#92400e,#d97706);
+    border-radius: 20px; padding: 5px 13px 5px 9px;
+    box-shadow: 0 4px 20px rgba(251,191,36,.5);
+    font-size: 9px; font-weight: 900; letter-spacing: .14em;
+    text-transform: uppercase; color: #fef3c7;
+  }
+
+  /* card body */
+  .body { padding: 20px 22px 22px; }
+  .product-name {
+    font-size: 20px; font-weight: 900; color: #fff;
+    letter-spacing: -.02em; line-height: 1.15;
+    margin-bottom: 16px;
+  }
+
+  /* plan tabs */
+  .plans {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 16px;
+    background: rgba(255,255,255,.04);
+    border-radius: 13px; padding: 4px;
+    border: 1px solid rgba(255,255,255,.06);
+  }
+  .plan-btn {
+    position: relative; padding: 14px 6px; border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer; font-family: 'Inter', sans-serif;
+    transition: all .2s cubic-bezier(.22,1,.36,1);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0;
+  }
+  .plan-btn.active {
+    background: linear-gradient(135deg,rgba(255,255,255,.09),rgba(255,255,255,.04));
+  }
+  .plan-label {
+    font-size: 16px; font-weight: 800;
+    letter-spacing: -.01em;
+  }
+  .save-badge {
+    position: absolute; top: -8px; right: -4px;
+    font-size: 8px; font-weight: 900; color: #4ade80;
+    background: rgba(74,222,128,.15); border: 1px solid rgba(74,222,128,.25);
+    border-radius: 99px; padding: 1px 5px;
+  }
+
+  /* features */
+  .features {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 6px 10px; margin-bottom: 18px;
+  }
+  .feat {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: rgba(255,255,255,.5);
+  }
+  .feat-check {
+    width: 16px; height: 16px; border-radius: 5px; flex-shrink: 0;
+    background: rgba(255,255,255,.04);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; font-weight: 900;
+  }
+
+  /* CTA buy button */
+  .cta {
+    width: 100%; padding: 15px 20px; border-radius: 14px;
+    cursor: pointer; font-family: 'Inter', sans-serif;
+    font-size: 14px; font-weight: 800; color: #fff;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: all .22s;
+  }
+  .cta-icon {
+    width: 32px; height: 32px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 900;
+  }
+</style>
+</head>
+<body>
+<h1>Product Cards Preview</h1>
+<div class="grid">
+
+  <!-- CARD 1: Internal Panel -->
+  <div class="card" style="border:1px solid rgba(74,222,128,.22); box-shadow:0 24px 60px rgba(0,0,0,.55),0 0 40px rgba(74,222,128,.3)">
+    <div class="banner" style="background:linear-gradient(135deg,rgba(20,83,45,.55),rgba(5,46,22,.35))">
+      <img src="https://www.dropbox.com/scl/fi/vmjmtlagavp3qnxy44vng/Internal.png?rlkey=wu9oxjcrvwh1tw685aqa7z8gm&st=xsnlein0&raw=1" alt="Internal Panel"/>
+      <div class="banner-fade"></div>
+      <div class="banner-topbar" style="background:linear-gradient(90deg,transparent,#4ade80,transparent)"></div>
+      <div class="price-badge" style="text-shadow:0 0 30px rgba(74,222,128,.3),0 2px 8px rgba(0,0,0,.8)">$3</div>
+    </div>
+    <div class="body">
+      <div class="product-name">Internal Panel</div>
+      <div class="plans" style="grid-template-columns:repeat(3,1fr)">
+        <button class="plan-btn active" style="border-color:#4ade80;box-shadow:0 0 18px rgba(74,222,128,.3),inset 0 1px 0 rgba(255,255,255,.1)">
+          <span class="plan-label" style="color:#fff">3 Days</span>
+        </button>
+        <button class="plan-btn">
+          <span class="plan-label" style="color:rgba(255,255,255,.45)">Weekly</span>
+        </button>
+        <button class="plan-btn" style="position:relative">
+          <span class="save-badge">-29%</span>
+          <span class="plan-label" style="color:rgba(255,255,255,.45)">Monthly</span>
+        </button>
+      </div>
+      <div class="features">
+        <div class="feat"><div class="feat-check" style="border:1px solid rgba(74,222,128,.22);color:#4ade80">✓</div><span>Aimbot & ESP</span></div>
+        <div class="feat"><div class="feat-check" style="border:1px solid rgba(74,222,128,.22);color:#4ade80">✓</div><span>Speed & No recoil</span></div>
+        <div class="feat"><div class="feat-check" style="border:1px solid rgba(74,222,128,.22);color:#4ade80">✓</div><span>Auto updates</span></div>
+        <div class="feat"><div class="feat-check" style="border:1px solid rgba(74,222,128,.22);color:#4ade80">✓</div><span>OB52 Undetected</span></div>
+      </div>
+      <button class="cta" style="border:1px solid rgba(74,222,128,.22);background:linear-gradient(135deg,rgba(20,83,45,.55),rgba(0,0,0,.2));box-shadow:0 0 28px rgba(74,222,128,.3)">
+        <span style="display:flex;align-items:center;gap:8px"><span style="font-size:15px">⚡</span> Buy 3 Days — $3</span>
+        <div class="cta-icon" style="background:#4ade80">→</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- CARD 2: Combo Pack (Featured) -->
+  <div class="card" style="border:1px solid rgba(251,191,36,.28); box-shadow:0 0 0 1px rgba(251,191,36,.12) inset,0 32px 72px rgba(0,0,0,.65),0 0 80px rgba(251,191,36,.35)">
+    <div class="banner" style="background:linear-gradient(135deg,rgba(92,67,0,.55),rgba(45,26,0,.35))">
+      <img src="https://www.dropbox.com/scl/fi/b09vgdpumapu0qrmauzf2/Combo.png?rlkey=nph0m7pxg7klstq9n5voxs0qj&st=cnlqvvws&raw=1" alt="Combo Pack"/>
+      <div class="banner-fade"></div>
+      <div class="banner-topbar" style="background:linear-gradient(90deg,transparent,#fbbf24,#e8b84b,transparent)"></div>
+      <div class="featured-badge">👑 BEST SELLER</div>
+      <div class="price-badge" style="text-shadow:0 0 30px rgba(251,191,36,.35),0 2px 8px rgba(0,0,0,.8)">$10</div>
+    </div>
+    <div class="body">
+      <div class="product-name">Combo Pack</div>
+      <div class="plans" style="grid-template-columns:repeat(2,1fr)">
+        <button class="plan-btn active" style="border-color:#fbbf24;box-shadow:0 0 18px rgba(251,191,36,.35),inset 0 1px 0 rgba(255,255,255,.1)">
+          <span class="plan-label" style="color:#fff">Weekly</span>
+        </button>
+        <button class="plan-btn" style="position:relative">
+          <span class="save-badge">-43%</span>
+          <span class="plan-label" style="color:rgba(255,255,255,.45)">Monthly</span>
+        </button>
+      </div>
+      <div class="features">
+        <div class="feat"><div class="feat-check" style="border:1px solid rgba(251,191,36,.28);color:#fbbf24">✓</div><span>Everything in Internal</span></div>
+        <div class="feat"><div class="feat-check" style="border:1px solid rgba(251,191,36,.28);color:#fbbf24">✓</div><span>Everything in Fake Lag</span></div>
+        <div class="feat"><div class="feat-check" style="border:1px solid rgba(251,191,36,.28);color:#fbbf24">✓</div><span>Priority Support</span></div>
+        <div class="feat"><div class="feat-check" style="border:1px solid rgba(251,191,36,.28);color:#fbbf24">✓</div><span>Best price guaranteed</span></div>
+      </div>
+      <button class="cta" style="border:1px solid rgba(251,191,36,.28);background:linear-gradient(135deg,rgba(92,67,0,.55),rgba(0,0,0,.2));box-shadow:0 0 28px rgba(251,191,36,.35)">
+        <span style="display:flex;align-items:center;gap:8px"><span style="font-size:15px">⚡</span> Buy Weekly — $10</span>
+        <div class="cta-icon" style="background:#fbbf24">→</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- CARD 3: Fake Lag -->
+  <div class="card" style="border:1px solid rgba(129,140,248,.22); box-shadow:0 24px 60px rgba(0,0,0,.55),0 0 40px rgba(129,140,248,.3)">
+    <div class="banner" style="background:linear-gradient(135deg,rgba(30,27,75,.55),rgba(15,14,46,.35))">
+      <img src="https://www.dropbox.com/scl/fi/7gg0c6tvs1vkcyba0ofw4/Fake-Lag.png?rlkey=muslqa9erob4yq8ojoyotsgmp&st=87k0qh8e&raw=1" alt="Fake Lag"/>
+      <div class="banner-fade"></div>
+      <div class="banner-topbar" style="background:linear-gradient(90deg,transparent,#818cf8,transparent)"></div>
+      <div class="price-badge" style="text-shadow:0 0 30px rgba(129,140,248,.3),0 2px 8px rgba(0,0,0,.8)">$5</div>
+    </div>
+    <div class="body">
+      <div class="product-name">Fake Lag</div>
+      <div class="plans" style="grid-template-columns:repeat(2,1fr)">
+        <button class="plan-btn active" style="border-color:#818cf8;box-shadow:0 0 18px rgba(129,140,248,.3),inset 0 1px 0 rgba(255,255,255,.1)">
+          <span class="plan-label" style="color:#fff">Weekly</span>
+        </button>
+        <button class="plan-btn" style="position:relative">
+          <span class="save-badge">-52%</span>
+          <span class="plan-label" style="color:rgba(255,255,255,.45)">Monthly</span>
+        </button>
+      </div>
+      <div class="features">
+        <div class="feat"><div class="feat-check" style="border:1px solid rgba(129,140,248,.22);color:#818cf8">✓</div><span>Lag switch control</span></div>
+        <div class="feat"><div class="feat-check" style="border:1px solid rgba(129,140,248,.22);color:#818cf8">✓</div><span>Packet manipulation</span></div>
+        <div class="feat"><div class="feat-check" style="border:1px solid rgba(129,140,248,.22);color:#818cf8">✓</div><span>Adjustable delay</span></div>
+        <div class="feat"><div class="feat-check" style="border:1px solid rgba(129,140,248,.22);color:#818cf8">✓</div><span>OB52 Undetected</span></div>
+      </div>
+      <button class="cta" style="border:1px solid rgba(129,140,248,.22);background:linear-gradient(135deg,rgba(30,27,75,.55),rgba(0,0,0,.2));box-shadow:0 0 28px rgba(129,140,248,.3)">
+        <span style="display:flex;align-items:center;gap:8px"><span style="font-size:15px">⚡</span> Buy Weekly — $5</span>
+        <div class="cta-icon" style="background:#818cf8">→</div>
+      </button>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

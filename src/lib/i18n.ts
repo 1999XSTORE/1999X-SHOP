@@ -60,7 +60,7 @@ const en = {
     submitted: '✅ Submitted! Admin will approve shortly.',
     history: 'Transaction History', noTxns: 'No transactions yet',
     approved: '✓ Approved', rejected: '✗ Rejected', pending: '⏳ Pending',
-    buy: 'Buy', insufficientBalance: 'Insufficient Balance',
+    buy: 'Buy', insufficientBalance: 'Insufficient Balance', purchaseKey: 'Purchase Key',
     // PayPal auto
     paypalAuto: 'PayPal — Instant Auto-Verified',
     paypalAutoDesc: 'Balance added automatically after payment — no TXN ID needed',
@@ -125,11 +125,11 @@ const en = {
       license: 'License',
     },
     planLabels: {
-      days3: '3 Days',
-      days7: '7 Days',
-      days30: '30 Days',
-      weekly: 'Weekly',
-      monthly: 'Monthly',
+      days3: '3 Day',
+      days7: '7 Day',
+      days30: '30 Day',
+      weekly: '7 Day',
+      monthly: '30 Day',
     },
     panels: {
       internal: {

@@ -463,9 +463,25 @@ export default function ChatPage() {
           .chat-sidebar-panel{display:none!important;}
           .chat-sidebar-panel.visible{display:flex!important;}
         }
+        /* Force chat page to fill viewport without outer page scroll */
+        .chat-page-root{
+          display:flex;
+          flex-direction:column;
+          height:calc(100vh - 64px);
+          max-height:calc(100vh - 64px);
+          overflow:hidden;
+        }
+        .chat-layout{
+          display:flex;
+          flex:1;
+          min-height:0;
+          gap:8px;
+          overflow:hidden;
+        }
       `}</style>
 
-      <div style={{ display:'flex', flex:1, minHeight:0, gap:8, overflow:'hidden' }}>
+      <div className="chat-page-root">
+      <div className="chat-layout">
 
         {/* ── Main chat area ── */}
         <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0, background:'rgba(255,255,255,.02)', border:'1px solid rgba(255,255,255,.06)', borderRadius:isMobile?16:20, overflow:'hidden' }}>
@@ -629,18 +645,18 @@ export default function ChatPage() {
 
         {/* ── Online Users Sidebar ── */}
         {showSidebar && (
-          <div className={`chat-sidebar-panel${isMobile?'' : ''}`}
+          <div className={`chat-sidebar-panel`}
             style={{ width:isMobile?'min(180px,42vw)':200, display:'flex', flexDirection:'column', background:'rgba(255,255,255,.02)', border:'1px solid rgba(255,255,255,.06)', borderRadius:isMobile?16:20, overflow:'hidden', flexShrink:0 }}>
             <div style={{ padding:'10px 12px', borderBottom:'1px solid rgba(255,255,255,.06)', flexShrink:0 }}>
               <div style={{ fontSize:10,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.1em' }}>
-                Online — {sortedOnline.length}
+                {t('chat.members')} — {sortedOnline.length}
               </div>
             </div>
             <div className="chat-scroll" style={{ flex:1,overflowY:'auto',padding:'8px' }}>
               {(['owner','admin','support','reseller','user'] as const).map(role=>{
                 const group=sortedOnline.filter(u=>(u.userRole||'user')===role);
                 if(!group.length) return null;
-                const roleLabel=role==='user'?'Members':ROLE_META[role].label;
+                const roleLabel=role==='user'?t('chat.members'):ROLE_META[role].label;
                 const roleColor=ROLE_META[role].color;
                 return (
                   <div key={role} style={{ marginBottom:12 }}>
@@ -671,6 +687,7 @@ export default function ChatPage() {
             </div>
           </div>
         )}
+      </div>
       </div>
     </>
   );
