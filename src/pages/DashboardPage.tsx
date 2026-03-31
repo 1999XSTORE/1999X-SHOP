@@ -1,7 +1,7 @@
 import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { logActivity } from '@/lib/activity';
-import { Wallet, Key, Gift, Clock, TrendingUp, Zap, Copy, CheckCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Wallet, Key, Gift, Clock, TrendingUp, Zap, Copy, CheckCircle, Eye, EyeOff, Loader2, Sparkles, ChevronRight, ChevronLeft, Download, Crown, Activity } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -45,35 +45,6 @@ async function upsertBonusRow(userId: string, userEmail: string, bonusPoints: nu
   }, { onConflict: 'user_id' });
 }
 
-function Ticker({ expiresAt }: { expiresAt: string }) {
-  const { t } = useTranslation();
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const diff = new Date(expiresAt).getTime() - now;
-  if (diff <= 0) return <span style={{ color:'var(--red)', fontWeight:700, fontSize:13 }}>{t('common.expired')}</span>;
-
-  const d = Math.floor(diff / 86400000);
-  const h = String(Math.floor((diff % 86400000) / 3600000)).padStart(2, '0');
-  const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
-  const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-
-  return (
-    <div style={{ display:'flex', alignItems:'baseline', gap:3 }} className="mono">
-      {d > 0 && <><span style={{ fontSize:28, fontWeight:800, color:'#fff' }}>{d}</span><span style={{ fontSize:11, color:'var(--muted)', marginRight:4 }}>d</span></>}
-      <span style={{ fontSize:28, fontWeight:800, color:'#fff' }}>{h}</span>
-      <span style={{ fontSize:16, color:'var(--muted)' }}>:</span>
-      <span style={{ fontSize:28, fontWeight:800, color:'#fff' }}>{m}</span>
-      <span style={{ fontSize:16, color:'var(--muted)' }}>:</span>
-      <span style={{ fontSize:28, fontWeight:800, color:'rgba(255,255,255,.4)' }}>{s}</span>
-    </div>
-  );
-}
-
 function MiniCountdown({ ms }: { ms: number }) {
   const [txt, setTxt] = useState('');
 
@@ -81,83 +52,100 @@ function MiniCountdown({ ms }: { ms: number }) {
     const tick = () => {
       const left = ms - Date.now();
       if (left <= 0) {
-        setTxt('');
+        setTxt('00:00:00');
         return;
       }
-      const d = Math.floor(left / 86400000);
-      const h = String(Math.floor((left % 86400000) / 3600000)).padStart(2, '0');
+      const h = String(Math.floor(left / 3600000)).padStart(2, '0');
       const m = String(Math.floor((left % 3600000) / 60000)).padStart(2, '0');
       const s = String(Math.floor((left % 60000) / 1000)).padStart(2, '0');
-      setTxt(d > 0 ? `${d}d ${h}:${m}:${s}` : `${h}:${m}:${s}`);
+      setTxt(`${h}:${m}:${s}`);
     };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [ms]);
 
-  return <span className="mono" style={{ fontWeight:700, color:'rgba(255,255,255,.7)' }}>{txt}</span>;
+  return <span className="font-mono font-medium opacity-80 tracking-wider">{txt}</span>;
 }
 
-function LicCard({ lic, accent }: { lic: any; accent: 'p' | 'b' }) {
+function LicenseCarouselCard({ lic }: { lic: any }) {
   const key = lic.key.replace('_INTERNAL', '');
   const dLeft = Math.max(0, Math.floor((new Date(lic.expiresAt).getTime() - Date.now()) / 86400000));
   const total = Math.max(30, Math.ceil((new Date(lic.expiresAt).getTime() - new Date(lic.lastLogin).getTime()) / 86400000));
   const pct = Math.min(100, (dLeft / total) * 100);
-  const isPurple = accent === 'p';
-  const color = isPurple ? '#8b5cf6' : '#38bdf8';
-  const glow  = isPurple ? 'rgba(139,92,246,.3)' : 'rgba(56,189,248,.3)';
-  const bg    = isPurple ? 'rgba(109,40,217,.08)' : 'rgba(56,189,248,.07)';
-  const bc    = isPurple ? 'rgba(139,92,246,.2)'  : 'rgba(56,189,248,.18)';
-  const barBg = isPurple ? 'linear-gradient(90deg,#6d28d9,#8b5cf6)' : 'linear-gradient(90deg,#0ea5e9,#38bdf8)';
 
   return (
-    <div className="dash-lic-card liquid-glass" style={{
-      boxShadow:`0 8px 32px rgba(0,0,0,.25), 0 0 40px ${glow}`,
-    }}>
-      {/* Top accent bar */}
-      <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg,transparent,${color},transparent)` }} />
-
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <div style={{ width:8, height:8, borderRadius:'50%', background:color, boxShadow:`0 0 10px ${color}`, animation:'blink 2s infinite' }} />
-          <span style={{ fontSize:13, fontWeight:700, color, letterSpacing:'.01em' }}>{lic.productName}</span>
+    <div className="snap-start shrink-0 w-[280px] md:w-[320px] h-[400px] rounded-[2rem] bg-slate-900/60 backdrop-blur-2xl border border-white/5 overflow-hidden relative group flex flex-col shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-transform hover:-translate-y-2">
+      {/* Background artwork placeholder / Glow */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-cyan-500/10 opacity-50 group-hover:opacity-100 transition-opacity duration-500 z-0"/>
+      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 blur-[50px] rounded-full z-0 pointer-events-none"/>
+      
+      <div className="p-6 relative z-10 flex-1 flex flex-col">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse"/>
+            <span className="text-[10px] font-semibold text-white/70 uppercase tracking-widest">Active</span>
+          </div>
+          <Crown size={18} className="text-white/20 group-hover:text-indigo-400 transition-colors" />
         </div>
-        <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:20, background:bg, border:`1px solid ${bc}`, fontSize:10, fontWeight:800, color, letterSpacing:'.06em', textTransform:'uppercase' }}>
-          ● Active
-        </span>
-      </div>
 
-      <Ticker expiresAt={lic.expiresAt} />
-      <p style={{ fontSize:11, color:'rgba(255,255,255,.28)', margin:'5px 0 16px' }}>
-        until {new Date(lic.expiresAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
-      </p>
+        <div className="mt-auto mb-6">
+          <h3 className="text-2xl font-bold text-white tracking-tight leading-none mb-2">{lic.productName}</h3>
+          <p className="text-sm text-slate-400 leading-relaxed max-w-[200px]">Empowering your gameplay with cutting edge telemetry.</p>
+        </div>
 
-      {/* Progress */}
-      <div style={{ height:4, borderRadius:999, background:'rgba(255,255,255,.07)', overflow:'hidden', marginBottom:14 }}>
-        <div style={{ height:'100%', width:`${pct}%`, borderRadius:999, background:barBg, boxShadow:`0 0 8px ${glow}`, transition:'width .8s cubic-bezier(.22,1,.36,1)' }} />
-      </div>
-      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:14 }}>
-        <span style={{ fontSize:10, color:'rgba(255,255,255,.25)', fontWeight:600 }}>{dLeft} days left</span>
-        <span style={{ fontSize:10, color:'rgba(255,255,255,.25)' }}>{Math.round(pct)}% remaining</span>
-      </div>
+        <div className="mb-6 space-y-2">
+          <div className="flex justify-between text-xs font-semibold text-slate-400 tracking-wider">
+            <span>{dLeft} DAYS REMAINING</span>
+            <span className="text-indigo-400">{Math.round(pct)}%</span>
+          </div>
+          <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden flex">
+            <div className="h-full bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
 
-      <code style={{ fontSize:10, fontFamily:'monospace', color:'rgba(255,255,255,.18)', wordBreak:'break-all', letterSpacing:'.05em' }}>{key}</code>
+        <div className="p-3 rounded-xl bg-slate-950/50 border border-white/5 font-mono text-xs text-slate-300 text-center truncate tracking-widest select-all">
+          {key}
+        </div>
+      </div>
     </div>
   );
 }
 
-function FreeKeyCard() {
+export default function DashboardPage() {
   const { t } = useTranslation();
-  const { addLicense, user } = useAppStore();
+  const { balance, licenses, transactions, user, addLicense } = useAppStore();
+  
+  // Free Key State
   const [row, setRow] = useState<FreeRow | null>(null);
   const [dbLoading, setDbLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [canClaim, setCanClaim] = useState(false);
-  const [cooldownMs, setCooldownMs] = useState(0);
-  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
-  const [copied, setCopied] = useState<Record<string, boolean>>({});
+  const [fkCooldownMs, setFkCooldownMs] = useState(0);
   const loaded = useRef(false);
 
+  // Bonus State
+  const [bonusPoints, setBonusPoints] = useState(0);
+  const [lastBonusClaim, setLastBonusClaim] = useState<string | null>(null);
+  const [bonusCooldown, setBonusCooldown] = useState('');
+  const [canClaimBonus, setCanClaimBonus] = useState(false);
+  const [claimingBonus, setClaimingBonus] = useState(false);
+  const [bonusLoaded, setBonusLoaded] = useState(false);
+
+  // Load Bonus
+  useEffect(() => {
+    if (!user?.id) return;
+    setBonusLoaded(false);
+    fetchBonusRow(user.id).then((r) => {
+      if (r) {
+        setBonusPoints(r.bonus_points ?? 0);
+        setLastBonusClaim(r.last_claim_time ?? null);
+      }
+      setBonusLoaded(true);
+    });
+  }, [user?.id]);
+
+  // Load Free Key
   useEffect(() => {
     if (!user || loaded.current) return;
     loaded.current = true;
@@ -171,233 +159,30 @@ function FreeKeyCard() {
       });
   }, [user?.id]);
 
+  // Free Key Ticker
   useEffect(() => {
     const tick = () => {
-      if (!row) {
-        setCanClaim(true);
-        setCooldownMs(0);
-        return;
-      }
+      if (!row) { setCanClaim(true); setFkCooldownMs(0); return; }
       const next = new Date(row.claimed_at).getTime() + FREE_KEY_COOLDOWN;
-      const left = next - Date.now();
-      if (left <= 0) {
-        setCanClaim(true);
-        setCooldownMs(0);
-      } else {
-        setCanClaim(false);
-        setCooldownMs(next);
-      }
+      if (next - Date.now() <= 0) { setCanClaim(true); setFkCooldownMs(0); }
+      else { setCanClaim(false); setFkCooldownMs(next); }
     };
-
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
+    tick(); const id = setInterval(tick, 1000); return () => clearInterval(id);
   }, [row?.claimed_at]);
 
-  const handleClaim = async () => {
-    if (!canClaim || generating || !user) return;
-    setGenerating(true);
-    toast.loading('Generating your 1-day trial key...', { id:'free-trial' });
-
-    try {
-      const [lagRes, intRes] = await Promise.all([
-        fetch(`${SUPA_URL}/functions/v1/generate-key`, {
-          method:'POST',
-          headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${SUPA_ANON}`, apikey:SUPA_ANON },
-          body:JSON.stringify({ panel_type:'lag', days:1, hours:0, mask:'1999X-FREE-****' }),
-        }).then(r => r.json()),
-        fetch(`${SUPA_URL}/functions/v1/generate-key`, {
-          method:'POST',
-          headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${SUPA_ANON}`, apikey:SUPA_ANON },
-          body:JSON.stringify({ panel_type:'internal', days:1, hours:0, mask:'1999X-FREE-****' }),
-        }).then(r => r.json()),
-      ]);
-
-      const lagKey = lagRes?.success ? lagRes.key : null;
-      const intKey = intRes?.success ? intRes.key : null;
-
-      if (!lagKey && !intKey) {
-        toast.dismiss('free-trial');
-        toast.error(t('license.activationFailed'));
-        setGenerating(false);
-        return;
-      }
-
-      const now = new Date().toISOString();
-      const expiresAt = new Date(Date.now() + FREE_KEY_TTL).toISOString();
-      const { error } = await supabase.from('free_trial_keys').upsert({
-        user_id:user.id,
-        user_email:user.email,
-        lag_key:lagKey,
-        internal_key:intKey,
-        claimed_at:now,
-        expires_at:expiresAt,
-      }, { onConflict:'user_id' });
-
-      if (error) {
-        toast.dismiss('free-trial');
-        toast.error(error.message);
-        setGenerating(false);
-        return;
-      }
-
-      if (lagKey) {
-        addLicense({ id:`free_lag_${Date.now()}`, productId:'keyauth-lag', productName:'Fake Lag (Free 1 Day Trial)', key:lagKey, hwid:'', lastLogin:now, expiresAt, status:'active', ip:'', device:'', hwidResetsUsed:0, hwidResetMonth:new Date().getMonth() });
-      }
-      if (intKey) {
-        addLicense({ id:`free_int_${Date.now()}`, productId:'keyauth-internal', productName:'Internal (Free 1 Day Trial)', key:`${intKey}_INTERNAL`, hwid:'', lastLogin:now, expiresAt, status:'active', ip:'', device:'', hwidResetsUsed:0, hwidResetMonth:new Date().getMonth() });
-      }
-
-      setRow({ lag_key:lagKey, internal_key:intKey, claimed_at:now, expires_at:expiresAt });
-      logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'free_key_claim', product:'Free 1-Day Trial Key', status:'success', meta:{ lag:!!lagKey, internal:!!intKey, expires:expiresAt } });
-      toast.dismiss('free-trial');
-      toast.success(t('dashboard.freeKeyClaimed'));
-    } catch (error) {
-      toast.dismiss('free-trial');
-      toast.error(String(error));
-    }
-
-    setGenerating(false);
-  };
-
-  const copyKey = (key: string, id: string) => {
-    navigator.clipboard.writeText(key);
-    setCopied((prev) => ({ ...prev, [id]:true }));
-    setTimeout(() => setCopied((prev) => ({ ...prev, [id]:false })), 2000);
-    toast.success(t('common.copied'));
-  };
-
-  if (dbLoading) {
-    return (
-      <div className="liquid-glass" style={{ padding:'20px 24px', borderRadius:20, display:'flex', alignItems:'center', gap:10, color:'rgba(255,255,255,.4)' }}>
-        <Loader2 size={14} className="animate-spin" />
-        <span style={{ fontSize:13 }}>{t('common.loading')}</span>
-      </div>
-    );
-  }
-
-  const isActive = !!row && new Date(row.expires_at).getTime() > Date.now();
-  const keyList = [
-    ...(row?.internal_key ? [{ id:'int', label:'Internal Trial Key', key:row.internal_key.replace('_INTERNAL', '') }] : []),
-    ...(row?.lag_key ? [{ id:'lag', label:'Fake Lag Trial Key', key:row.lag_key }] : []),
-  ];
-
-  return (
-    <div className="liquid-glass" style={{ borderRadius:22, padding:'26px 26px', position:'relative',
-      boxShadow:'0 32px 64px rgba(0,0,0,.3), 0 0 60px rgba(99,102,241,.08)' }}>
-      {/* Top line */}
-      <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:'linear-gradient(90deg,transparent,#8b5cf6 35%,#38bdf8 70%,transparent)', pointerEvents:'none' }} />
-      {/* Glow orb */}
-      <div style={{ position:'absolute', top:-60, right:-40, width:180, height:180, borderRadius:'50%', background:'radial-gradient(circle,rgba(99,102,241,.2) 0%,transparent 70%)', pointerEvents:'none' }} />
-
-      <div style={{ position:'relative', display:'flex', alignItems:'flex-start', gap:16, marginBottom: isActive && keyList.length ? 20 : 0 }}>
-        <div style={{ width:52, height:52, borderRadius:16, background:'rgba(99,102,241,.14)', border:'1px solid rgba(167,139,250,.3)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 28px rgba(99,102,241,.3)', flexShrink:0 }}>
-          <Zap size={24} color="#c4b5fd" />
-        </div>
-
-        <div style={{ flex:1 }}>
-          <div style={{ fontSize:17, fontWeight:800, color:'#fff', marginBottom:4, letterSpacing:'-.01em' }}>{t('dashboard.freeKey')}</div>
-          <div style={{ fontSize:12, color:'rgba(255,255,255,.45)', marginBottom:16, lineHeight:1.5 }}>{t('dashboard.freeKeyDesc')}</div>
-
-          {/* Active status */}
-          {isActive && row && (
-            <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 12px', borderRadius:20, background:'rgba(16,232,152,.08)', border:'1px solid rgba(16,232,152,.2)', marginBottom:14, flexWrap:'wrap' }}>
-              <div style={{ width:5, height:5, borderRadius:'50%', background:'var(--green)', boxShadow:'0 0 8px var(--green)' }} />
-              <span style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>{t('dashboard.freeKeyActive')}</span>
-              <span style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>{t('dashboard.freeKeyExpiresIn')}</span>
-              <MiniCountdown ms={new Date(row.expires_at).getTime()} />
-            </div>
-          )}
-
-          {row && !isActive && (
-            <div style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:20, background:'rgba(248,113,113,.06)', border:'1px solid rgba(248,113,113,.18)', marginBottom:14, fontSize:11, color:'var(--red)', fontWeight:600 }}>
-              ● {t('dashboard.freeKeyExpired')}
-            </div>
-          )}
-
-          {canClaim ? (
-            <button onClick={handleClaim} disabled={generating} className="dash-free-btn">
-              {generating
-                ? <><Loader2 size={13} className="animate-spin" /> {t('dashboard.freeKeyGenerating')}</>
-                : <><Zap size={14} /> {t('dashboard.freeKeyBtn')}</>}
-            </button>
-          ) : (
-            <div style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:12, color:'rgba(255,255,255,.3)', fontWeight:600, padding:'7px 12px', borderRadius:20, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.07)' }}>
-              <Clock size={12} /> {t('dashboard.freeKeyCooldown')} <MiniCountdown ms={cooldownMs} />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Key display */}
-      {isActive && keyList.length > 0 && (
-        <div style={{ display:'flex', flexDirection:'column', gap:8, paddingTop:4, position:'relative' }}>
-          {keyList.map((keyItem) => (
-            <div key={keyItem.id} className="dash-key-row">
-              <div style={{ fontSize:10, color:'rgba(255,255,255,.3)', textTransform:'uppercase', letterSpacing:'.1em', marginBottom:7, fontWeight:700 }}>{keyItem.label}</div>
-              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <code style={{ flex:1, fontSize:12, fontFamily:'monospace', color:'#fff', letterSpacing:'1px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', filter:revealed[keyItem.id] ? 'none' : 'blur(5px)', transition:'filter .3s' }}>
-                  {keyItem.key}
-                </code>
-                <button onClick={() => setRevealed(p => ({ ...p, [keyItem.id]:!p[keyItem.id] }))} style={{ padding:'5px 8px', borderRadius:8, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', cursor:'pointer', color:'rgba(255,255,255,.5)', display:'flex', transition:'all .15s' }}>
-                  {revealed[keyItem.id] ? <EyeOff size={12} /> : <Eye size={12} />}
-                </button>
-                <button onClick={() => copyKey(keyItem.key, keyItem.id)} style={{ padding:'5px 8px', borderRadius:8, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', cursor:'pointer', color:copied[keyItem.id] ? 'var(--green)' : 'rgba(255,255,255,.5)', display:'flex', transition:'all .15s' }}>
-                  {copied[keyItem.id] ? <CheckCircle size={12} /> : <Copy size={12} />}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function DashboardPage() {
-  const { t } = useTranslation();
-  const { balance, licenses, transactions, user } = useAppStore();
-  const [bonusPoints, setBonusPoints] = useState(0);
-  const [lastBonusClaim, setLastBonusClaim] = useState<string | null>(null);
-  const [bonusCooldown, setBonusCooldown] = useState('');
-  const [canClaimBonus, setCanClaimBonus] = useState(false);
-  const [claimingBonus, setClaimingBonus] = useState(false);
-  const [bonusLoaded, setBonusLoaded] = useState(false);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    setBonusLoaded(false);
-    fetchBonusRow(user.id).then((row) => {
-      if (row) {
-        setBonusPoints(row.bonus_points ?? 0);
-        setLastBonusClaim(row.last_claim_time ?? null);
-      }
-      setBonusLoaded(true);
-    });
-  }, [user?.id]);
-
+  // Bonus Ticker
   useEffect(() => {
     const tick = () => {
-      if (!lastBonusClaim) {
-        setCanClaimBonus(true);
-        setBonusCooldown('');
-        return;
-      }
+      if (!lastBonusClaim) { setCanClaimBonus(true); setBonusCooldown(''); return; }
       const diff = BONUS_COOLDOWN - (Date.now() - new Date(lastBonusClaim).getTime());
-      if (diff <= 0) {
-        setCanClaimBonus(true);
-        setBonusCooldown('');
-        return;
-      }
+      if (diff <= 0) { setCanClaimBonus(true); setBonusCooldown(''); return; }
       setCanClaimBonus(false);
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
       setBonusCooldown(`${h}h ${m}m ${s}s`);
     };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
+    tick(); const id = setInterval(tick, 1000); return () => clearInterval(id);
   }, [lastBonusClaim]);
 
   const handleClaimBonus = async () => {
@@ -405,244 +190,258 @@ export default function DashboardPage() {
     setClaimingBonus(true);
     const latest = await fetchBonusRow(user.id);
     if (latest?.last_claim_time) {
-      const diff = BONUS_COOLDOWN - (Date.now() - new Date(latest.last_claim_time).getTime());
-      if (diff > 0) {
-        setLastBonusClaim(latest.last_claim_time);
-        setCanClaimBonus(false);
-        setClaimingBonus(false);
-        toast.error('Already claimed recently. Please wait.');
-        return;
+      if (BONUS_COOLDOWN - (Date.now() - new Date(latest.last_claim_time).getTime()) > 0) {
+        setLastBonusClaim(latest.last_claim_time); setCanClaimBonus(false); setClaimingBonus(false); toast.error('Already claimed recently.'); return;
       }
     }
     const nextPoints = (latest?.bonus_points ?? bonusPoints) + 10;
     const claimTime = new Date().toISOString();
     const { error } = await upsertBonusRow(user.id, user.email, nextPoints, claimTime);
-    if (error) {
-    toast.error(t('common.error'));
-      setClaimingBonus(false);
-      return;
-    }
-    setBonusPoints(nextPoints);
-    setLastBonusClaim(claimTime);
-    setClaimingBonus(false);
+    if (error) { toast.error(t('common.error')); setClaimingBonus(false); return; }
+    
+    setBonusPoints(nextPoints); setLastBonusClaim(claimTime); setClaimingBonus(false);
     toast.success(t('bonus.claimed'));
     logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'bonus_claim', status:'success', meta:{ points:10, total:nextPoints } });
   };
 
+  const handleClaimFreeKey = async () => {
+    if (!canClaim || generating || !user) return;
+    setGenerating(true);
+    toast.loading('Initializing environment...', { id:'free-trial' });
+
+    try {
+      const [lagRes, intRes] = await Promise.all([
+        fetch(`${SUPA_URL}/functions/v1/generate-key`, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${SUPA_ANON}`, apikey:SUPA_ANON }, body:JSON.stringify({ panel_type:'lag', days:1, hours:0, mask:'1999X-FREE-****' }) }).then(r => r.json()),
+        fetch(`${SUPA_URL}/functions/v1/generate-key`, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${SUPA_ANON}`, apikey:SUPA_ANON }, body:JSON.stringify({ panel_type:'internal', days:1, hours:0, mask:'1999X-FREE-****' }) }).then(r => r.json()),
+      ]);
+
+      const lagKey = lagRes?.success ? lagRes.key : null;
+      const intKey = intRes?.success ? intRes.key : null;
+
+      if (!lagKey && !intKey) { toast.dismiss('free-trial'); toast.error(t('license.activationFailed')); setGenerating(false); return; }
+
+      const now = new Date().toISOString();
+      const expiresAt = new Date(Date.now() + FREE_KEY_TTL).toISOString();
+      const { error } = await supabase.from('free_trial_keys').upsert({ user_id:user.id, user_email:user.email, lag_key:lagKey, internal_key:intKey, claimed_at:now, expires_at:expiresAt }, { onConflict:'user_id' });
+
+      if (error) { toast.dismiss('free-trial'); toast.error(error.message); setGenerating(false); return; }
+
+      if (lagKey) addLicense({ id:`free_lag_${Date.now()}`, productId:'keyauth-lag', productName:'Fake Lag (Free 1 Day Trial)', key:lagKey, hwid:'', lastLogin:now, expiresAt, status:'active', ip:'', device:'', hwidResetsUsed:0, hwidResetMonth:new Date().getMonth() });
+      if (intKey) addLicense({ id:`free_int_${Date.now()}`, productId:'keyauth-internal', productName:'Internal (Free 1 Day Trial)', key:`${intKey}_INTERNAL`, hwid:'', lastLogin:now, expiresAt, status:'active', ip:'', device:'', hwidResetsUsed:0, hwidResetMonth:new Date().getMonth() });
+
+      setRow({ lag_key:lagKey, internal_key:intKey, claimed_at:now, expires_at:expiresAt });
+      toast.dismiss('free-trial'); toast.success('Trial Environment Provisioned');
+    } catch (error) { toast.dismiss('free-trial'); toast.error(String(error)); }
+    setGenerating(false);
+  };
+
+  const copyKey = (val: string) => {
+    navigator.clipboard.writeText(val);
+    toast.success('Copied to clipboard');
+  };
+
   const active = licenses.filter((license) => new Date(license.expiresAt).getTime() > Date.now());
-  const lag = active.filter((license) => license.productId === 'keyauth-lag');
-  const internal = active.filter((license) => license.productId === 'keyauth-internal' || license.key.endsWith('_INTERNAL'));
   const approved = (transactions as any[]).filter((tx: any) => tx.status === 'approved').length;
 
   const stats = [
-    { label:t('dashboard.balance'), val:`$${balance.toFixed(2)}`, icon:Wallet, c:'var(--purple)', bg:'rgba(109,40,217,.08)', bc:'rgba(139,92,246,.16)' },
-    { label:t('dashboard.activeKeys'), val:active.length, icon:Key, c:'var(--green)', bg:'rgba(16,232,152,.06)', bc:'rgba(16,232,152,.14)' },
-    { label:t('dashboard.approved'), val:approved, icon:TrendingUp, c:'var(--blue)', bg:'rgba(56,189,248,.06)', bc:'rgba(56,189,248,.14)' },
-    { label:t('dashboard.bonusPoints'), val:bonusPoints, icon:Gift, c:'var(--amber)', bg:'rgba(251,191,36,.06)', bc:'rgba(251,191,36,.14)' },
+    { label: 'Balance', val: `$${balance.toFixed(2)}`, icon: Wallet, color: 'text-indigo-400', shadow: 'shadow-indigo-500/20', hover: 'group-hover:shadow-[0_0_40px_rgba(99,102,241,0.3)]' },
+    { label: 'Active Keys', val: active.length, icon: Key, color: 'text-emerald-400', shadow: 'shadow-emerald-500/20', hover: 'group-hover:shadow-[0_0_40px_rgba(16,232,152,0.3)]' },
+    { label: 'Purchases', val: approved, icon: TrendingUp, color: 'text-cyan-400', shadow: 'shadow-cyan-500/20', hover: 'group-hover:shadow-[0_0_40px_rgba(34,211,238,0.3)]' },
+    { label: 'Rewards', val: bonusPoints, icon: Gift, color: 'text-amber-400', shadow: 'shadow-amber-500/20', hover: 'group-hover:shadow-[0_0_40px_rgba(251,191,36,0.3)]' },
   ];
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isFreeKeyActive = !!row && new Date(row.expires_at).getTime() > Date.now();
+
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:20, position:'relative', zIndex:1 }}>
-      <style>{`
-        @keyframes dash-in  { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
-        @keyframes dash-glow{ 0%,100%{opacity:.7} 50%{opacity:1} }
-        @keyframes dash-bar  { from{width:0} to{width:var(--w)} }
-        .dash-card {
-          border-radius: 22px;
-          animation: dash-in .4s cubic-bezier(.22,1,.36,1) both;
-        }
-        .dash-stat {
-          border-radius: 18px; padding: 22px 20px;
-          transition: all .22s cubic-bezier(.22,1,.36,1);
-          animation: dash-in .4s cubic-bezier(.22,1,.36,1) both;
-        }
-        .dash-stat:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 16px 40px rgba(0,0,0,.3);
-        }
-        .dash-prog-track {
-          height: 4px; border-radius: 999px;
-          background: rgba(255,255,255,.07); overflow: hidden; margin-top:14px;
-        }
-        .dash-prog-fill {
-          height: 100%; border-radius: 999px;
-          animation: dash-bar .8s cubic-bezier(.22,1,.36,1) both;
-        }
-        .dash-lic-card {
-          border-radius: 20px; overflow: hidden; padding: 24px;
-          transition: all .25s cubic-bezier(.22,1,.36,1);
-          animation: dash-in .4s cubic-bezier(.22,1,.36,1) both;
-          position: relative;
-        }
-        .dash-lic-card:hover { transform: translateY(-3px); }
-        .dash-key-row {
-          border-radius: 12px; padding: 12px 14px;
-          background: rgba(255,255,255,.06);
-          border: 1px solid rgba(255,255,255,.1);
-          backdrop-filter: blur(12px);
-          margin-bottom: 8px;
-        }
-        .dash-bonus-bar { height: 3px; border-radius: 999px; background: rgba(255,255,255,.06); overflow:hidden; margin-top:16px; }
-        .dash-free-btn {
-          display: inline-flex; align-items: center; gap: 8px;
-          padding: 11px 20px; border-radius: 12px; border: none; cursor: pointer;
-          font-family: inherit; font-size: 13px; font-weight: 700;
-          background: linear-gradient(135deg,#4f46e5,#7c3aed);
-          color: #fff; box-shadow: 0 0 24px rgba(99,102,241,.45);
-          transition: all .22s cubic-bezier(.22,1,.36,1);
-        }
-        .dash-free-btn:hover { transform: translateY(-2px); box-shadow: 0 0 36px rgba(99,102,241,.65); }
-        .dash-free-btn:disabled { opacity:.5; cursor:not-allowed; transform:none !important; }
-      `}</style>
-
-      {/* FLOATING PARTICLES */}
-      <div className="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
-        {Array.from({ length: 40 }).map((_, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full bg-white blur-[1px]"
-            style={{
-              width: Math.random() * 4 + 1 + 'px',
-              height: Math.random() * 4 + 1 + 'px',
-              top: Math.random() * 100 + '%',
-              left: Math.random() * 100 + '%',
-              opacity: Math.random() * 0.4 + 0.1,
-              animation: `float-particle ${Math.random() * 30 + 15}s linear infinite`,
-              animationDelay: `-${Math.random() * 30}s`
-            }}
-          />
-        ))}
-        <style>{`
-          @keyframes float-particle {
-            0% { transform: translateY(0vh) rotate(0deg); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
-          }
-        `}</style>
+    <div className="relative min-h-screen text-slate-200 overflow-x-hidden pt-8 pb-32">
+      
+      {/* GLOBAL BACKGROUND - Extreme Dark Grid & Big Glows */}
+      <div className="fixed inset-0 z-[-1] pointer-events-none bg-[#03050a] flex items-center justify-center">
+        {/* Technical Grid Overlay */}
+        <div className="absolute inset-0 z-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:60px_60px]"></div>
+        
+        {/* Massive Space Glows (Image 1 Style) */}
+        <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[70vw] h-[70vw] rounded-full bg-blue-900/10 blur-[150px]"></div>
+        <div className="absolute bottom-[-30%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-900/10 blur-[130px]"></div>
+        <div className="absolute top-[20%] right-[-20%] w-[60vw] h-[60vw] rounded-full bg-cyan-900/5 blur-[120px]"></div>
+        
+        {/* Deep vignette */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#03050a]/80 via-transparent to-[#03050a]/80"></div>
       </div>
 
-      {/* ══ HERO WELCOME ══ */}
-      <div className="dash-card liquid-glass" style={{ padding:'28px 32px', position:'relative', overflow:'hidden',
-        boxShadow:'0 20px 40px rgba(0,0,0,.25)' }}>
-        <div style={{ position:'absolute', top:-60, right:-60, width:220, height:220, borderRadius:'50%', background:'radial-gradient(circle,rgba(109,40,217,.2) 0%,transparent 70%)', pointerEvents:'none' }} />
-        <div style={{ position:'absolute', bottom:-40, left:-20, width:160, height:160, borderRadius:'50%', background:'radial-gradient(circle,rgba(16,232,152,.1) 0%,transparent 70%)', pointerEvents:'none' }} />
-
-        <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-            {/* Avatar */}
-            <div style={{ position:'relative', flexShrink:0 }}>
-              {user?.avatar
-                ? <img src={user.avatar} style={{ width:54, height:54, borderRadius:16, objectFit:'cover', border:'2px solid rgba(139,92,246,.35)', boxShadow:'0 0 24px rgba(109,40,217,.3)' }} />
-                : <div style={{ width:54, height:54, borderRadius:16, background:'linear-gradient(135deg,#6d28d9,#4c1d95)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:900, color:'#fff', boxShadow:'0 0 24px rgba(109,40,217,.4)' }}>{user?.name?.charAt(0) || 'U'}</div>}
-              <div style={{ position:'absolute', bottom:-3, right:-3, width:14, height:14, borderRadius:'50%', background:'#10e898', border:'2px solid rgba(8,8,18,.95)', boxShadow:'0 0 10px rgba(16,232,152,.7)' }} />
+      {/* 1. SaaS HERO SECTION */}
+      <div className="relative z-10 flex flex-col items-center justify-center text-center px-6 mt-12 mb-20 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] font-semibold tracking-widest text-white/50 mb-8 backdrop-blur-md uppercase shadow-xl transition-transform hover:scale-105">
+          <Sparkles size={14} className="text-cyan-400" />
+          <span>Performance Benchmarks Active</span>
+        </div>
+        
+        <h1 className="text-5xl md:text-7xl lg:text-[5.5rem] font-bold text-white tracking-tighter leading-[1.05] max-w-5xl">
+          The #1 AI agent <br className="hidden md:block"/>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-200 via-cyan-200 to-indigo-300 font-light italic opacity-90">for undetectable logic</span>
+        </h1>
+        
+        <p className="mt-8 text-lg text-slate-400 max-w-2xl font-light leading-relaxed">
+          Welcome back, <span className="text-white font-medium">{user?.name}</span>. Streamline your presence with our intuitive, scalable 1999X platform.
+        </p>
+        
+        <div className="mt-12">
+          {canClaim ? (
+            <button 
+              onClick={handleClaimFreeKey} disabled={generating}
+              className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-full bg-white text-black font-semibold tracking-wide hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(255,255,255,0.3)] disabled:opacity-50"
+            >
+              {generating ? <Loader2 size={18} className="animate-spin"/> : <Zap size={18}/>}
+              <span>{generating ? 'Initializing...' : 'Start free trial'}</span>
+            </button>
+          ) : (
+            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 text-sm font-medium text-white/60">
+              <Clock size={16}/> Trial Cooldown: <MiniCountdown ms={fkCooldownMs} />
             </div>
-
-            <div>
-              <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.4)', marginBottom:5 }}>{t('dashboard.welcomeBack')}</div>
-              <div style={{ fontSize:24, fontWeight:900, color:'#fff', letterSpacing:'-.02em', lineHeight:1 }}>{user?.name?.split(' ')[0] || 'User'} 👋</div>
-            </div>
-          </div>
-
-          {/* Status badges */}
-          <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:20, background:'rgba(16,232,152,.08)', border:'1px solid rgba(16,232,152,.2)' }}>
-              <div className="dot dot-green" style={{ width:5, height:5 }} />
-              <span style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>{t('dashboard.undetected')}</span>
-            </div>
-            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:20, background:'rgba(139,92,246,.08)', border:'1px solid rgba(139,92,246,.2)' }}>
-              <span style={{ fontSize:11, fontWeight:700, color:'#c4b5fd' }}>OB52 Ready</span>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* ══ STATS GRID ══ */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12 }}>
-        {stats.map((stat, i) => (
-          <div key={stat.label} className="dash-stat liquid-glass" style={{ animationDelay:`${i * 60}ms` }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-              <div style={{ width:38, height:38, borderRadius:11, background:stat.bg, border:`1px solid ${stat.bc}`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 0 16px ${stat.bc}` }}>
-                <stat.icon size={17} style={{ color:stat.c }} />
+      {/* 2. CIRCULAR STATS HUB (Image 1 Bottom Row) */}
+      <div className="relative z-10 w-full max-w-5xl mx-auto mb-32 px-6">
+        {/* Subtle bridge line */}
+        <div className="hidden md:block absolute top-10 left-12 right-12 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent -z-10"></div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4 relative">
+          {stats.map((stat, i) => (
+            <div key={i} className="group flex flex-col items-center gap-5 cursor-pointer transition-transform hover:-translate-y-2 animate-in fade-in zoom-in-95 duration-700" style={{ animationDelay: `${i * 100}ms` }}>
+              <div className={`w-20 h-20 rounded-full bg-slate-900/40 backdrop-blur-2xl border border-white/5 flex items-center justify-center transition-all duration-300 shadow-2xl ${stat.hover}`}>
+                <stat.icon size={26} className={stat.color} />
               </div>
-              <div style={{ width:6, height:6, borderRadius:'50%', background:stat.c, boxShadow:`0 0 8px ${stat.c}`, animation:'dash-glow 2s ease-in-out infinite' }} />
+              <div className="text-center">
+                <div className="text-2xl font-bold text-white mb-0.5">{stat.val}</div>
+                <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.2em]">{stat.label}</div>
+              </div>
             </div>
-            <div style={{ fontSize:32, fontWeight:900, color:'#fff', letterSpacing:'-.04em', lineHeight:1, marginBottom:5 }}>{stat.val}</div>
-            <div style={{ fontSize:11, fontWeight:600, color:'rgba(255,255,255,.45)', textTransform:'uppercase', letterSpacing:'.1em' }}>{stat.label}</div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      {/* ══ ACTIVE SUBSCRIPTIONS ══ */}
-      {active.length > 0 ? (
-        <div style={{ animationDelay:'80ms' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
-            <div style={{ width:3, height:16, borderRadius:999, background:'linear-gradient(180deg,#8b5cf6,#6d28d9)' }} />
-            <span style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.12em', color:'rgba(255,255,255,.5)' }}>{t('dashboard.activeSubscriptions')}</span>
+      {/* 3. ACTIVE SUBSCRIPTIONS CAROUSEL (Image 2 style) */}
+      {active.length > 0 && (
+        <div className="relative z-10 w-full max-w-7xl mx-auto mb-24 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
+          <div className="flex items-end justify-between px-6 mb-8">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight text-white mb-1">Active Environments</h2>
+              <p className="text-sm text-slate-400">Manage and monitor your deployed instances.</p>
+            </div>
+            <div className="hidden md:flex gap-2">
+              <button onClick={() => scrollRef.current?.scrollBy({ left: -320, behavior: 'smooth' })} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors backdrop-blur-sm"><ChevronLeft size={18}/></button>
+              <button onClick={() => scrollRef.current?.scrollBy({ left: 320, behavior: 'smooth' })} className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors backdrop-blur-sm"><ChevronRight size={18}/></button>
+            </div>
           </div>
-          <div style={{ display:'grid', gap:14, gridTemplateColumns: internal.length > 0 && lag.length > 0 ? 'repeat(auto-fit,minmax(280px,1fr))' : '1fr' }}>
-            {internal.map((license) => <LicCard key={license.id} lic={license} accent="b" />)}
-            {lag.map((license) => <LicCard key={license.id} lic={license} accent="p" />)}
+          
+          <div ref={scrollRef} className="flex overflow-x-auto gap-6 px-6 snap-x pb-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            {active.map(lic => <LicenseCarouselCard key={lic.id} lic={lic} />)}
           </div>
-        </div>
-      ) : (
-        <div className="dash-card liquid-glass" style={{ padding:'52px 24px', textAlign:'center' }}>
-          <div style={{ width:56, height:56, borderRadius:16, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
-            <Key size={24} style={{ color:'rgba(255,255,255,.2)' }} />
-          </div>
-          <p style={{ fontSize:15, fontWeight:700, color:'rgba(255,255,255,.6)', marginBottom:6 }}>{t('dashboard.noLicense')}</p>
-          <p style={{ fontSize:13, color:'rgba(255,255,255,.3)' }}>{t('dashboard.noLicenseDesc')}</p>
         </div>
       )}
 
-      {/* ══ FREE KEY CARD ══ */}
-      {user && <FreeKeyCard />}
-
-      {/* ══ DAILY BONUS ══ */}
-      <div className="dash-card liquid-glass-strong" style={{ padding:'22px 24px' }}>
-        <div style={{ position:'absolute', top:0, left:0, right:0, height:1, borderRadius:'22px 22px 0 0', background:'linear-gradient(90deg,transparent,rgba(251,191,36,.4),transparent)', pointerEvents:'none' }} />
-
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:14, flex:1 }}>
-            <div style={{ width:46, height:46, borderRadius:14, background:'rgba(251,191,36,.1)', border:'1px solid rgba(251,191,36,.22)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 20px rgba(251,191,36,.15)', flexShrink:0 }}>
-              <Gift size={22} color="#fbbf24" />
+      {/* 4. BOTTOM GLASS PANELS (Image 3 Tech / Clean Cards) */}
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-8 mb-20">
+        
+        {/* FREE KEY ACTIVE / HISTORY (Left Pane) */}
+        <div className="rounded-[2rem] bg-slate-900/30 backdrop-blur-2xl border border-emerald-500/10 p-8 flex flex-col hover:border-emerald-500/30 transition-colors shadow-2xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+              <Activity size={24} className="text-emerald-400" />
             </div>
             <div>
-              <div style={{ fontSize:15, fontWeight:800, color:'#fff', marginBottom:3 }}>{t('dashboard.dailyBonus')}</div>
-              <div style={{ fontSize:12, color:'rgba(255,255,255,.5)' }}>{t('dashboard.dailyBonusDesc')}</div>
+              <h3 className="text-xl font-bold text-white tracking-tight">Experiment Bot AI</h3>
+              <p className="text-sm text-slate-400">Risk-free trial environments.</p>
             </div>
           </div>
 
-          <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:8, flexShrink:0 }}>
-            <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
-              <span style={{ fontSize:28, fontWeight:900, color:'#fbbf24', letterSpacing:'-.03em' }}>{bonusPoints}</span>
-              <span style={{ fontSize:11, color:'rgba(255,255,255,.4)', fontWeight:500 }}>{t('bonus.title')}</span>
+          {!dbLoading && isFreeKeyActive ? (
+             <div className="flex-1 flex flex-col gap-4">
+               <div className="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-semibold w-fit">
+                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"/> Online
+                 <div className="opacity-50 ml-2">Expires in <MiniCountdown ms={new Date(row!.expires_at).getTime()} /></div>
+               </div>
+               
+               <div className="grid gap-3 mt-auto">
+                 {row!.lag_key && (
+                   <div className="p-4 rounded-xl bg-slate-950/50 border border-white/5 flex items-center justify-between group">
+                     <div className="font-mono text-xs text-slate-300">LAG TIER</div>
+                     <button onClick={() => copyKey(row!.lag_key!)} className="p-2 rounded-md bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors"><Copy size={14}/></button>
+                   </div>
+                 )}
+                 {row!.internal_key && (
+                   <div className="p-4 rounded-xl bg-slate-950/50 border border-white/5 flex items-center justify-between group">
+                     <div className="font-mono text-xs text-slate-300">INTERNAL TIER</div>
+                     <button onClick={() => copyKey(row!.internal_key!)} className="p-2 rounded-md bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors"><Copy size={14}/></button>
+                   </div>
+                 )}
+               </div>
+             </div>
+          ) : (
+             <div className="flex-1 flex flex-col justify-center items-center text-center py-10 opacity-60">
+                <BoxIcon />
+                <p className="text-sm mt-4 font-medium uppercase tracking-widest text-slate-500">No active process</p>
+             </div>
+          )}
+        </div>
+
+        {/* DAILY BONUS REWARD (Right Pane) */}
+        <div className="rounded-[2rem] bg-slate-900/30 backdrop-blur-2xl border border-amber-500/10 p-8 flex flex-col hover:border-amber-500/30 transition-colors shadow-2xl overflow-hidden relative group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 blur-[80px] rounded-full pointer-events-none group-hover:bg-amber-500/10 transition-colors"/>
+          
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+              <Gift size={24} className="text-amber-400" />
             </div>
-            {!bonusLoaded
-              ? <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'rgba(255,255,255,.3)' }}>
-                  <Loader2 size={11} className="animate-spin" /> Loading…
-                </div>
-              : canClaimBonus
-              ? <button className="btn btn-sm" style={{ background:'linear-gradient(135deg,#fbbf24,#f59e0b)', color:'#3a1a00', fontWeight:800, border:'none', boxShadow:'0 0 20px rgba(245,158,11,.4)', padding:'9px 18px', borderRadius:11, fontSize:13 }}
-                  onClick={handleClaimBonus} disabled={claimingBonus}>
-                  {claimingBonus ? <><Loader2 size={12} className="animate-spin" /> Claiming…</> : t('dashboard.claimNow')}
-                </button>
-              : <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'rgba(255,255,255,.4)', fontWeight:600 }}>
-                  <Clock size={11} style={{ color:'rgba(255,255,255,.25)' }} /> {bonusCooldown}
-                </div>
-            }
+            <div>
+              <h3 className="text-xl font-bold text-white tracking-tight">Growth Archive</h3>
+              <p className="text-sm text-slate-400">Daily interaction rewards tracking.</p>
+            </div>
+          </div>
+
+          <div className="flex items-baseline gap-3 mb-10">
+            <span className="text-6xl font-bold text-white tracking-tighter">{bonusPoints}</span>
+            <span className="text-sm font-semibold text-slate-500 uppercase tracking-widest">Points Yielded</span>
+          </div>
+
+          <div className="mt-auto">
+            <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden mb-4">
+              <div className="h-full bg-gradient-to-r from-amber-600 to-yellow-400 shadow-[0_0_15px_#fbbf24] rounded-full transition-all duration-1000" style={{ width: `${bonusPoints % 100}%` }} />
+            </div>
+            
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-400 tracking-wider mb-6">
+              <span>{Math.max(0, 100 - (bonusPoints % 100))} POINTS NEXT</span>
+              <span>LEVEL {Math.floor(bonusPoints / 100) + 1}</span>
+            </div>
+
+            {bonusLoaded && canClaimBonus ? (
+              <button onClick={handleClaimBonus} disabled={claimingBonus} className="w-full py-4 rounded-xl bg-white/10 hover:bg-white/15 border border-white/5 font-semibold text-white tracking-wide transition-colors flex justify-center items-center gap-2">
+                {claimingBonus ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                Mine Rewards
+              </button>
+            ) : (
+              <button disabled className="w-full py-4 rounded-xl bg-slate-900/50 border border-white/5 font-semibold text-slate-500 tracking-wide flex justify-center items-center gap-2 cursor-not-allowed">
+                <Clock size={16} /> <MiniCountdown ms={new Date(lastBonusClaim!).getTime() + BONUS_COOLDOWN} />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="dash-bonus-bar">
-          <div style={{ height:'100%', width:`${bonusPoints % 100}%`, borderRadius:999, background:'linear-gradient(90deg,#f59e0b,#fbbf24)', boxShadow:'0 0 8px rgba(251,191,36,.5)', transition:'width .6s cubic-bezier(.22,1,.36,1)' }} />
-        </div>
-        <div style={{ display:'flex', justifyContent:'space-between', marginTop:6 }}>
-          <span style={{ fontSize:10, color:'rgba(255,255,255,.4)', fontWeight:600 }}>{bonusPoints % 100}/100 to next reward</span>
-          <span style={{ fontSize:10, color:'rgba(255,255,255,.4)' }}>Level {Math.floor(bonusPoints / 100) + 1}</span>
-        </div>
       </div>
+
     </div>
+  );
+}
+
+function BoxIcon() {
+  return (
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="opacity-20">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+      <polyline points="3.29 7 12 12 20.71 7"></polyline>
+      <line x1="12" y1="22" x2="12" y2="12"></line>
+    </svg>
   );
 }
