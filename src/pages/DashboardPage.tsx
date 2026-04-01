@@ -4,7 +4,7 @@ import { logActivity, notifyAll, sendNotificationEmail } from '@/lib/activity';
 import {
   Gift, Clock, Zap, Copy, CheckCircle, Eye, EyeOff,
   Loader2, Sparkles, Send, X, Plus, Trash2,
-  Users, Activity, Shield, Star
+  Users, Activity, Shield, Star, TrendingUp, Wallet
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
@@ -40,41 +40,40 @@ async function generateKey(panelType: 'lag'|'internal', days: number) {
   } catch(e) { return { success:false, message:String(e) }; }
 }
 
-/* ── Animated number count-up ───────────────────────────── */
-function CountUp({ to, duration = 900 }: { to: number; duration?: number }) {
+function CountUp({ to, duration = 1000 }: { to: number; duration?: number }) {
   const [val, setVal] = useState(0);
   useEffect(() => {
     if (to === 0) return;
     const start = performance.now();
-    const tick = (now: number) => {
+    const run = (now: number) => {
       const t = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - t, 3);
-      setVal(Math.round(eased * to));
-      if (t < 1) requestAnimationFrame(tick);
+      const e = 1 - Math.pow(1 - t, 4);
+      setVal(Math.round(e * to));
+      if (t < 1) requestAnimationFrame(run);
     };
-    requestAnimationFrame(tick);
+    const timer = setTimeout(() => requestAnimationFrame(run), 200);
+    return () => clearTimeout(timer);
   }, [to]);
   return <>{val.toLocaleString()}</>;
 }
 
-/* ── Live countdown ─────────────────────────────────────── */
-function MiniCountdown({ ms }: { ms: number }) {
-  const [txt, setTxt] = useState('');
+function LiveClock({ ms }: { ms: number }) {
+  const [txt, setTxt] = useState('--:--:--');
   useEffect(() => {
     const tick = () => {
       const left = ms - Date.now();
-      if (left <= 0) { setTxt(''); return; }
+      if (left <= 0) { setTxt('00:00:00'); return; }
       const h = String(Math.floor((left%86400000)/3600000)).padStart(2,'0');
       const m = String(Math.floor((left%3600000)/60000)).padStart(2,'0');
       const s = String(Math.floor((left%60000)/1000)).padStart(2,'0');
       setTxt(`${h}:${m}:${s}`);
     };
-    tick(); const id = setInterval(tick,1000); return ()=>clearInterval(id);
+    tick(); const id = setInterval(tick, 1000); return () => clearInterval(id);
   }, [ms]);
   return <span>{txt}</span>;
 }
 
-/* ── Reward modal (logic unchanged, new skin) ───────────── */
+/* ─── REWARD MODAL ──────────────────────────────────────── */
 function RewardModal({ bonusPoints, userId, userEmail, onClose, onRedeem }: {
   bonusPoints: number; userId: string; userEmail: string;
   onClose: () => void; onRedeem: (pts: number) => void;
@@ -113,47 +112,55 @@ function RewardModal({ bonusPoints, userId, userEmail, onClose, onRedeem }: {
   };
 
   return (
-    <div style={{ position:'fixed',inset:0,zIndex:70,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.85)',backdropFilter:'blur(24px)',padding:16 }}
+    <div style={{ position:'fixed',inset:0,zIndex:70,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(2,2,8,.92)',backdropFilter:'blur(28px)',padding:20 }}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{ width:'100%',maxWidth:400,borderRadius:24,background:'rgba(14,14,20,.97)',border:'1px solid rgba(124,92,255,.25)',boxShadow:'0 0 60px rgba(124,92,255,.18), 0 0 0 1px rgba(255,255,255,.04) inset',padding:'32px 28px',position:'relative' }}>
-        <button onClick={onClose} style={{ position:'absolute',top:14,right:14,background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',borderRadius:9,width:30,height:30,cursor:'pointer',color:'rgba(255,255,255,.45)',display:'flex',alignItems:'center',justifyContent:'center' }}><X size={13}/></button>
+      <div style={{ width:'100%',maxWidth:420,borderRadius:28,background:'linear-gradient(145deg,rgba(15,10,35,.98),rgba(8,6,20,.98))',border:'1px solid rgba(139,92,246,.3)',boxShadow:'0 0 0 1px rgba(255,255,255,.04) inset, 0 40px 100px rgba(0,0,0,.8), 0 0 80px rgba(109,40,217,.18)',padding:'36px 32px',position:'relative',overflow:'hidden' }}>
+        <div style={{ position:'absolute',top:-60,left:-40,width:200,height:200,borderRadius:'50%',background:'radial-gradient(circle,rgba(124,92,255,.15) 0%,transparent 70%)',pointerEvents:'none' }}/>
+        <button onClick={onClose} style={{ position:'absolute',top:16,right:16,background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.08)',borderRadius:10,width:32,height:32,cursor:'pointer',color:'rgba(255,255,255,.4)',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .15s' }}
+          onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,.1)';}}
+          onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,.05)';}}>
+          <X size={14}/>
+        </button>
         {!success ? (
           <>
-            <div style={{ textAlign:'center',marginBottom:26 }}>
-              <div style={{ fontSize:36,marginBottom:10 }}>🎁</div>
-              <div style={{ fontSize:19,fontWeight:700,color:'#fff',marginBottom:5 }}>Choose Reward</div>
-              <p style={{ fontSize:12,color:'rgba(255,255,255,.4)' }}>100 points → pick your reward</p>
+            <div style={{ textAlign:'center',marginBottom:28 }}>
+              <div style={{ width:56,height:56,borderRadius:18,background:'linear-gradient(135deg,rgba(124,92,255,.2),rgba(109,40,217,.08))',border:'1px solid rgba(124,92,255,.25)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 14px',fontSize:24 }}>🎁</div>
+              <div style={{ fontSize:20,fontWeight:700,color:'#fff',marginBottom:5 }}>Choose Your Reward</div>
+              <p style={{ fontSize:13,color:'rgba(255,255,255,.38)',margin:0 }}>100 points → pick your reward</p>
             </div>
             <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
               {[
-                { onClick:claimBalance, icon:'💰', title:'$3 Balance', sub:'Add to wallet', border:'rgba(170,255,0,.2)', bg:'rgba(170,255,0,.05)', col:'#AAFF00' },
-                { onClick:claimKey, icon:loading?null:'🔑', title:'3-Day Key', sub:'Free panel license', border:'rgba(124,92,255,.22)', bg:'rgba(124,92,255,.06)', col:'#7C5CFF' },
+                { fn:claimBalance, icon:'💰', label:'$3 Balance', sub:'Instantly added to wallet', ac:'rgba(124,92,255,', acv:.22, col:'#a78bfa' },
+                { fn:claimKey,     icon:'🔑', label:'3-Day Key',  sub:'Free panel license key',  ac:'rgba(255,255,255,', acv:.1, col:'#fff' },
               ].map((opt,i)=>(
-                <button key={i} onClick={opt.onClick} disabled={loading&&i===1}
-                  style={{ padding:'16px 18px',borderRadius:14,background:opt.bg,border:`1px solid ${opt.border}`,cursor:'pointer',display:'flex',alignItems:'center',gap:12,transition:'all .18s',fontFamily:'inherit',textAlign:'left' }}
-                  onMouseEnter={e=>{e.currentTarget.style.filter='brightness(1.15)';}}
-                  onMouseLeave={e=>{e.currentTarget.style.filter='none';}}>
-                  {loading&&i===1?<Loader2 size={20} className="animate-spin" color={opt.col}/>:<span style={{ fontSize:24 }}>{opt.icon}</span>}
-                  <div><div style={{ fontSize:14,fontWeight:700,color:'#fff' }}>{opt.title}</div><div style={{ fontSize:11,color:'rgba(255,255,255,.38)' }}>{opt.sub}</div></div>
+                <button key={i} onClick={opt.fn} disabled={loading&&i===1}
+                  style={{ padding:'18px 20px',borderRadius:16,background:`${opt.ac}0.06)`,border:`1px solid ${opt.ac}${opt.acv})`,cursor:'pointer',display:'flex',alignItems:'center',gap:14,transition:'all .2s',fontFamily:'inherit',textAlign:'left' }}
+                  onMouseEnter={e=>{e.currentTarget.style.background=`${opt.ac}0.12)`;}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=`${opt.ac}0.06)`;}}>
+                  {loading&&i===1?<Loader2 size={22} className="animate-spin" style={{ color:opt.col }}/>:<span style={{ fontSize:26 }}>{opt.icon}</span>}
+                  <div>
+                    <div style={{ fontSize:15,fontWeight:700,color:opt.col,marginBottom:2 }}>{opt.label}</div>
+                    <div style={{ fontSize:11,color:'rgba(255,255,255,.35)' }}>{opt.sub}</div>
+                  </div>
                 </button>
               ))}
             </div>
           </>
         ) : success==='balance' ? (
           <div style={{ textAlign:'center',padding:'16px 0' }}>
-            <div style={{ fontSize:44,marginBottom:12 }}>✅</div>
-            <div style={{ fontSize:17,fontWeight:700,color:'#AAFF00',marginBottom:18 }}>$3 Added!</div>
-            <button onClick={onClose} style={{ padding:'10px 26px',borderRadius:11,background:'rgba(170,255,0,.1)',border:'1px solid rgba(170,255,0,.25)',cursor:'pointer',color:'#AAFF00',fontFamily:'inherit',fontWeight:700,fontSize:13 }}>Done</button>
+            <div style={{ fontSize:52,marginBottom:14 }}>✅</div>
+            <div style={{ fontSize:18,fontWeight:700,color:'#a78bfa',marginBottom:20 }}>$3 Added to Wallet!</div>
+            <button onClick={onClose} className="px-btn">Done</button>
           </div>
         ) : (
-          <div style={{ textAlign:'center',padding:'16px 0' }}>
-            <div style={{ fontSize:44,marginBottom:12 }}>🔑</div>
-            <div style={{ fontSize:17,fontWeight:700,color:'#7C5CFF',marginBottom:14 }}>Key Generated!</div>
-            <div style={{ background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',borderRadius:11,padding:'11px 13px',marginBottom:14,display:'flex',alignItems:'center',gap:9 }}>
+          <div style={{ textAlign:'center',padding:'12px 0' }}>
+            <div style={{ fontSize:52,marginBottom:12 }}>🔑</div>
+            <div style={{ fontSize:18,fontWeight:700,color:'#a78bfa',marginBottom:16 }}>Key Generated!</div>
+            <div style={{ background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',borderRadius:12,padding:'12px 14px',marginBottom:16,display:'flex',alignItems:'center',gap:10 }}>
               <code style={{ flex:1,fontSize:11,fontFamily:'monospace',color:'rgba(255,255,255,.8)',wordBreak:'break-all' }}>{genKey}</code>
-              <button onClick={()=>{navigator.clipboard.writeText(genKey);setCopied(true);setTimeout(()=>setCopied(false),2000);}} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',borderRadius:6,padding:'5px 8px',cursor:'pointer',color:'rgba(255,255,255,.55)',flexShrink:0 }}>{copied?<CheckCircle size={12}/>:<Copy size={12}/>}</button>
+              <button onClick={()=>{navigator.clipboard.writeText(genKey);setCopied(true);setTimeout(()=>setCopied(false),2000);}} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',borderRadius:8,padding:'6px 9px',cursor:'pointer',color:'rgba(255,255,255,.55)',flexShrink:0 }}>{copied?<CheckCircle size={13}/>:<Copy size={13}/>}</button>
             </div>
-            <button onClick={onClose} style={{ padding:'10px 26px',borderRadius:11,background:'rgba(124,92,255,.1)',border:'1px solid rgba(124,92,255,.25)',cursor:'pointer',color:'#7C5CFF',fontFamily:'inherit',fontWeight:700,fontSize:13 }}>Done</button>
+            <button onClick={onClose} className="px-btn">Done</button>
           </div>
         )}
       </div>
@@ -161,8 +168,8 @@ function RewardModal({ bonusPoints, userId, userEmail, onClose, onRedeem }: {
   );
 }
 
-/* ── Free Key Card ──────────────────────────────────────── */
-function FreeKeyCard({ delay }: { delay: string }) {
+/* ─── FREE KEY CARD ─────────────────────────────────────── */
+function FreeKeyCard({ animDelay }: { animDelay: number }) {
   const { addLicense, user } = useAppStore();
   const [row, setRow] = useState<FreeRow|null>(null);
   const [dbLoading, setDbLoading] = useState(true);
@@ -208,7 +215,7 @@ function FreeKeyCard({ delay }: { delay: string }) {
       if (intKey) { addLicense({ id:`free_int_${Date.now()}`,productId:'keyauth-internal',productName:'Internal (Free Trial)',key:`${intKey}_INTERNAL`,hwid:'',lastLogin:now,expiresAt,status:'active',ip:'',device:'',hwidResetsUsed:0,hwidResetMonth:new Date().getMonth() }); licRows.push({ user_id:user.id,user_email:user.email,product_id:'keyauth-internal',product_name:'Internal (Free Trial)',license_key:`${intKey}_INTERNAL`,keyauth_username:intKey,hwid:'',last_login:now,expires_at:expiresAt,status:'active',ip:'',device:'',hwid_resets_used:0,hwid_reset_month:new Date().getMonth() }); }
       if (licRows.length > 0) await supabase.from('user_licenses').upsert(licRows, { onConflict:'user_id,license_key' });
       setRow({ lag_key:lagKey,internal_key:intKey,claimed_at:now,expires_at:expiresAt });
-      toast.dismiss('free-trial'); toast.success('Trial activated! Check Licenses tab.');
+      toast.dismiss('free-trial'); toast.success('Trial activated!');
     } catch(e) { toast.dismiss('free-trial'); toast.error(String(e)); }
     setGenerating(false);
   };
@@ -217,56 +224,49 @@ function FreeKeyCard({ delay }: { delay: string }) {
   const isActive = !!row && new Date(row.expires_at).getTime()>Date.now();
 
   return (
-    <div className="g-card" style={{ animationDelay:delay, '--glow':'rgba(170,255,0,.2)' } as any}>
-      {/* Accent glow corner */}
-      <div style={{ position:'absolute',top:-40,right:-30,width:120,height:120,borderRadius:'50%',background:'radial-gradient(circle,rgba(170,255,0,.08) 0%,transparent 70%)',pointerEvents:'none' }}/>
-      {/* Header */}
-      <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:20 }}>
-        <div style={{ width:40,height:40,borderRadius:12,background:'rgba(170,255,0,.08)',border:'1px solid rgba(170,255,0,.18)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
-          <Zap size={17} color="#AAFF00"/>
-        </div>
+    <div className="px-panel" style={{ animationDelay:`${animDelay}ms`, gridColumn:'span 1' }}>
+      <div className="px-panel-glow" style={{ background:'radial-gradient(circle at 80% 20%, rgba(124,92,255,.22) 0%, transparent 60%)' }}/>
+      <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:22 }}>
         <div>
-          <div style={{ fontSize:14,fontWeight:700,color:'#fff',letterSpacing:'-.01em' }}>Free Trial</div>
-          <div style={{ fontSize:10,color:'rgba(255,255,255,.35)',letterSpacing:'.06em',textTransform:'uppercase',marginTop:1 }}>48hr cooldown · Internal + Lag</div>
+          <div style={{ fontSize:11,fontWeight:600,color:'rgba(255,255,255,.38)',letterSpacing:'.14em',textTransform:'uppercase',marginBottom:6 }}>Free Trial</div>
+          <div style={{ fontSize:20,fontWeight:700,color:'#fff',letterSpacing:'-.02em' }}>Daily Access</div>
+          <div style={{ fontSize:12,color:'rgba(255,255,255,.3)',marginTop:3 }}>48hr cooldown · Internal + Lag</div>
+        </div>
+        <div style={{ width:44,height:44,borderRadius:14,background:'linear-gradient(135deg,rgba(124,92,255,.25),rgba(109,40,217,.1))',border:'1px solid rgba(124,92,255,.3)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 20px rgba(124,92,255,.2)' }}>
+          <Zap size={20} color="#a78bfa"/>
         </div>
       </div>
 
       {isActive && row ? (
-        <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
-          {/* Active timer */}
-          <div style={{ padding:'14px 16px',borderRadius:14,background:'rgba(170,255,0,.04)',border:'1px solid rgba(170,255,0,.14)' }}>
-            <div style={{ fontSize:9,color:'#AAFF00',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',marginBottom:6 }}>TRIAL ACTIVE — EXPIRES IN</div>
-            <div style={{ fontSize:28,fontWeight:700,color:'#AAFF00',fontFamily:'monospace',letterSpacing:'.05em' }}>
-              <MiniCountdown ms={new Date(row.expires_at).getTime()}/>
+        <div style={{ display:'flex',flexDirection:'column',gap:12 }}>
+          <div style={{ padding:'18px 20px',borderRadius:18,background:'rgba(124,92,255,.08)',border:'1px solid rgba(124,92,255,.18)',position:'relative',overflow:'hidden' }}>
+            <div style={{ position:'absolute',inset:0,background:'linear-gradient(135deg,rgba(124,92,255,.06) 0%,transparent 60%)',pointerEvents:'none' }}/>
+            <div style={{ fontSize:9,color:'rgba(167,139,250,.7)',fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',marginBottom:8 }}>Trial Active — Expires In</div>
+            <div style={{ fontSize:36,fontWeight:700,color:'#a78bfa',fontFamily:'monospace',letterSpacing:'.04em',lineHeight:1 }}>
+              <LiveClock ms={new Date(row.expires_at).getTime()}/>
             </div>
           </div>
-          {/* View Keys */}
-          <button onClick={()=>setRevealed(!revealed)}
-            style={{ padding:'10px 14px',borderRadius:11,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',cursor:'pointer',color:'rgba(255,255,255,.55)',fontSize:12,fontFamily:'inherit',fontWeight:600,display:'flex',alignItems:'center',gap:6,justifyContent:'center',transition:'all .18s' }}
-            onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,.08)';e.currentTarget.style.color='#fff';}}
-            onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,.04)';e.currentTarget.style.color='rgba(255,255,255,.55)';}}>
-            {revealed?<EyeOff size={13}/>:<Eye size={13}/>} {revealed?'Hide Keys':'View Keys'}
+          <button onClick={()=>setRevealed(!revealed)} style={{ padding:'11px 16px',borderRadius:13,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',cursor:'pointer',color:'rgba(255,255,255,.5)',fontSize:13,fontFamily:'inherit',fontWeight:600,display:'flex',alignItems:'center',gap:7,justifyContent:'center',transition:'all .18s' }}
+            onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,.08)';e.currentTarget.style.color='#fff';e.currentTarget.style.borderColor='rgba(255,255,255,.16)';}}
+            onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,.04)';e.currentTarget.style.color='rgba(255,255,255,.5)';e.currentTarget.style.borderColor='rgba(255,255,255,.08)';}}>
+            {revealed?<EyeOff size={14}/>:<Eye size={14}/>} {revealed?'Hide Keys':'View Keys'}
           </button>
           {revealed && (
-            <div style={{ display:'flex',flexDirection:'column',gap:6 }}>
-              {row.lag_key&&<div style={{ padding:'9px 12px',borderRadius:10,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)' }}><div style={{ fontSize:8,color:'rgba(255,255,255,.28)',fontWeight:700,marginBottom:3,letterSpacing:'.1em',textTransform:'uppercase' }}>Fake Lag</div><code style={{ fontSize:11,color:'rgba(255,255,255,.65)',fontFamily:'monospace',wordBreak:'break-all' }}>{row.lag_key}</code></div>}
-              {row.internal_key&&<div style={{ padding:'9px 12px',borderRadius:10,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)' }}><div style={{ fontSize:8,color:'rgba(255,255,255,.28)',fontWeight:700,marginBottom:3,letterSpacing:'.1em',textTransform:'uppercase' }}>Internal</div><code style={{ fontSize:11,color:'rgba(255,255,255,.65)',fontFamily:'monospace',wordBreak:'break-all' }}>{row.internal_key}</code></div>}
+            <div style={{ display:'flex',flexDirection:'column',gap:7 }}>
+              {row.lag_key&&<div style={{ padding:'10px 14px',borderRadius:12,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)' }}><div style={{ fontSize:8,color:'rgba(255,255,255,.28)',fontWeight:700,marginBottom:4,letterSpacing:'.12em',textTransform:'uppercase' }}>Fake Lag</div><code style={{ fontSize:11,color:'rgba(255,255,255,.65)',fontFamily:'monospace',wordBreak:'break-all' }}>{row.lag_key}</code></div>}
+              {row.internal_key&&<div style={{ padding:'10px 14px',borderRadius:12,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)' }}><div style={{ fontSize:8,color:'rgba(255,255,255,.28)',fontWeight:700,marginBottom:4,letterSpacing:'.12em',textTransform:'uppercase' }}>Internal</div><code style={{ fontSize:11,color:'rgba(255,255,255,.65)',fontFamily:'monospace',wordBreak:'break-all' }}>{row.internal_key}</code></div>}
             </div>
           )}
         </div>
       ) : canClaim ? (
-        <button onClick={handleClaim} disabled={generating}
-          style={{ width:'100%',padding:'13px',borderRadius:12,background:'rgba(170,255,0,.09)',border:'1px solid rgba(170,255,0,.22)',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:700,color:'#AAFF00',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'all .2s',boxShadow:generating?'none':'0 0 20px rgba(170,255,0,.1)' }}
-          onMouseEnter={e=>{if(!generating){e.currentTarget.style.background='rgba(170,255,0,.16)';e.currentTarget.style.boxShadow='0 0 28px rgba(170,255,0,.2)';}}}
-          onMouseLeave={e=>{e.currentTarget.style.background='rgba(170,255,0,.09)';e.currentTarget.style.boxShadow='0 0 20px rgba(170,255,0,.1)';}}>
-          {generating?<Loader2 size={14} className="animate-spin"/>:<Zap size={14}/>}
-          {generating?'Generating…':'Claim Free Trial'}
+        <button onClick={handleClaim} disabled={generating} className="px-btn px-btn-full" style={{ marginTop:4 }}>
+          {generating?<><Loader2 size={15} className="animate-spin"/>Generating…</>:<><Zap size={15}/>Claim Free Trial</>}
         </button>
       ) : (
-        <div style={{ padding:'14px 16px',borderRadius:14,background:'rgba(255,255,255,.025)',border:'1px solid rgba(255,255,255,.06)',textAlign:'center' }}>
-          <div style={{ fontSize:9,color:'rgba(255,255,255,.28)',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',marginBottom:6 }}>NEXT TRIAL IN</div>
-          <div style={{ fontSize:26,fontWeight:700,color:'rgba(255,255,255,.5)',fontFamily:'monospace',letterSpacing:'.05em' }}>
-            <MiniCountdown ms={cooldownMs}/>
+        <div style={{ padding:'18px 20px',borderRadius:18,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)',textAlign:'center',marginTop:4 }}>
+          <div style={{ fontSize:9,color:'rgba(255,255,255,.28)',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',marginBottom:8 }}>Next Trial In</div>
+          <div style={{ fontSize:32,fontWeight:700,color:'rgba(255,255,255,.4)',fontFamily:'monospace',letterSpacing:'.04em' }}>
+            <LiveClock ms={cooldownMs}/>
           </div>
         </div>
       )}
@@ -275,16 +275,15 @@ function FreeKeyCard({ delay }: { delay: string }) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   MAIN DASHBOARD
+   MAIN PAGE
 ═══════════════════════════════════════════════════════════ */
 export default function DashboardPage() {
   const { t } = useTranslation();
   const { balance, licenses, transactions, user, systemStatus } = useAppStore();
   const isSystemOnline = systemStatus==='online';
   const isMod = canManageAnnouncements(user?.role);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const bgRef = useRef<HTMLCanvasElement>(null);
 
-  // ── State ────────────────────────────────────────────────
   const [bonusPoints, setBonusPoints] = useState(0);
   const [lastBonusClaim, setLastBonusClaim] = useState<string|null>(null);
   const [bonusCooldown, setBonusCooldown] = useState('');
@@ -303,10 +302,8 @@ export default function DashboardPage() {
   const [fType, setFType] = useState<'update'|'maintenance'|'feature'>('update');
   const [publishing, setPublishing] = useState(false);
   const [expandedAnn, setExpandedAnn] = useState<string|null>(null);
-  // Arc animation
-  const [arcOffset, setArcOffset] = useState(251);
+  const [arcDash, setArcDash] = useState(0);
 
-  // ── Effects ──────────────────────────────────────────────
   useEffect(() => {
     if (!user?.id) return;
     setBonusLoaded(false);
@@ -349,66 +346,46 @@ export default function DashboardPage() {
     return ()=>{ supabase.removeChannel(ch); };
   }, []);
 
-  // Arc animate on mount
+  // Arc gauge animation
+  const ARC = 282;
   useEffect(() => {
-    const ARC_LEN = 251;
-    const fill = Math.min(1, balance / Math.max(balance + 20, 100));
-    const target = ARC_LEN - fill * ARC_LEN;
+    const target = Math.min(ARC, (balance / Math.max(balance+20,100)) * ARC);
     const start = performance.now();
-    const dur = 900;
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / dur);
-      const eased = 1 - Math.pow(1 - t, 3);
-      setArcOffset(ARC_LEN - eased * (ARC_LEN - target));
-      if (t < 1) requestAnimationFrame(tick);
+    const run = (now: number) => {
+      const t = Math.min(1, (now-start)/900);
+      const e = 1-Math.pow(1-t,3);
+      setArcDash(e*target);
+      if (t<1) requestAnimationFrame(run);
     };
-    const timer = setTimeout(() => requestAnimationFrame(tick), 300);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(()=>requestAnimationFrame(run),400);
+    return ()=>clearTimeout(timer);
   }, [balance]);
 
-  // Dot-grid canvas background
+  // Soft mesh background
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    let raf: number;
-    let t = 0;
-
-    const resize = () => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-    };
-    resize();
-    window.addEventListener('resize', resize);
-
+    const canvas = bgRef.current; if (!canvas) return;
+    const ctx = canvas.getContext('2d'); if (!ctx) return;
+    let raf: number, t = 0;
+    const resize = () => { canvas.width=canvas.offsetWidth; canvas.height=canvas.offsetHeight; };
+    resize(); window.addEventListener('resize', resize);
     const draw = () => {
-      t += 0.0003;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const spacing = 36;
-      const cols = Math.ceil(canvas.width / spacing) + 2;
-      const rows = Math.ceil(canvas.height / spacing) + 2;
-      const ox = (t * 8) % spacing;
-      const oy = (t * 5) % spacing;
-      for (let c = -1; c < cols; c++) {
-        for (let r = -1; r < rows; r++) {
-          const x = c * spacing - ox;
-          const y = r * spacing - oy;
-          // subtle wave opacity
-          const wave = 0.5 + 0.5 * Math.sin(c * 0.4 + t * 2) * Math.cos(r * 0.4 + t * 1.5);
-          ctx.beginPath();
-          ctx.arc(x, y, 1, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255,255,255,${0.022 + 0.018 * wave})`;
-          ctx.fill();
+      t += 0.00025;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      const S=44;
+      const ox=(t*6)%S, oy=(t*4)%S;
+      for(let c=-1;c<Math.ceil(canvas.width/S)+2;c++)
+        for(let r=-1;r<Math.ceil(canvas.height/S)+2;r++){
+          const wx=c*S-ox, wy=r*S-oy;
+          const w=0.5+0.5*Math.sin(c*.5+t*1.8)*Math.cos(r*.5+t*1.2);
+          ctx.beginPath(); ctx.arc(wx,wy,1.2,0,Math.PI*2);
+          ctx.fillStyle=`rgba(139,92,246,${.025+.02*w})`; ctx.fill();
         }
-      }
-      raf = requestAnimationFrame(draw);
+      raf=requestAnimationFrame(draw);
     };
     draw();
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+    return ()=>{ cancelAnimationFrame(raf); window.removeEventListener('resize',resize); };
   }, []);
 
-  // ── Handlers ─────────────────────────────────────────────
   const handleClaimBonus = async () => {
     if (!user||!canClaimBonus||claimingBonus||!bonusLoaded) return;
     setClaimingBonus(true);
@@ -419,7 +396,7 @@ export default function DashboardPage() {
     const nextPoints=(latest?.bonus_points??bonusPoints)+10;
     const claimTime=new Date().toISOString();
     const { error } = await upsertBonusRow(user.id,user.email,nextPoints,claimTime);
-    if (error) { toast.error('Error claiming bonus'); setClaimingBonus(false); return; }
+    if (error) { toast.error('Error'); setClaimingBonus(false); return; }
     setBonusPoints(nextPoints); setLastBonusClaim(claimTime); setClaimingBonus(false);
     toast.success('+10 bonus points!');
     logActivity({ userId:user.id,userEmail:user.email,userName:user.name,action:'bonus_claim',status:'success',meta:{ points:10,total:nextPoints } });
@@ -445,210 +422,203 @@ export default function DashboardPage() {
     if (error) toast.error('Delete failed');
   };
 
-  // ── Derived ───────────────────────────────────────────────
-  const active = licenses.filter(l=>new Date(l.expiresAt).getTime()>Date.now());
+  const active      = licenses.filter(l=>new Date(l.expiresAt).getTime()>Date.now());
   const totalOnline = safeNum(lag.onlineUsers)+safeNum(int.onlineUsers);
   const totalUsers  = safeNum(lag.numUsers)+safeNum(int.numUsers);
-  const progressPct = bonusPoints % 100;
+  const progressPct = bonusPoints%100;
   const firstName   = user?.name?.split(' ')[0] || 'User';
-  const ARC_LEN     = 251;
-  const arcFill     = ARC_LEN - arcOffset;
 
   const TYPE_CFG = {
-    update:      { emoji:'✨', color:'#AAFF00', bg:'rgba(170,255,0,.07)',  border:'rgba(170,255,0,.18)'  },
-    maintenance: { emoji:'🔧', color:'#a78bfa', bg:'rgba(167,139,250,.07)',border:'rgba(167,139,250,.18)' },
-    feature:     { emoji:'⚡', color:'#7C5CFF', bg:'rgba(124,92,255,.07)', border:'rgba(124,92,255,.2)'  },
+    update:      { emoji:'✨', color:'#a78bfa', bg:'rgba(167,139,250,.07)', border:'rgba(167,139,250,.18)' },
+    maintenance: { emoji:'🔧', color:'rgba(255,255,255,.55)', bg:'rgba(255,255,255,.04)', border:'rgba(255,255,255,.12)' },
+    feature:     { emoji:'⚡', color:'#c4b5fd', bg:'rgba(196,181,253,.07)', border:'rgba(196,181,253,.2)'  },
   } as const;
 
-  /* ── RENDER ─────────────────────────────────────────────── */
   return (
-    <div style={{ position:'relative', minHeight:'100%', paddingBottom:80, fontFamily:"'Inter',sans-serif" }}>
+    <div style={{ position:'relative',paddingBottom:80,fontFamily:"'Inter',system-ui,sans-serif",minHeight:'100%' }}>
 
-      {/* ── Global CSS ── */}
+      {/* ── STYLES ── */}
       <style>{`
-        /* Keyframes */
-        @keyframes g-in   { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes g-pulse{ 0%,100%{transform:scale(1);opacity:.7} 50%{transform:scale(1.5);opacity:1} }
-        @keyframes g-glow { 0%,100%{box-shadow:0 0 8px #AAFF00,0 0 18px rgba(170,255,0,.35)} 50%{box-shadow:0 0 14px #AAFF00,0 0 32px rgba(170,255,0,.6)} }
-        @keyframes g-shi  { 0%{transform:translateX(-120%)} 100%{transform:translateX(220%)} }
-        @keyframes g-bar  { from{width:0} to{width:var(--bw,0%)} }
-        @keyframes g-spin { to{transform:rotate(360deg)} }
+        @keyframes px-in  {from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+        @keyframes px-pop {0%{transform:scale(0.85);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
+        @keyframes px-dot {0%,100%{transform:scale(.9);opacity:.6}50%{transform:scale(1.4);opacity:1;box-shadow:0 0 0 4px rgba(167,139,250,.2),0 0 16px rgba(139,92,246,.6)}}
+        @keyframes px-grd {0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+        @keyframes px-bar {from{width:0}to{width:var(--bw)}}
+        @keyframes px-shi {0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+        @keyframes px-orb {0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.08)}66%{transform:translate(-20px,15px) scale(.95)}}
+        @keyframes px-rng {0%,100%{transform:scale(1);opacity:.4}50%{transform:scale(1.06);opacity:.7}}
 
-        /* Card base */
-        .g-card {
+        /* ── Panel (main card type) ── */
+        .px-panel {
           position:relative; overflow:hidden;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 20px;
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          padding: 24px 22px;
-          animation: g-in 0.55s cubic-bezier(0.22,1,0.36,1) both;
-          transition: border-color .22s ease, box-shadow .22s ease, transform .28s cubic-bezier(.22,1,.36,1);
-          /* shimmer top line */
+          background:rgba(255,255,255,.028);
+          border:1px solid rgba(255,255,255,.07);
+          border-radius:24px;
+          padding:28px 26px;
+          backdrop-filter:blur(20px);
+          -webkit-backdrop-filter:blur(20px);
+          animation:px-in .6s cubic-bezier(.22,1,.36,1) both;
+          transition:border-color .25s, box-shadow .3s, transform .3s cubic-bezier(.22,1,.36,1);
+          will-change:transform;
         }
-        .g-card::before {
+        .px-panel::after {
           content:''; position:absolute; top:0; left:0; right:0; height:1px;
-          background:linear-gradient(90deg,transparent,rgba(255,255,255,.09),transparent);
+          background:linear-gradient(90deg,transparent 0%,rgba(167,139,250,.3) 30%,rgba(255,255,255,.15) 50%,rgba(167,139,250,.3) 70%,transparent 100%);
           pointer-events:none;
         }
-        .g-card:hover {
-          border-color: rgba(255,255,255,0.15);
-          transform: translateY(-3px);
-          box-shadow: 0 0 0 1px rgba(255,255,255,.04), 0 20px 60px rgba(0,0,0,.55), 0 0 40px var(--glow,rgba(255,255,255,.04));
+        .px-panel:hover {
+          border-color:rgba(167,139,250,.25);
+          transform:translateY(-4px);
+          box-shadow:0 0 0 1px rgba(139,92,246,.12),0 24px 64px rgba(0,0,0,.55),0 0 60px rgba(109,40,217,.12);
         }
-        /* shimmer sweep */
-        .g-card .g-sweep {
-          position:absolute; top:0; bottom:0; left:0; width:50%;
-          background:linear-gradient(90deg,transparent,rgba(255,255,255,.025),transparent);
-          animation:g-shi 5s ease-in-out infinite;
-          pointer-events:none;
+        .px-panel-glow {
+          position:absolute; inset:0; pointer-events:none;
+          opacity:.6; transition:opacity .3s;
         }
+        .px-panel:hover .px-panel-glow { opacity:1; }
 
-        /* Live dot */
-        .g-live-dot {
-          width:8px; height:8px; border-radius:50%; background:#AAFF00;
-          animation: g-pulse 2s ease-in-out infinite, g-glow 2s ease-in-out infinite;
+        /* ── Live dot ── */
+        .px-dot {
+          display:inline-block; width:8px; height:8px; border-radius:50%;
+          background:linear-gradient(135deg,#a78bfa,#7c3aed);
+          animation:px-dot 2.4s ease-in-out infinite;
           flex-shrink:0;
         }
 
-        /* Progress bar */
-        .g-bar-track { height:5px; border-radius:99px; background:rgba(255,255,255,.06); overflow:hidden; }
-        .g-bar-fill  { height:100%; border-radius:99px; animation:g-bar .9s cubic-bezier(.22,1,.36,1) both; position:relative; overflow:hidden; }
-        .g-bar-fill::after { content:''; position:absolute; top:0; bottom:0; left:0; width:60%;
-          background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);
-          animation:g-shi 2.5s ease-in-out infinite; }
-
-        /* Claim button */
-        .g-btn {
-          width:100%; padding:13px; border-radius:13px; border:none; cursor:pointer;
-          font-family:inherit; font-size:13px; font-weight:700; color:#000;
-          background:linear-gradient(135deg,#AAFF00,#85cc00);
-          box-shadow:0 0 24px rgba(170,255,0,.3),0 4px 14px rgba(0,0,0,.25);
-          display:flex; align-items:center; justify-content:center; gap:7px;
-          transition:all .22s cubic-bezier(.22,1,.36,1); position:relative; overflow:hidden;
+        /* ── Stat value ── */
+        .px-num {
+          font-size:52px; font-weight:700; line-height:1; letter-spacing:-.05em;
+          background:linear-gradient(135deg,#fff 0%,rgba(255,255,255,.7) 100%);
+          -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+          background-clip:text;
         }
-        .g-btn::before { content:''; position:absolute; top:0; bottom:0; left:-100%; width:50%;
-          background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);
-          transition:left .4s ease; pointer-events:none; }
-        .g-btn:hover { transform:translateY(-2px); box-shadow:0 0 36px rgba(170,255,0,.5),0 8px 20px rgba(0,0,0,.35); }
-        .g-btn:hover::before { left:150%; }
-        .g-btn:disabled {
-          background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08);
-          color:rgba(255,255,255,.3); box-shadow:none; cursor:not-allowed; transform:none !important;
+        .px-num-violet {
+          background:linear-gradient(135deg,#c4b5fd 0%,#7c3aed 100%);
+          -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+          background-clip:text;
         }
 
-        /* Labels */
-        .g-lbl {
-          font-size:10px; font-weight:600; letter-spacing:.12em;
-          text-transform:uppercase; color:rgba(255,255,255,.45);
+        /* ── Label ── */
+        .px-label {
+          font-size:10px; font-weight:600; letter-spacing:.14em;
+          text-transform:uppercase; color:rgba(255,255,255,.38);
         }
 
-        /* Bento grid */
-        .g-bento { display:grid; gap:14px; }
-        .g-col2  { grid-template-columns:1fr 1fr; }
-        @media(max-width:860px) { .g-col2 { grid-template-columns:1fr; } }
+        /* ── Primary button ── */
+        .px-btn {
+          display:inline-flex; align-items:center; justify-content:center; gap:8px;
+          padding:13px 28px; border-radius:14px; border:none; cursor:pointer;
+          font-family:inherit; font-size:13px; font-weight:700; color:#fff;
+          background:linear-gradient(135deg,#7c3aed,#6d28d9,#4c1d95);
+          background-size:200% 200%; animation:px-grd 4s ease infinite;
+          box-shadow:0 0 28px rgba(109,40,217,.45),0 4px 16px rgba(0,0,0,.35);
+          transition:all .25s cubic-bezier(.22,1,.36,1); position:relative; overflow:hidden;
+        }
+        .px-btn::before { content:''; position:absolute; top:0; bottom:0; left:-100%; width:50%;
+          background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);
+          transition:left .45s ease; }
+        .px-btn:hover { transform:translateY(-2px); box-shadow:0 0 44px rgba(109,40,217,.65),0 8px 24px rgba(0,0,0,.4); }
+        .px-btn:hover::before { left:180%; }
+        .px-btn:active { transform:scale(.97); }
+        .px-btn:disabled { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.3); box-shadow:none; cursor:not-allowed; transform:none !important; animation:none; }
+        .px-btn-full { width:100%; }
+
+        /* ── Progress bar ── */
+        .px-bar-track { height:6px; border-radius:99px; background:rgba(255,255,255,.06); overflow:hidden; position:relative; }
+        .px-bar-fill {
+          height:100%; border-radius:99px; position:relative; overflow:hidden;
+          animation:px-bar .9s cubic-bezier(.22,1,.36,1) both;
+        }
+        .px-bar-fill::after { content:''; position:absolute; top:0; bottom:0; width:40%;
+          background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);
+          animation:px-shi 2.8s ease-in-out infinite; }
+
+        /* ── Grid layouts ── */
+        .px-grid { display:grid; gap:16px; }
+        .px-g-hero   { grid-template-columns: 1.1fr 1fr; grid-template-rows: auto; }
+        .px-g-stats  { grid-template-columns: repeat(3,1fr); }
+        .px-g-bottom { grid-template-columns: 1fr 1fr; }
+        @media(max-width:900px) {
+          .px-g-hero   { grid-template-columns:1fr; }
+          .px-g-stats  { grid-template-columns:1fr 1fr; }
+          .px-g-bottom { grid-template-columns:1fr; }
+        }
+        @media(max-width:540px) {
+          .px-g-stats { grid-template-columns:1fr; }
+        }
       `}</style>
 
-      {/* ── Animated dot-grid canvas ── */}
-      <canvas ref={canvasRef} style={{ position:'fixed',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:0,opacity:.6 }}/>
+      {/* ── Mesh background ── */}
+      <canvas ref={bgRef} style={{ position:'fixed',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:0 }}/>
 
-      {/* ── Content ── */}
       <div style={{ position:'relative',zIndex:1 }}>
 
-        {/* ═══ REWARD MODAL ═══ */}
         {showRewardModal && user && (
           <RewardModal bonusPoints={bonusPoints} userId={user.id} userEmail={user.email}
             onClose={()=>setShowRewardModal(false)}
             onRedeem={pts=>{ setBonusPoints(pts); setShowRewardModal(false); }}/>
         )}
 
-        {/* ═══ WELCOME HEADER ═══ */}
-        <div style={{ marginBottom:30, animation:'g-in .45s both' }}>
-          {/* System badge */}
-          <div style={{ display:'inline-flex',alignItems:'center',gap:7,marginBottom:12,
-            padding:'4px 12px',borderRadius:99,
-            background:isSystemOnline?'rgba(170,255,0,.08)':'rgba(245,158,11,.08)',
-            border:`1px solid ${isSystemOnline?'rgba(170,255,0,.2)':'rgba(245,158,11,.2)'}` }}>
-            <div className={isSystemOnline?'g-live-dot':undefined}
-              style={isSystemOnline?{}:{ width:8,height:8,borderRadius:'50%',background:'#F59E0B',flexShrink:0 }}/>
-            <span style={{ fontSize:10,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',
-              color:isSystemOnline?'#AAFF00':'#F59E0B' }}>
-              {isSystemOnline?'System Online':'Maintenance'}
-            </span>
+        {/* ══ HEADER ══════════════════════════════════════════ */}
+        <div style={{ marginBottom:36, animation:'px-in .5s both' }}>
+          <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:14 }}>
+            <div style={{ display:'inline-flex',alignItems:'center',gap:7,padding:'5px 14px',borderRadius:99,background:isSystemOnline?'rgba(167,139,250,.1)':'rgba(245,158,11,.08)',border:`1px solid ${isSystemOnline?'rgba(167,139,250,.25)':'rgba(245,158,11,.2)'}` }}>
+              <span className={isSystemOnline?'px-dot':undefined} style={isSystemOnline?{}:{ width:7,height:7,borderRadius:'50%',background:'#F59E0B',display:'inline-block' }}/>
+              <span style={{ fontSize:10,fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',color:isSystemOnline?'#c4b5fd':'#F59E0B' }}>
+                {isSystemOnline?'System Online':'Maintenance'}
+              </span>
+            </div>
+            <div style={{ fontSize:10,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',color:'rgba(255,255,255,.18)' }}>1999X Free Fire Panel</div>
           </div>
-          {/* Name */}
-          <h1 style={{ fontSize:'clamp(28px,5vw,44px)',fontWeight:700,color:'#fff',
-            letterSpacing:'-.04em',margin:0,lineHeight:1.1,marginBottom:6 }}>
+          <h1 style={{ margin:0,lineHeight:1,marginBottom:0,fontSize:'clamp(36px,6vw,58px)',fontWeight:700,letterSpacing:'-.04em',color:'#fff' }}>
             Welcome back,{' '}
-            <span style={{ color:'#7C5CFF' }}>{firstName}</span>
+            <span style={{ background:'linear-gradient(125deg,#e0d7ff 0%,#c4b5fd 30%,#a78bfa 60%,#7c3aed 100%)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>
+              {firstName}
+            </span>
           </h1>
-          <p style={{ fontSize:11,color:'rgba(255,255,255,.3)',margin:0,
-            fontWeight:600,letterSpacing:'.2em',textTransform:'uppercase' }}>
-            1999X Free Fire Panel
-          </p>
         </div>
 
-        {/* ═══ ANNOUNCEMENTS ═══ */}
+        {/* ══ ANNOUNCEMENTS ═══════════════════════════════════ */}
         {!annLoading && anns.length > 0 && (
-          <div style={{ marginBottom:18, animation:'g-in .4s .05s both' }}>
+          <div style={{ marginBottom:20,animation:'px-in .4s .06s both' }}>
             {isMod && (
-              <div style={{ display:'flex',justifyContent:'flex-end',marginBottom:7 }}>
-                <button onClick={()=>setShowForm(!showForm)}
-                  style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:9,
-                    background:showForm?'rgba(248,113,113,.07)':'rgba(255,255,255,.04)',
-                    border:`1px solid ${showForm?'rgba(248,113,113,.15)':'rgba(255,255,255,.08)'}`,
-                    cursor:'pointer',color:showForm?'#f87171':'rgba(255,255,255,.45)',
-                    fontSize:11,fontFamily:'inherit',fontWeight:600 }}>
+              <div style={{ display:'flex',justifyContent:'flex-end',marginBottom:8 }}>
+                <button onClick={()=>setShowForm(!showForm)} style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:9,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',cursor:'pointer',color:'rgba(255,255,255,.45)',fontSize:11,fontFamily:'inherit',fontWeight:600 }}>
                   {showForm?<><X size={10}/>Close</>:<><Plus size={10}/>Post</>}
                 </button>
               </div>
             )}
             {showForm && isMod && (
-              <div style={{ padding:'14px',borderRadius:14,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)',marginBottom:10 }}>
-                <div style={{ display:'flex',gap:6,marginBottom:9,flexWrap:'wrap' }}>
+              <div style={{ padding:'16px',borderRadius:16,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)',marginBottom:10 }}>
+                <div style={{ display:'flex',gap:6,marginBottom:10,flexWrap:'wrap' }}>
                   {(['update','feature','maintenance'] as const).map(tp=>(
-                    <button key={tp} onClick={()=>setFType(tp)}
-                      style={{ padding:'3px 11px',borderRadius:20,fontSize:10,fontWeight:700,cursor:'pointer',
-                        border:`1px solid ${fType===tp?TYPE_CFG[tp].color:TYPE_CFG[tp].border}`,
-                        background:fType===tp?TYPE_CFG[tp].bg:'transparent',
-                        color:fType===tp?TYPE_CFG[tp].color:'rgba(255,255,255,.35)',fontFamily:'inherit' }}>{tp}</button>
+                    <button key={tp} onClick={()=>setFType(tp)} style={{ padding:'4px 12px',borderRadius:20,fontSize:10,fontWeight:700,cursor:'pointer',border:`1px solid ${fType===tp?TYPE_CFG[tp].color:TYPE_CFG[tp].border}`,background:fType===tp?TYPE_CFG[tp].bg:'transparent',color:fType===tp?TYPE_CFG[tp].color:'rgba(255,255,255,.35)',fontFamily:'inherit' }}>{tp}</button>
                   ))}
                 </div>
-                <input value={fTitle} onChange={e=>setFTitle(e.target.value)} placeholder="Title…"
-                  style={{ width:'100%',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:8,padding:'8px 11px',color:'#fff',fontSize:12,outline:'none',marginBottom:7,fontFamily:'inherit',boxSizing:'border-box' }}/>
-                <textarea value={fContent} onChange={e=>setFContent(e.target.value)} placeholder="Content…" rows={2}
-                  style={{ width:'100%',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:8,padding:'8px 11px',color:'#fff',fontSize:12,outline:'none',resize:'vertical',fontFamily:'inherit',marginBottom:9,boxSizing:'border-box' }}/>
-                <button onClick={handlePublishAnn} disabled={publishing}
-                  style={{ width:'100%',padding:'9px',borderRadius:9,background:'rgba(124,92,255,.15)',border:'1px solid rgba(124,92,255,.3)',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,color:'#7C5CFF',display:'flex',alignItems:'center',justifyContent:'center',gap:6 }}>
+                <input value={fTitle} onChange={e=>setFTitle(e.target.value)} placeholder="Title…" style={{ width:'100%',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:9,padding:'9px 12px',color:'#fff',fontSize:12,outline:'none',marginBottom:8,fontFamily:'inherit',boxSizing:'border-box' }}/>
+                <textarea value={fContent} onChange={e=>setFContent(e.target.value)} placeholder="Content…" rows={2} style={{ width:'100%',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:9,padding:'9px 12px',color:'#fff',fontSize:12,outline:'none',resize:'vertical',fontFamily:'inherit',marginBottom:10,boxSizing:'border-box' }}/>
+                <button onClick={handlePublishAnn} disabled={publishing} style={{ width:'100%',padding:'10px',borderRadius:10,background:'linear-gradient(135deg,#7c3aed,#6d28d9)',border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',gap:6 }}>
                   {publishing?<><Loader2 size={12} className="animate-spin"/>Sending…</>:<><Send size={12}/>Publish</>}
                 </button>
               </div>
             )}
-            <div style={{ display:'flex',flexDirection:'column',gap:7 }}>
+            <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
               {anns.map((ann,i)=>{
-                const cfg = TYPE_CFG[ann.type]??TYPE_CFG.update;
-                const expanded = expandedAnn===ann.id;
+                const cfg=TYPE_CFG[ann.type]??TYPE_CFG.update; const exp=expandedAnn===ann.id;
                 return (
-                  <div key={ann.id} onClick={()=>setExpandedAnn(expanded?null:ann.id)}
-                    style={{ padding:'12px 15px',borderRadius:13,background:'rgba(255,255,255,.03)',
-                      border:`1px solid rgba(255,255,255,.07)`,borderLeft:`3px solid ${cfg.color}55`,
-                      cursor:'pointer',transition:'all .16s',animationDelay:`${i*.04}s` }}
+                  <div key={ann.id} onClick={()=>setExpandedAnn(exp?null:ann.id)}
+                    style={{ padding:'14px 16px',borderRadius:16,background:'rgba(255,255,255,.03)',border:`1px solid rgba(255,255,255,.07)`,borderLeft:`3px solid ${cfg.color}`,cursor:'pointer',transition:'all .16s',animationDelay:`${i*.04}s` }}
                     onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,.055)';}}
                     onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,.03)';}}>
-                    <div style={{ display:'flex',alignItems:'center',gap:8 }}>
-                      <span style={{ fontSize:13 }}>{cfg.emoji}</span>
+                    <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                      <span style={{ fontSize:14 }}>{cfg.emoji}</span>
                       <div style={{ flex:1,minWidth:0 }}>
-                        <div style={{ fontSize:13,fontWeight:600,color:'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:expanded?'normal':'nowrap' }}>{ann.title}</div>
-                        {!expanded&&<div style={{ fontSize:11,color:'rgba(255,255,255,.32)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:1 }}>{ann.content}</div>}
+                        <div style={{ fontSize:13,fontWeight:600,color:'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:exp?'normal':'nowrap' }}>{ann.title}</div>
+                        {!exp&&<div style={{ fontSize:11,color:'rgba(255,255,255,.32)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:2 }}>{ann.content}</div>}
                       </div>
-                      <span style={{ fontSize:8,fontWeight:700,padding:'2px 6px',borderRadius:99,background:cfg.bg,color:cfg.color,border:`1px solid ${cfg.border}`,letterSpacing:'.06em',textTransform:'uppercase',flexShrink:0 }}>{ann.type}</span>
-                      {isMod&&<button onClick={e=>{e.stopPropagation();handleDeleteAnn(ann.id);}}
-                        style={{ padding:'3px',borderRadius:5,background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,.18)',flexShrink:0 }}
-                        onMouseEnter={e=>e.currentTarget.style.color='#f87171'}
-                        onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,.18)'}><Trash2 size={10}/></button>}
+                      {isMod&&<button onClick={e=>{e.stopPropagation();handleDeleteAnn(ann.id);}} style={{ padding:'3px',borderRadius:5,background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,.18)' }} onMouseEnter={e=>e.currentTarget.style.color='#f87171'} onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,.18)'}><Trash2 size={10}/></button>}
                     </div>
-                    {expanded&&<p style={{ fontSize:12,color:'rgba(255,255,255,.45)',lineHeight:1.6,margin:'9px 0 0 21px' }}>{ann.content}</p>}
+                    {exp&&<p style={{ fontSize:12,color:'rgba(255,255,255,.45)',lineHeight:1.6,margin:'10px 0 0 24px' }}>{ann.content}</p>}
                   </div>
                 );
               })}
@@ -656,21 +626,20 @@ export default function DashboardPage() {
           </div>
         )}
         {isMod && anns.length===0 && (
-          <div style={{ marginBottom:16,display:'flex',gap:10,alignItems:'flex-start',flexWrap:'wrap' }}>
-            <button onClick={()=>setShowForm(!showForm)}
-              style={{ display:'flex',alignItems:'center',gap:6,padding:'7px 13px',borderRadius:9,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',cursor:'pointer',color:'rgba(255,255,255,.4)',fontSize:11,fontFamily:'inherit',fontWeight:600 }}>
+          <div style={{ marginBottom:20,display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-start' }}>
+            <button onClick={()=>setShowForm(!showForm)} style={{ display:'flex',alignItems:'center',gap:6,padding:'7px 14px',borderRadius:10,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',cursor:'pointer',color:'rgba(255,255,255,.4)',fontSize:11,fontFamily:'inherit',fontWeight:600 }}>
               <Plus size={11}/> Post Announcement
             </button>
-            {showForm && (
-              <div style={{ flex:1,display:'flex',flexDirection:'column',gap:7,padding:'13px',borderRadius:12,background:'rgba(255,255,255,.025)',border:'1px solid rgba(255,255,255,.07)',minWidth:260 }}>
+            {showForm&&(
+              <div style={{ flex:1,display:'flex',flexDirection:'column',gap:8,padding:'14px',borderRadius:14,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)',minWidth:260 }}>
                 <div style={{ display:'flex',gap:6,flexWrap:'wrap' }}>
                   {(['update','feature','maintenance'] as const).map(tp=>(
-                    <button key={tp} onClick={()=>setFType(tp)} style={{ padding:'3px 10px',borderRadius:20,fontSize:10,fontWeight:700,cursor:'pointer',border:`1px solid ${fType===tp?TYPE_CFG[tp].color:TYPE_CFG[tp].border}`,background:fType===tp?TYPE_CFG[tp].bg:'transparent',color:fType===tp?TYPE_CFG[tp].color:'rgba(255,255,255,.32)',fontFamily:'inherit' }}>{tp}</button>
+                    <button key={tp} onClick={()=>setFType(tp)} style={{ padding:'3px 11px',borderRadius:20,fontSize:10,fontWeight:700,cursor:'pointer',border:`1px solid ${fType===tp?TYPE_CFG[tp].color:TYPE_CFG[tp].border}`,background:fType===tp?TYPE_CFG[tp].bg:'transparent',color:fType===tp?TYPE_CFG[tp].color:'rgba(255,255,255,.32)',fontFamily:'inherit' }}>{tp}</button>
                   ))}
                 </div>
-                <input value={fTitle} onChange={e=>setFTitle(e.target.value)} placeholder="Title…" style={{ background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:7,padding:'7px 10px',color:'#fff',fontSize:12,outline:'none',fontFamily:'inherit' }}/>
-                <textarea value={fContent} onChange={e=>setFContent(e.target.value)} placeholder="Content…" rows={2} style={{ background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:7,padding:'7px 10px',color:'#fff',fontSize:12,outline:'none',resize:'vertical',fontFamily:'inherit' }}/>
-                <button onClick={handlePublishAnn} disabled={publishing} style={{ padding:'8px',borderRadius:8,background:'rgba(124,92,255,.14)',border:'1px solid rgba(124,92,255,.28)',cursor:'pointer',fontFamily:'inherit',fontSize:11,fontWeight:700,color:'#7C5CFF',display:'flex',alignItems:'center',justifyContent:'center',gap:5 }}>
+                <input value={fTitle} onChange={e=>setFTitle(e.target.value)} placeholder="Title…" style={{ background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:8,padding:'8px 11px',color:'#fff',fontSize:12,outline:'none',fontFamily:'inherit' }}/>
+                <textarea value={fContent} onChange={e=>setFContent(e.target.value)} placeholder="Content…" rows={2} style={{ background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:8,padding:'8px 11px',color:'#fff',fontSize:12,outline:'none',resize:'vertical',fontFamily:'inherit' }}/>
+                <button onClick={handlePublishAnn} disabled={publishing} style={{ padding:'9px',borderRadius:9,background:'linear-gradient(135deg,#7c3aed,#6d28d9)',border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',gap:6 }}>
                   {publishing?<><Loader2 size={11} className="animate-spin"/>Sending…</>:<><Send size={11}/>Publish</>}
                 </button>
               </div>
@@ -678,162 +647,199 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ═══ BENTO ROW 1: Balance  +  Stat cards ═══ */}
-        <div className="g-bento g-col2" style={{ marginBottom:14 }}>
+        {/* ══ ROW 1: HERO LEFT + STATS RIGHT ═══════════════════ */}
+        <div className="px-grid px-g-hero" style={{ marginBottom:16 }}>
 
-          {/* ── BALANCE CARD ── */}
-          <div className="g-card" style={{ animationDelay:'0ms', '--glow':'rgba(170,255,0,.12)' } as any}>
-            <div className="g-sweep"/>
-            {/* Header */}
-            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18 }}>
-              <span className="g-lbl">Balance</span>
-              <div style={{ display:'inline-flex',alignItems:'center',gap:6,padding:'3px 10px',borderRadius:99,background:'rgba(170,255,0,.08)',border:'1px solid rgba(170,255,0,.18)' }}>
-                <div className="g-live-dot" style={{ width:5,height:5,animation:'g-pulse 2s ease-in-out infinite' }}/>
-                <span style={{ fontSize:9,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#AAFF00' }}>Active</span>
-              </div>
-            </div>
-            {/* Arc gauge */}
-            <div style={{ display:'flex',justifyContent:'center',marginBottom:18 }}>
-              <div style={{ position:'relative',width:180,height:108 }}>
-                <svg width="180" height="108" viewBox="0 0 180 108" style={{ overflow:'visible' }}>
-                  {/* Track */}
-                  <path d="M18 100 A72 72 0 0 1 162 100" fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="12" strokeLinecap="round"/>
-                  {/* Glow fill */}
-                  <path d="M18 100 A72 72 0 0 1 162 100" fill="none" stroke="rgba(170,255,0,.2)" strokeWidth="14" strokeLinecap="round"
-                    strokeDasharray={ARC_LEN} strokeDashoffset={arcOffset + 4}/>
-                  {/* Main fill */}
-                  <path d="M18 100 A72 72 0 0 1 162 100" fill="none" stroke="#AAFF00" strokeWidth="11" strokeLinecap="round"
-                    strokeDasharray={ARC_LEN} strokeDashoffset={arcOffset}
-                    style={{ filter:'drop-shadow(0 0 8px rgba(170,255,0,.85))' }}/>
-                  {/* Tip dot */}
-                  {arcFill > 8 && (() => {
-                    const angle = Math.PI - (arcFill / ARC_LEN) * Math.PI;
-                    const cx = 90 + 72 * Math.cos(angle);
-                    const cy = 100 - 72 * Math.sin(angle);
-                    return <circle cx={cx} cy={cy} r="7" fill="#AAFF00" style={{ filter:'drop-shadow(0 0 10px #AAFF00)' }}/>;
+          {/* ─── BALANCE HERO PANEL ─── */}
+          <div className="px-panel" style={{ animationDelay:'0ms' }}>
+            {/* Purple radial glow */}
+            <div className="px-panel-glow" style={{ background:'radial-gradient(ellipse at 20% 0%, rgba(124,92,255,.28) 0%, transparent 55%)' }}/>
+            {/* Floating orbs */}
+            <div style={{ position:'absolute',top:-20,right:-20,width:160,height:160,borderRadius:'50%',background:'radial-gradient(circle,rgba(139,92,246,.14) 0%,transparent 70%)',animation:'px-orb 9s ease-in-out infinite',pointerEvents:'none' }}/>
+            <div style={{ position:'absolute',bottom:-30,left:30,width:120,height:120,borderRadius:'50%',background:'radial-gradient(circle,rgba(196,181,253,.08) 0%,transparent 70%)',animation:'px-orb 12s ease-in-out infinite reverse',pointerEvents:'none' }}/>
+
+            <div className="px-label" style={{ marginBottom:14,position:'relative' }}>Available Balance</div>
+
+            {/* Arc gauge + number */}
+            <div style={{ display:'flex',alignItems:'center',gap:28,marginBottom:24,position:'relative' }}>
+              {/* SVG Arc */}
+              <div style={{ position:'relative',flexShrink:0 }}>
+                <svg width="120" height="120" viewBox="0 0 120 120">
+                  {/* Outer ring */}
+                  <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,.05)" strokeWidth="8"/>
+                  {/* Glow track */}
+                  <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(124,92,255,.15)" strokeWidth="10"
+                    strokeDasharray={`${ARC} ${ARC}`} strokeDashoffset={ARC-arcDash+6}
+                    strokeLinecap="round" transform="rotate(-90 60 60)"/>
+                  {/* Main arc */}
+                  <circle cx="60" cy="60" r="50" fill="none"
+                    stroke="url(#arcGrad)" strokeWidth="7"
+                    strokeDasharray={`${ARC} ${ARC}`} strokeDashoffset={ARC-arcDash}
+                    strokeLinecap="round" transform="rotate(-90 60 60)"
+                    style={{ filter:'drop-shadow(0 0 8px rgba(167,139,250,.9))' }}/>
+                  {/* Tip glow */}
+                  {arcDash > 5 && (() => {
+                    const angle = (-Math.PI/2) + (arcDash/ARC)*Math.PI*2;
+                    return <circle cx={60+50*Math.cos(angle)} cy={60+50*Math.sin(angle)} r="5" fill="#c4b5fd" style={{ filter:'drop-shadow(0 0 8px #a78bfa)' }}/>;
                   })()}
+                  <defs>
+                    <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#c4b5fd"/>
+                      <stop offset="100%" stopColor="#7c3aed"/>
+                    </linearGradient>
+                  </defs>
                 </svg>
-                <div style={{ position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-end',paddingBottom:6 }}>
-                  <div style={{ fontSize:32,fontWeight:700,color:'#fff',letterSpacing:'-.05em',lineHeight:1 }}>
-                    ${balance.toFixed(2)}
-                  </div>
-                  <div style={{ fontSize:9,color:'rgba(255,255,255,.35)',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',marginTop:4 }}>Wallet Balance</div>
+                {/* Inner wallet icon */}
+                <div style={{ position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center' }}>
+                  <Wallet size={22} color="rgba(167,139,250,.6)"/>
+                </div>
+              </div>
+              {/* Amount */}
+              <div>
+                <div style={{ fontSize:'clamp(40px,5vw,56px)',fontWeight:700,color:'#fff',letterSpacing:'-.05em',lineHeight:1,marginBottom:4 }}>
+                  ${balance.toFixed(2)}
+                </div>
+                <div style={{ display:'flex',alignItems:'center',gap:7 }}>
+                  <span className="px-dot" style={{ width:6,height:6 }}/>
+                  <span style={{ fontSize:11,color:'rgba(255,255,255,.4)',fontWeight:600 }}>Active Account</span>
                 </div>
               </div>
             </div>
-            {/* Sub-stats */}
-            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10 }}>
-              <div style={{ padding:'12px 14px',borderRadius:13,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)' }}>
-                <div className="g-lbl" style={{ marginBottom:4 }}>Active Keys</div>
-                <div style={{ fontSize:26,fontWeight:700,color:'#AAFF00',letterSpacing:'-.03em',lineHeight:1 }}>
-                  <CountUp to={active.length}/>
+
+            {/* Sub-metrics */}
+            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,position:'relative' }}>
+              {[
+                { label:'Active Keys', val:active.length, col:'#c4b5fd', bg:'rgba(196,181,253,.07)', bc:'rgba(196,181,253,.15)' },
+                { label:'Bonus Pts',   val:bonusPoints,   col:'#a78bfa', bg:'rgba(167,139,250,.07)', bc:'rgba(167,139,250,.15)' },
+              ].map(s=>(
+                <div key={s.label} style={{ padding:'14px 16px',borderRadius:16,background:s.bg,border:`1px solid ${s.bc}`,position:'relative',overflow:'hidden' }}>
+                  <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${s.col}40,transparent)` }}/>
+                  <div className="px-label" style={{ marginBottom:6 }}>{s.label}</div>
+                  <div style={{ fontSize:30,fontWeight:700,color:s.col,letterSpacing:'-.04em',lineHeight:1 }}>
+                    <CountUp to={s.val}/>
+                  </div>
                 </div>
-              </div>
-              <div style={{ padding:'12px 14px',borderRadius:13,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)' }}>
-                <div className="g-lbl" style={{ marginBottom:4 }}>Bonus Pts</div>
-                <div style={{ fontSize:26,fontWeight:700,color:'#7C5CFF',letterSpacing:'-.03em',lineHeight:1 }}>
-                  <CountUp to={bonusPoints}/>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
-          {/* ── RIGHT: 3 stat cards ── */}
-          <div style={{ display:'flex',flexDirection:'column',gap:14 }}>
+          {/* ─── STAT PANELS (right col) ─── */}
+          <div style={{ display:'flex',flexDirection:'column',gap:16 }}>
+
             {/* Total Users */}
-            <div className="g-card" style={{ flex:1, animationDelay:'80ms', '--glow':'rgba(124,92,255,.12)' } as any}>
-              <div className="g-sweep"/>
-              <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(124,92,255,.3),transparent)'}}/>
-              <div className="g-lbl" style={{ marginBottom:8 }}>Total Users</div>
-              <div style={{ fontSize:40,fontWeight:700,color:'#7C5CFF',letterSpacing:'-.04em',lineHeight:1,marginBottom:3 }}>
-                {statsLoading ? '—' : <><CountUp to={totalUsers}/><span style={{ fontSize:20 }}>+</span></>}
+            <div className="px-panel" style={{ flex:1,animationDelay:'80ms' }}>
+              <div className="px-panel-glow" style={{ background:'radial-gradient(circle at 90% 10%,rgba(124,92,255,.18) 0%,transparent 60%)' }}/>
+              <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:10 }}>
+                <div className="px-label">Total Users</div>
+                <div style={{ width:36,height:36,borderRadius:11,background:'rgba(124,92,255,.1)',border:'1px solid rgba(124,92,255,.2)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                  <Users size={16} color="#a78bfa"/>
+                </div>
               </div>
-              <div style={{ fontSize:11,color:'rgba(255,255,255,.3)',fontWeight:500 }}>Registered accounts</div>
+              <div className="px-num px-num-violet" style={{ fontSize:'clamp(36px,4vw,48px)' }}>
+                {statsLoading?'—':<><CountUp to={totalUsers}/><span style={{ fontSize:22,fontWeight:400 }}>+</span></>}
+              </div>
+              <div style={{ fontSize:11,color:'rgba(255,255,255,.28)',marginTop:5,fontWeight:500 }}>Registered accounts</div>
             </div>
+
             {/* Live Playing */}
-            <div className="g-card" style={{ flex:1, animationDelay:'160ms', '--glow':'rgba(170,255,0,.12)' } as any}>
-              <div className="g-sweep"/>
-              <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(170,255,0,.25),transparent)'}}/>
-              <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8 }}>
-                <span className="g-lbl">Live Playing</span>
-                <div className="g-live-dot"/>
+            <div className="px-panel" style={{ flex:1,animationDelay:'160ms' }}>
+              <div className="px-panel-glow" style={{ background:'radial-gradient(circle at 90% 10%,rgba(167,139,250,.16) 0%,transparent 60%)' }}/>
+              <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:10 }}>
+                <div className="px-label">Live Playing</div>
+                <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+                  <span className="px-dot"/>
+                  <div style={{ width:36,height:36,borderRadius:11,background:'rgba(167,139,250,.1)',border:'1px solid rgba(167,139,250,.2)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                    <Activity size={16} color="#c4b5fd"/>
+                  </div>
+                </div>
               </div>
-              <div style={{ fontSize:40,fontWeight:700,color:'#AAFF00',letterSpacing:'-.04em',lineHeight:1,marginBottom:3 }}>
-                {statsLoading ? '—' : <CountUp to={totalOnline}/>}
+              <div className="px-num" style={{ fontSize:'clamp(36px,4vw,48px)' }}>
+                {statsLoading?'—':<CountUp to={totalOnline}/>}
               </div>
-              <div style={{ fontSize:11,color:'rgba(255,255,255,.3)',fontWeight:500 }}>Active sessions now</div>
+              <div style={{ fontSize:11,color:'rgba(255,255,255,.28)',marginTop:5,fontWeight:500 }}>Active sessions now</div>
             </div>
+
             {/* Antiban */}
-            <div className="g-card" style={{ flex:1, animationDelay:'240ms', '--glow':'rgba(245,158,11,.12)' } as any}>
-              <div className="g-sweep"/>
-              <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(245,158,11,.25),transparent)'}}/>
-              <div className="g-lbl" style={{ marginBottom:8 }}>Antiban OB52</div>
-              <div style={{ fontSize:32,fontWeight:700,color:'#F59E0B',letterSpacing:'-.03em',lineHeight:1,marginBottom:3 }}>Protected</div>
-              <div style={{ fontSize:11,color:'rgba(255,255,255,.3)',fontWeight:500 }}>Fully undetected</div>
+            <div className="px-panel" style={{ flex:1,animationDelay:'240ms' }}>
+              <div className="px-panel-glow" style={{ background:'radial-gradient(circle at 90% 10%,rgba(167,139,250,.12) 0%,transparent 60%)' }}/>
+              <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:10 }}>
+                <div className="px-label">Antiban OB52</div>
+                <div style={{ width:36,height:36,borderRadius:11,background:'rgba(167,139,250,.08)',border:'1px solid rgba(167,139,250,.18)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                  <Shield size={16} color="#a78bfa"/>
+                </div>
+              </div>
+              <div style={{ fontSize:28,fontWeight:700,letterSpacing:'-.03em',lineHeight:1,background:'linear-gradient(125deg,#e0d7ff,#a78bfa)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>
+                Protected
+              </div>
+              <div style={{ fontSize:11,color:'rgba(255,255,255,.28)',marginTop:5,fontWeight:500 }}>Fully undetected</div>
             </div>
           </div>
         </div>
 
-        {/* ═══ BENTO ROW 2: Daily Bonus  +  Free Trial ═══ */}
-        <div className="g-bento g-col2">
+        {/* ══ ROW 2: DAILY BONUS + FREE TRIAL ═════════════════ */}
+        <div className="px-grid px-g-bottom">
 
-          {/* ── DAILY BONUS CARD ── */}
-          <div className="g-card" style={{ animationDelay:'320ms', '--glow':'rgba(124,92,255,.14)' } as any}>
-            <div className="g-sweep"/>
+          {/* ─── DAILY BONUS ─── */}
+          <div className="px-panel" style={{ animationDelay:'320ms' }}>
+            <div className="px-panel-glow" style={{ background:'radial-gradient(ellipse at 10% 0%,rgba(124,92,255,.24) 0%,transparent 55%)' }}/>
+            <div style={{ position:'absolute',top:-30,right:-20,width:140,height:140,borderRadius:'50%',background:'radial-gradient(circle,rgba(139,92,246,.1) 0%,transparent 70%)',animation:'px-orb 8s ease-in-out infinite',pointerEvents:'none' }}/>
+
             {/* Header */}
-            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20 }}>
-              <div style={{ display:'flex',alignItems:'center',gap:11 }}>
-                <div style={{ width:40,height:40,borderRadius:12,background:'rgba(124,92,255,.1)',border:'1px solid rgba(124,92,255,.2)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 16px rgba(124,92,255,.15)' }}>
-                  <Gift size={17} color="#7C5CFF"/>
-                </div>
-                <div>
-                  <div style={{ fontSize:14,fontWeight:700,color:'#fff',letterSpacing:'-.01em' }}>Daily Bonus</div>
-                  <div style={{ fontSize:10,color:'rgba(255,255,255,.32)',letterSpacing:'.05em',textTransform:'uppercase',marginTop:1 }}>+10 pts · resets 24h</div>
-                </div>
+            <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:22,position:'relative' }}>
+              <div>
+                <div className="px-label" style={{ marginBottom:6 }}>Daily Bonus</div>
+                <div style={{ fontSize:22,fontWeight:700,color:'#fff',letterSpacing:'-.02em',lineHeight:1 }}>Earn &amp; Reward</div>
+                <div style={{ fontSize:11,color:'rgba(255,255,255,.3)',marginTop:4 }}>+10 pts every 24 hours</div>
               </div>
-              {bonusPoints>=100 && (
-                <button onClick={()=>setShowRewardModal(true)}
-                  style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:9,background:'rgba(170,255,0,.08)',border:'1px solid rgba(170,255,0,.22)',cursor:'pointer',fontFamily:'inherit',fontSize:11,fontWeight:700,color:'#AAFF00',transition:'all .15s' }}
-                  onMouseEnter={e=>{e.currentTarget.style.background='rgba(170,255,0,.15)';}}
-                  onMouseLeave={e=>{e.currentTarget.style.background='rgba(170,255,0,.08)';}}>
-                  <Star size={10}/> Redeem
-                </button>
-              )}
+              <div style={{ display:'flex',flexDirection:'column',alignItems:'flex-end',gap:8 }}>
+                <div style={{ width:44,height:44,borderRadius:14,background:'linear-gradient(135deg,rgba(124,92,255,.2),rgba(109,40,217,.08))',border:'1px solid rgba(124,92,255,.28)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 18px rgba(109,40,217,.2)' }}>
+                  <Gift size={20} color="#a78bfa"/>
+                </div>
+                {bonusPoints>=100 && (
+                  <button onClick={()=>setShowRewardModal(true)}
+                    style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:10,background:'rgba(167,139,250,.12)',border:'1px solid rgba(167,139,250,.28)',cursor:'pointer',fontFamily:'inherit',fontSize:11,fontWeight:700,color:'#c4b5fd',transition:'all .15s',whiteSpace:'nowrap' }}
+                    onMouseEnter={e=>{e.currentTarget.style.background='rgba(167,139,250,.2)';}}
+                    onMouseLeave={e=>{e.currentTarget.style.background='rgba(167,139,250,.12)';}}>
+                    <Star size={10}/> Redeem
+                  </button>
+                )}
+              </div>
             </div>
-            {/* Points + progress */}
-            <div style={{ marginBottom:18 }}>
+
+            {/* Points display */}
+            <div style={{ marginBottom:18,position:'relative' }}>
               <div style={{ display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10 }}>
-                <div style={{ display:'flex',alignItems:'baseline',gap:5 }}>
-                  <span style={{ fontSize:48,fontWeight:700,color:'#fff',letterSpacing:'-.06em',lineHeight:1 }}>{bonusPoints}</span>
-                  <span style={{ fontSize:14,color:'rgba(255,255,255,.3)',fontWeight:600 }}>pts</span>
+                <div style={{ display:'flex',alignItems:'baseline',gap:6 }}>
+                  <span style={{ fontSize:56,fontWeight:700,color:'#fff',letterSpacing:'-.06em',lineHeight:1 }}>{bonusPoints}</span>
+                  <span style={{ fontSize:16,color:'rgba(255,255,255,.28)',fontWeight:600 }}>pts</span>
                 </div>
-                <span style={{ fontSize:11,color:'rgba(255,255,255,.25)',fontWeight:600 }}>{progressPct}/100</span>
+                <div style={{ textAlign:'right' }}>
+                  <div style={{ fontSize:11,color:'rgba(255,255,255,.22)',fontWeight:600 }}>{progressPct}/100</div>
+                  {bonusPoints>=100 && <div style={{ fontSize:10,color:'#c4b5fd',fontWeight:700,marginTop:2 }}>🎁 Ready!</div>}
+                </div>
               </div>
-              <div className="g-bar-track">
-                <div className="g-bar-fill" style={{
-                  background:'linear-gradient(90deg,#7C5CFF,#a78bfa)',
-                  boxShadow:'0 0 12px rgba(124,92,255,.5)',
+              {/* Bar */}
+              <div className="px-bar-track">
+                <div className="px-bar-fill" style={{
+                  background:'linear-gradient(90deg,#7c3aed,#a78bfa,#c4b5fd)',
+                  boxShadow:'0 0 14px rgba(139,92,246,.55)',
                   '--bw':`${Math.min(progressPct===0&&bonusPoints>=100?100:progressPct,100)}%`
                 } as any}/>
               </div>
-              {bonusPoints>=100 && (
-                <div style={{ textAlign:'right',marginTop:5,fontSize:10,color:'#AAFF00',fontWeight:700,letterSpacing:'.04em' }}>
-                  🎁 Ready to redeem
-                </div>
-              )}
             </div>
+
             {/* Claim button */}
-            <button onClick={handleClaimBonus} disabled={!canClaimBonus||claimingBonus} className="g-btn">
+            <button onClick={handleClaimBonus} disabled={!canClaimBonus||claimingBonus} className="px-btn px-btn-full">
               {claimingBonus
-                ? <><Loader2 size={13} style={{ animation:'g-spin 1s linear infinite' }}/>Claiming…</>
+                ? <><Loader2 size={14} className="animate-spin"/>Claiming…</>
                 : canClaimBonus
-                  ? <><Sparkles size={13}/>Claim +10 Points</>
-                  : <><Clock size={12}/>{bonusCooldown}</>}
+                  ? <><Sparkles size={14}/>Claim +10 Points</>
+                  : <><Clock size={13}/>{bonusCooldown}</>}
             </button>
           </div>
 
-          {/* ── FREE TRIAL CARD ── */}
-          <FreeKeyCard delay="400ms"/>
+          {/* ─── FREE TRIAL ─── */}
+          <FreeKeyCard animDelay={400}/>
 
         </div>
       </div>

@@ -1462,126 +1462,6 @@ export default function WalletPage() {
           box-shadow: 0 0 22px rgba(109,40,217,.18), inset 0 1px 0 rgba(255,255,255,.06);
         }
 
-        /* ── Hero card ── */
-        .w-hero {
-          position: relative; border-radius: 28px; overflow: hidden;
-          padding: 36px 40px;
-          background: linear-gradient(135deg,
-            rgba(15,10,30,.98) 0%,
-            rgba(8,8,20,.98) 50%,
-            rgba(5,12,8,.98) 100%);
-          border: 1px solid rgba(139,92,246,.18);
-          box-shadow:
-            0 0 0 1px rgba(255,255,255,.04) inset,
-            0 1px 0 rgba(255,255,255,.07) inset,
-            0 40px 80px rgba(0,0,0,.55),
-            0 0 100px rgba(109,40,217,.08);
-          animation: w-slide-up .5s cubic-bezier(.22,1,.36,1) both;
-        }
-        .w-hero-orb-l {
-          position: absolute; top: -80px; left: -60px;
-          width: 280px; height: 280px; border-radius: 50%;
-          background: radial-gradient(circle, rgba(109,40,217,.22) 0%, transparent 70%);
-          pointer-events: none; filter: blur(2px);
-        }
-        .w-hero-orb-r {
-          position: absolute; bottom: -60px; right: -40px;
-          width: 220px; height: 220px; border-radius: 50%;
-          background: radial-gradient(circle, rgba(16,232,152,.1) 0%, transparent 70%);
-          pointer-events: none;
-        }
-        .w-hero-line {
-          position: absolute; top: 0; left: 0; right: 0; height: 1px;
-          background: linear-gradient(90deg, transparent 0%, rgba(139,92,246,.5) 40%, rgba(16,232,152,.3) 70%, transparent 100%);
-          pointer-events: none;
-        }
-
-        /* Shimmer overlay on hero */
-        .w-hero::after {
-          content: '';
-          position: absolute; top: 0; bottom: 0;
-          width: 30%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,.025), transparent);
-          animation: w-shimmer 5s ease-in-out infinite;
-          pointer-events: none;
-        }
-
-        .w-balance-label {
-          font-size: 11px; font-weight: 700; letter-spacing: .18em;
-          text-transform: uppercase; color: rgba(255,255,255,.28); margin-bottom: 10px;
-        }
-        .w-balance-amount {
-          font-size: 64px; font-weight: 900; color: #fff;
-          letter-spacing: -.05em; line-height: 1;
-          animation: w-bal-glow 4s ease-in-out infinite;
-          margin-bottom: 14px;
-        }
-
-        /* CTA buttons */
-        .w-btn-primary {
-          display: flex; align-items: center; justify-content: center; gap: 9px;
-          padding: 14px 28px; border-radius: 14px;
-          background: linear-gradient(135deg,#8b5cf6 0%,#7c3aed 50%,#6d28d9 100%);
-          border: 1px solid rgba(139,92,246,.5);
-          cursor: pointer; color: #fff; font-size: 14px; font-weight: 700;
-          font-family: inherit; white-space: nowrap;
-          box-shadow: 0 0 32px rgba(109,40,217,.5), 0 4px 20px rgba(0,0,0,.35);
-          transition: all .25s cubic-bezier(.22,1,.36,1);
-          position: relative; overflow: hidden;
-        }
-        .w-btn-primary::before {
-          content: '';
-          position: absolute; top: 0; bottom: 0; left: -80%;
-          width: 50%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
-          transition: left .4s ease;
-          pointer-events: none;
-        }
-        .w-btn-primary:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 0 48px rgba(109,40,217,.7), 0 8px 28px rgba(0,0,0,.4);
-          border-color: rgba(139,92,246,.7);
-        }
-        .w-btn-primary:hover::before { left: 160%; }
-        .w-btn-primary:active { transform: translateY(0) scale(.98); }
-
-        .w-btn-secondary {
-          display: flex; align-items: center; justify-content: center; gap: 8px;
-          padding: 12px 24px; border-radius: 14px;
-          background: rgba(255,255,255,.055);
-          border: 1px solid rgba(255,255,255,.1);
-          cursor: pointer; color: rgba(255,255,255,.65); font-size: 13px;
-          font-weight: 600; font-family: inherit; white-space: nowrap;
-          backdrop-filter: blur(8px);
-          transition: all .2s cubic-bezier(.22,1,.36,1);
-        }
-        .w-btn-secondary:hover {
-          background: rgba(255,255,255,.09);
-          border-color: rgba(255,255,255,.18);
-          color: #fff; transform: translateY(-1px);
-        }
-
-        /* ── History row ── */
-        .w-history-row {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 16px 20px; border-radius: 16px;
-          border: 1px solid transparent;
-          transition: all .2s;
-          gap: 12px;
-        }
-        .w-history-row:hover { background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.06); }
-
-        /* ── Stat mini-cards ── */
-        .w-stat {
-          flex: 1; padding: 18px 20px; border-radius: 18px;
-          background: rgba(255,255,255,.03);
-          border: 1px solid rgba(255,255,255,.07);
-          backdrop-filter: blur(12px);
-          transition: all .2s;
-          min-width: 0;
-        }
-        .w-stat:hover { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.11); }
-
         /* ── Animated buy button ── */
         .ppc-btn {
           --tooltip-height: 32px;
@@ -1688,53 +1568,7 @@ export default function WalletPage() {
 
       <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
 
-        {/* ══ HERO BALANCE CARD ══ */}
-        <div className="w-hero">
-          <div className="w-hero-line" />
-          <div className="w-hero-orb-l" />
-          <div className="w-hero-orb-r" />
 
-          <div style={{ position:'relative', display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:24 }}>
-            {/* Left — balance */}
-            <div>
-              <div className="w-balance-label">{t('wallet.availableBalance')}</div>
-              <div className="w-balance-amount">${balance.toFixed(2)}</div>
-
-              {/* Status badges */}
-              <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 13px', borderRadius:20, background:'rgba(16,232,152,.08)', border:'1px solid rgba(16,232,152,.18)' }}>
-                  <div className="dot dot-green" style={{ width:5, height:5 }} />
-                  <span style={{ fontSize:11, fontWeight:700, color:'var(--green)' }}>{t('dashboard.activeAccount')}</span>
-                </div>
-                <span style={{ fontSize:11, color:'rgba(255,255,255,.22)', letterSpacing:'.02em' }}>{t('shop.activeAccountNote')}</span>
-              </div>
-            </div>
-
-            {/* Right — action buttons */}
-            <div style={{ display:'flex', flexDirection:'column', gap:10, alignSelf:'center', flexShrink:0 }}>
-              <button className="w-btn-primary" onClick={()=>setActiveTab('deposit')}>
-                <Wallet size={16} /> {t('wallet.addFunds')}
-              </button>
-              <button className="w-btn-secondary" onClick={()=>setActiveTab('products')}>
-                <ShoppingBag size={15} /> {t('wallet.buyProducts')}
-              </button>
-            </div>
-          </div>
-
-          {/* ── Mini stat strip ── */}
-          <div style={{ display:'flex', gap:10, marginTop:28, flexWrap:'wrap' }}>
-            {[
-              { label:t('wallet.totalDeposited'), value:`$${myTxns.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount),0).toFixed(2)}`, color:'rgba(139,92,246,.9)' },
-              { label:t('common.pending'),        value:myTxns.filter(t=>t.status==='pending').length,  color:'rgba(251,191,36,.9)'  },
-              { label:t('wallet.transactions'),   value:myTxns.length,                                   color:'rgba(56,189,248,.9)'  },
-            ].map(s=>(
-              <div key={s.label} className="w-stat">
-                <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,.3)', textTransform:'uppercase', letterSpacing:'.12em', marginBottom:6 }}>{s.label}</div>
-                <div style={{ fontSize:26, fontWeight:900, color:s.color, letterSpacing:'-.03em' }}>{s.value}</div>
-              </div>
-            ))}
-          </div>
-        </div>
 
 
         {/* ══ TABS ══ */}
@@ -1796,107 +1630,184 @@ export default function WalletPage() {
         {/* ══ HISTORY TAB ══ */}
         {activeTab==='history'&&(
           <div style={{ animation:'w-slide-up .4s cubic-bezier(.22,1,.36,1) both' }}>
-            <div style={{ borderRadius:24, overflow:'hidden', border:'1px solid rgba(255,255,255,.07)', background:'rgba(255,255,255,.018)', backdropFilter:'blur(18px)' }}>
+            <style>{`
+              @keyframes tx-in { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
 
-              {/* History header */}
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'22px 26px', borderBottom:'1px solid rgba(255,255,255,.06)' }}>
-                  <div>
-                    <div style={{ fontSize:16, fontWeight:800, color:'#fff', marginBottom:2 }}>{t('wallet.transactionHistory')}</div>
-                    <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>{t('wallet.historySummary', { payments: myTxns.length, keys: sortedPurchasedLicenses.length })}</div>
-                  </div>
-                <button onClick={loadTxns} disabled={txnsLoad}
-                  style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:11, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.09)', cursor:'pointer', color:'rgba(255,255,255,.55)', fontFamily:'inherit', fontSize:12, fontWeight:600, transition:'all .18s' }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.09)';(e.currentTarget as HTMLButtonElement).style.color='#fff';}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.05)';(e.currentTarget as HTMLButtonElement).style.color='rgba(255,255,255,.55)';}}>
-                  <RefreshCw size={12} className={txnsLoad?'animate-spin':''}/> Refresh
-                </button>
+              .tx-card {
+                border-radius: 18px;
+                border: 1px solid rgba(255,255,255,.07);
+                background: rgba(255,255,255,.025);
+                backdrop-filter: blur(12px);
+                overflow: hidden;
+                transition: border-color .2s, box-shadow .2s, transform .22s cubic-bezier(.22,1,.36,1);
+                animation: tx-in .4s cubic-bezier(.22,1,.36,1) both;
+              }
+              .tx-card:hover { border-color:rgba(255,255,255,.12); transform:translateY(-2px); box-shadow:0 12px 40px rgba(0,0,0,.4); }
+              .tx-card.tx-approved { border-color:rgba(16,232,152,.14); }
+              .tx-card.tx-approved:hover { border-color:rgba(16,232,152,.28); box-shadow:0 12px 40px rgba(0,0,0,.4),0 0 28px rgba(16,232,152,.08); }
+              .tx-card.tx-pending  { border-color:rgba(251,191,36,.14); }
+              .tx-card.tx-pending:hover  { border-color:rgba(251,191,36,.28); box-shadow:0 12px 40px rgba(0,0,0,.4),0 0 28px rgba(251,191,36,.06); }
+              .tx-card.tx-rejected { border-color:rgba(248,113,113,.14); }
+              .tx-card.tx-rejected:hover { border-color:rgba(248,113,113,.28); box-shadow:0 12px 40px rgba(0,0,0,.4),0 0 28px rgba(248,113,113,.06); }
+
+              .tx-status-approved { background:rgba(16,232,152,.1); border:1px solid rgba(16,232,152,.22); color:#10e898; }
+              .tx-status-pending  { background:rgba(251,191,36,.1); border:1px solid rgba(251,191,36,.22); color:#fbbf24; }
+              .tx-status-rejected { background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.22); color:#f87171; }
+
+              .tx-pill {
+                display:inline-flex; align-items:center; gap:5px;
+                padding:5px 12px; border-radius:99px; font-size:11px; font-weight:700;
+                letter-spacing:.02em;
+              }
+              .tx-dot {
+                width:6px; height:6px; border-radius:50%; flex-shrink:0;
+              }
+              .tx-dot-approved { background:#10e898; box-shadow:0 0 6px rgba(16,232,152,.7); }
+              .tx-dot-pending  { background:#fbbf24; animation:tx-pulse 1.8s ease-in-out infinite; }
+              .tx-dot-rejected { background:#f87171; }
+              @keyframes tx-pulse { 0%,100%{opacity:.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.4)} }
+
+              .tx-meta-chip {
+                display:inline-flex; align-items:center; gap:5px;
+                padding:3px 9px; border-radius:7px;
+                background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07);
+                font-size:10px; font-weight:600; color:rgba(255,255,255,.45);
+                font-family:monospace; letter-spacing:.02em;
+              }
+            `}</style>
+
+            {/* Header */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:18 }}>
+              <div>
+                <div style={{ fontSize:18, fontWeight:800, color:'#fff', letterSpacing:'-.02em', marginBottom:3 }}>Deposit History</div>
+                <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>
+                  {myTxns.length} transaction{myTxns.length!==1?'s':''} · ${myTxns.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount),0).toFixed(2)} total deposited
+                </div>
               </div>
+              <button onClick={loadTxns} disabled={txnsLoad}
+                style={{ display:'flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:11,background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.09)',cursor:'pointer',color:'rgba(255,255,255,.55)',fontFamily:'inherit',fontSize:12,fontWeight:600,transition:'all .18s' }}
+                onMouseEnter={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.09)';(e.currentTarget as HTMLButtonElement).style.color='#fff';}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background='rgba(255,255,255,.05)';(e.currentTarget as HTMLButtonElement).style.color='rgba(255,255,255,.55)';}}>
+                <RefreshCw size={12} className={txnsLoad?'animate-spin':''}/> Refresh
+              </button>
+            </div>
 
-              {/* History body */}
-              <div style={{ padding:'10px 16px 16px' }}>
-                {txnsLoad
-                  ? <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'48px 0', color:'rgba(255,255,255,.3)' }}>
-                      <Loader2 size={16} className="animate-spin"/>
-                      <span style={{ fontSize:13 }}>{t('wallet.loadingTransactions')}</span>
-                    </div>
-                    : myTxns.length===0 && sortedPurchasedLicenses.length===0
-                    ? <div style={{ textAlign:'center', padding:'56px 0' }}>
-                        <div style={{ fontSize:42, marginBottom:14, opacity:.5 }}>📭</div>
-                        <p style={{ fontSize:14, color:'rgba(255,255,255,.4)', fontWeight:700, marginBottom:5 }}>{t('wallet.noHistory')}</p>
-                        <p style={{ fontSize:12, color:'rgba(255,255,255,.2)' }}>{t('wallet.noHistoryDesc')}</p>
-                      </div>
-                    : <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-                        {sortedPurchasedLicenses.length > 0 && (
-                          <div style={{ padding:'10px 6px 18px' }}>
-                            <div style={{ fontSize:13, fontWeight:800, color:'#fff', margin:'4px 10px 12px' }}>{t('wallet.purchasedKeys')}</div>
-                            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                              {sortedPurchasedLicenses.map(license => (
-                                <div key={`${license.productId}-${license.key}`} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'16px 18px', borderRadius:18, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)' }}>
-                                  <div style={{ minWidth:0, flex:1 }}>
-                                    <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8, flexWrap:'wrap' }}>
-                                      <span style={{ fontSize:14, fontWeight:800, color:'#fff' }}>{getLicenseDisplayName(t, license.productId, license.productName)}</span>
-                                      <span style={{ padding:'4px 10px', borderRadius:999, fontSize:10, fontWeight:800, background: license.status==='expired' ? 'rgba(248,113,113,.12)' : 'rgba(16,232,152,.12)', border: `1px solid ${license.status==='expired' ? 'rgba(248,113,113,.18)' : 'rgba(16,232,152,.18)'}`, color: license.status==='expired' ? '#fca5a5' : '#86efac' }}>
-                                        {license.status === 'expired' ? t('common.expired') : t('common.active')}
-                                      </span>
-                                    </div>
-                                    <code style={{ display:'block', fontSize:12, color:'#fff', background:'rgba(0,0,0,.24)', padding:'10px 12px', borderRadius:12, border:'1px solid rgba(255,255,255,.06)', wordBreak:'break-all' }}>
-                                      {license.key}
-                                    </code>
-                                    <div style={{ marginTop:8, fontSize:11, color:'rgba(255,255,255,.35)' }}>
-                                      {t('wallet.expires')} {new Date(license.expiresAt).toLocaleString()}
-                                    </div>
-                                  </div>
-                                  <button
-                                    onClick={() => { navigator.clipboard.writeText(String(license.key).replace('_INTERNAL','')); toast.success(t('wallet.keyCopied')); }}
-                                    style={{ padding:'10px 14px', borderRadius:12, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.08)', color:'#fff', fontFamily:'inherit', fontSize:12, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6, flexShrink:0 }}
-                                  >
-                                    <Copy size={13}/> {t('common.copy')}
-                                  </button>
-                                </div>
-                              ))}
+            {/* Summary strip */}
+            {myTxns.length > 0 && (
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:18 }}>
+                {[
+                  { label:'Total Deposited', val:`$${myTxns.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount),0).toFixed(2)}`, color:'#10e898', bg:'rgba(16,232,152,.07)', bc:'rgba(16,232,152,.15)' },
+                  { label:'Pending', val:myTxns.filter(t=>t.status==='pending').length, color:'#fbbf24', bg:'rgba(251,191,36,.07)', bc:'rgba(251,191,36,.15)' },
+                  { label:'Total Transactions', val:myTxns.length, color:'rgba(255,255,255,.7)', bg:'rgba(255,255,255,.04)', bc:'rgba(255,255,255,.09)' },
+                ].map(s=>(
+                  <div key={s.label} style={{ padding:'14px 16px', borderRadius:14, background:s.bg, border:`1px solid ${s.bc}` }}>
+                    <div style={{ fontSize:9, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.38)', marginBottom:5 }}>{s.label}</div>
+                    <div style={{ fontSize:22, fontWeight:900, color:s.color, letterSpacing:'-.03em' }}>{s.val}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Transaction list */}
+            {txnsLoad ? (
+              <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:'56px 0',color:'rgba(255,255,255,.3)' }}>
+                <Loader2 size={16} className="animate-spin"/>
+                <span style={{ fontSize:13 }}>Loading transactions…</span>
+              </div>
+            ) : myTxns.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'64px 0', borderRadius:20, border:'1px dashed rgba(255,255,255,.08)', background:'rgba(255,255,255,.015)' }}>
+                <div style={{ fontSize:40, marginBottom:14, opacity:.4 }}>💳</div>
+                <p style={{ fontSize:15, color:'rgba(255,255,255,.35)', fontWeight:700, marginBottom:5 }}>No deposits yet</p>
+                <p style={{ fontSize:12, color:'rgba(255,255,255,.18)' }}>Add balance to see your transaction history here</p>
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                {myTxns.map((tx, i) => {
+                  const m = PAYMENT_METHODS.find(p=>p.id===tx.method);
+                  const isApproved = tx.status==='approved';
+                  const isPending  = tx.status==='pending';
+                  const isRejected = tx.status==='rejected';
+                  const statusClass = isApproved?'tx-approved':isPending?'tx-pending':'tx-rejected';
+                  const accentBar = isApproved?'#10e898':isPending?'#fbbf24':'#f87171';
+                  return (
+                    <div key={tx.id} className={`tx-card ${statusClass}`} style={{ animationDelay:`${i*50}ms` }}>
+                      {/* Left accent bar */}
+                      <div style={{ position:'absolute',top:0,bottom:0,left:0,width:3,background:accentBar,opacity:.7,borderRadius:'18px 0 0 18px' }}/>
+
+                      <div style={{ padding:'18px 20px 18px 22px' }}>
+                        {/* Top row: amount + status */}
+                        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:14, gap:12 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                            {/* Payment method icon */}
+                            <div style={{ width:44,height:44,borderRadius:13,background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.09)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',flexShrink:0 }}>
+                              {m?.icon ?? <span style={{ fontSize:20 }}>💳</span>}
                             </div>
+                            <div>
+                              <div style={{ display:'flex', alignItems:'baseline', gap:6, marginBottom:3 }}>
+                                <span style={{ fontSize:24, fontWeight:900, color:'#fff', letterSpacing:'-.04em' }}>
+                                  ${Number(tx.amount).toFixed(2)}
+                                </span>
+                                <span style={{ fontSize:12, color:'rgba(255,255,255,.4)', fontWeight:500 }}>USD</span>
+                              </div>
+                              <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                                <span style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,.7)' }}>
+                                  via {m?.label ?? tx.method}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          {/* Status badge */}
+                          <div className={`tx-pill tx-status-${tx.status}`} style={{ flexShrink:0 }}>
+                            <div className={`tx-dot tx-dot-${tx.status}`}/>
+                            {isApproved ? '✓ Approved' : isPending ? 'Pending' : '✕ Rejected'}
+                          </div>
+                        </div>
+
+                        {/* Detail chips row */}
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:7, marginBottom:tx.transaction_id?12:0 }}>
+                          <span className="tx-meta-chip">
+                            📅 {new Date(tx.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+                          </span>
+                          {tx.transaction_id && (
+                            <span className="tx-meta-chip">
+                              # {tx.transaction_id.slice(0,22)}{tx.transaction_id.length>22?'…':''}
+                            </span>
+                          )}
+                          {tx.note && tx.note.includes('Auto') && (
+                            <span className="tx-meta-chip" style={{ color:'rgba(56,189,248,.8)',borderColor:'rgba(56,189,248,.15)',background:'rgba(56,189,248,.06)' }}>
+                              ⚡ Auto-verified
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Full TXN ID (if exists) */}
+                        {tx.transaction_id && tx.transaction_id.length > 22 && (
+                          <div style={{ marginTop:10, padding:'9px 12px', borderRadius:10, background:'rgba(0,0,0,.2)', border:'1px solid rgba(255,255,255,.06)' }}>
+                            <div style={{ fontSize:8, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.25)', marginBottom:4 }}>Transaction ID</div>
+                            <code style={{ fontSize:11, fontFamily:'monospace', color:'rgba(255,255,255,.55)', wordBreak:'break-all', lineHeight:1.5 }}>
+                              {tx.transaction_id}
+                            </code>
                           </div>
                         )}
-                        {myTxns.map(tx=>{
-                        const m   = PAYMENT_METHODS.find(p=>p.id===tx.method);
-                        const sc  = tx.status==='approved'?'#10e898':tx.status==='rejected'?'#f87171':'#fbbf24';
-                        const sbg = tx.status==='approved'?'rgba(16,232,152,.06)':tx.status==='rejected'?'rgba(248,113,113,.06)':'rgba(251,191,36,.06)';
-                        const sbc = tx.status==='approved'?'rgba(16,232,152,.18)':tx.status==='rejected'?'rgba(248,113,113,.18)':'rgba(251,191,36,.18)';
-                        const icon = tx.status==='approved'?'✓':tx.status==='rejected'?'✗':'⏳';
-                        const label = tx.status==='approved' ? t('common.approved') : tx.status==='rejected' ? t('common.rejected') : t('common.pending');
-                        return (
-                          <div key={tx.id} className="w-history-row">
-                            {/* Method icon */}
-                            <div style={{ width:42, height:42, borderRadius:12, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.08)', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', flexShrink:0 }}>
-                              {m?.icon ?? <span style={{ fontSize:18 }}>💳</span>}
-                            </div>
-                            {/* Details */}
-                            <div style={{ flex:1, minWidth:0 }}>
-                              <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:2 }}>
-                                ${Number(tx.amount).toFixed(2)}
-                                <span style={{ fontSize:11, color:'rgba(255,255,255,.38)', fontWeight:500, marginLeft:6 }}>via {m?.label ?? tx.method}</span>
-                              </div>
-                              <div style={{ fontSize:11, color:'rgba(255,255,255,.25)', display:'flex', alignItems:'center', gap:8 }}>
-                                <span>{new Date(tx.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
-                                {tx.transaction_id && <><span>·</span><code style={{ fontFamily:'monospace', fontSize:10, color:'rgba(255,255,255,.2)' }}>{tx.transaction_id.slice(0,18)}{tx.transaction_id.length>18?'…':''}</code></>}
-                              </div>
-                            </div>
-                            {/* Status badge */}
-                            <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4, flexShrink:0 }}>
-                              <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'5px 13px', borderRadius:20, background:sbg, border:`1px solid ${sbc}`, fontSize:11, fontWeight:700, color:sc }}>
-                                {icon} {label}
-                              </span>
-                              <span style={{ fontSize:10, color:'rgba(255,255,255,.2)' }}>
-                                {new Date(tx.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      </div>
+
+                      {/* Bottom status bar for pending */}
+                      {isPending && (
+                        <div style={{ padding:'9px 22px', background:'rgba(251,191,36,.04)', borderTop:'1px solid rgba(251,191,36,.1)', display:'flex', alignItems:'center', gap:8 }}>
+                          <div className="tx-dot tx-dot-pending"/>
+                          <span style={{ fontSize:11, color:'rgba(251,191,36,.7)', fontWeight:600 }}>Awaiting admin approval — usually within a few minutes</span>
+                        </div>
+                      )}
+                      {isRejected && (
+                        <div style={{ padding:'9px 22px', background:'rgba(248,113,113,.04)', borderTop:'1px solid rgba(248,113,113,.1)', display:'flex', alignItems:'center', gap:8 }}>
+                          <span style={{ fontSize:11, color:'rgba(248,113,113,.6)', fontWeight:600 }}>Payment was rejected. Contact support if you believe this is an error.</span>
+                        </div>
+                      )}
                     </div>
-                }
+                  );
+                })}
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
