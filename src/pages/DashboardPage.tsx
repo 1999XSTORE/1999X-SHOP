@@ -207,7 +207,7 @@ function FreeKeyCard() {
   const isActive = !!row && new Date(row.expires_at).getTime()>Date.now();
 
   return (
-    <div className="db-float-card" style={{ padding:'26px 24px',position:'relative',overflow:'hidden' }}>
+    <div className="d-card" style={{ padding:'26px 24px' }}>
       <div style={{ position:'absolute',top:-30,right:-20,width:120,height:120,borderRadius:'50%',background:'radial-gradient(circle,rgba(94,247,166,.1) 0%,transparent 70%)',pointerEvents:'none' }}/>
       <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:18 }}>
         <div style={{ width:42,height:42,borderRadius:14,background:'linear-gradient(135deg,rgba(94,247,166,.18),rgba(94,247,166,.04))',border:'1px solid rgba(94,247,166,.22)',display:'flex',alignItems:'center',justifyContent:'center' }}>
@@ -415,177 +415,103 @@ export default function DashboardPage() {
   } as const;
 
   return (
-    <div style={{ display:'flex',flexDirection:'column',gap:0,paddingBottom:60,fontFamily:'Inter,sans-serif',position:'relative' }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:0, paddingBottom:80, fontFamily:"'Inter', sans-serif" }}>
       <style>{`
-        @keyframes db-in { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:none} }
-        @keyframes db-glow { 0%,100%{opacity:.55} 50%{opacity:1} }
-        @keyframes db-shimmer { 0%{left:-100%} 100%{left:200%} }
-        @keyframes db-badge { from{transform:scale(0.7);opacity:0} to{transform:scale(1);opacity:1} }
+        @keyframes _in  { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+        @keyframes _glow { 0%,100%{opacity:.5} 50%{opacity:1} }
+        @keyframes _shi  { 0%{left:-120%} 100%{left:120%} }
+        @keyframes _arc  { from{stroke-dashoffset:var(--ao)} to{stroke-dashoffset:var(--ae)} }
+        @keyframes _pop  { 0%{transform:scale(0) rotate(-20deg);opacity:0} 60%{transform:scale(1.08) rotate(2deg)} 100%{transform:scale(1) rotate(0);opacity:1} }
+        @keyframes _bar  { from{width:0} to{width:var(--bw)} }
 
-        .db-float-card {
-          background: linear-gradient(160deg,rgba(255,255,255,.035) 0%,rgba(255,255,255,.012) 100%);
+        .d-card {
+          background: rgba(18,17,28,.82);
           border: 1px solid rgba(255,255,255,.07);
-          border-radius: 22px;
+          border-radius: 20px;
           position: relative; overflow: hidden;
-          transition: border-color .25s, transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s;
+          transition: border-color .22s, box-shadow .22s, transform .28s cubic-bezier(.22,1,.36,1);
         }
-        .db-float-card::before {
+        .d-card::before {
           content:''; position:absolute; top:0; left:0; right:0; height:1px;
           background: linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);
         }
-        .db-float-card:hover { border-color:rgba(255,255,255,.12); transform:translateY(-3px); box-shadow:0 18px 50px rgba(0,0,0,.4); }
+        .d-card:hover { border-color:rgba(255,255,255,.13); transform:translateY(-3px); box-shadow:0 18px 48px rgba(0,0,0,.5); }
 
-        .db-stat {
-          animation: db-in .55s cubic-bezier(.22,1,.36,1) both;
-          flex:1; padding:22px 20px;
-          background: linear-gradient(160deg,rgba(255,255,255,.04) 0%,rgba(255,255,255,.015) 100%);
-          border: 1px solid rgba(255,255,255,.08); border-radius:20px;
-          position:relative; overflow:hidden;
-          transition: transform .28s cubic-bezier(.22,1,.36,1), border-color .2s;
-          min-width:0;
+        .d-label {
+          font-size:10px; font-weight:700; letter-spacing:.15em;
+          text-transform:uppercase; color:rgba(255,255,255,.3);
         }
-        .db-stat::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent); }
-        .db-stat:hover { transform:translateY(-4px); border-color:rgba(255,255,255,.13); }
-
-        .db-hero {
-          border-radius:28px; overflow:hidden; position:relative;
-          background: linear-gradient(145deg,#0e0820 0%,#120a2e 40%,#0a0f1a 100%);
-          border: 1px solid rgba(139,92,246,.18);
-          box-shadow: 0 0 80px rgba(109,40,217,.1), 0 32px 64px rgba(0,0,0,.5);
-          animation: db-in .5s cubic-bezier(.22,1,.36,1) both;
+        .d-val {
+          font-size:32px; font-weight:900; color:#fff;
+          letter-spacing:-.04em; line-height:1;
         }
 
-        .db-live-dot {
-          width:7px; height:7px; border-radius:50%;
-          background:#5EF7A6;
-          box-shadow: 0 0 8px #5EF7A6, 0 0 18px rgba(94,247,166,.35);
-          animation: db-glow 2s ease-in-out infinite;
+        .d-live {
+          display:inline-flex; align-items:center; gap:6px;
+          font-size:10px; font-weight:700; letter-spacing:.15em; text-transform:uppercase;
+          color:rgba(94,247,166,.8);
+        }
+        .d-live-dot {
+          width:7px; height:7px; border-radius:50%; background:#5EF7A6;
+          box-shadow:0 0 8px #5EF7A6,0 0 16px rgba(94,247,166,.4);
+          animation:_glow 2s ease-in-out infinite;
         }
 
-        .db-bar { height:5px; border-radius:999px; background:rgba(255,255,255,.06); overflow:hidden; position:relative; }
-        .db-bar-fill {
-          height:100%; border-radius:999px;
-          background:linear-gradient(90deg,#7c3aed,#a78bfa,#c4b5fd);
-          box-shadow:0 0 12px rgba(139,92,246,.55);
-          transition: width .8s cubic-bezier(.22,1,.36,1);
-          position:relative; overflow:hidden;
-        }
-        .db-bar-fill::after {
-          content:''; position:absolute; top:0; bottom:0; left:-100%;
-          width:50%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);
-          animation: db-shimmer 2.2s ease-in-out infinite;
+        .d-chip {
+          display:inline-flex; align-items:center; gap:5px;
+          padding:4px 11px; border-radius:99px; font-size:10px; font-weight:700;
+          letter-spacing:.06em;
         }
 
-        .db-btn-claim {
-          width:100%; padding:13px; border-radius:14px; border:none; cursor:pointer;
-          font-family:inherit; font-size:13px; font-weight:800;
-          display:flex; align-items:center; justify-content:center; gap:8px;
-          transition: all .25s cubic-bezier(.22,1,.36,1);
-          position:relative; overflow:hidden;
-          background: linear-gradient(135deg,#7c3aed,#6d28d9);
-          color:#fff;
-          box-shadow: 0 0 24px rgba(109,40,217,.4), 0 4px 16px rgba(0,0,0,.3);
+        .d-btn {
+          display:flex; align-items:center; justify-content:center; gap:7px;
+          padding:12px 0; width:100%; border-radius:12px; border:none; cursor:pointer;
+          font-family:inherit; font-size:13px; font-weight:700;
+          background:linear-gradient(135deg,#7c3aed,#6d28d9); color:#fff;
+          box-shadow:0 0 22px rgba(109,40,217,.38),0 4px 14px rgba(0,0,0,.3);
+          transition:all .22s cubic-bezier(.22,1,.36,1); position:relative; overflow:hidden;
         }
-        .db-btn-claim:hover { transform:translateY(-2px); box-shadow:0 0 38px rgba(109,40,217,.6),0 8px 22px rgba(0,0,0,.4); }
-        .db-btn-claim::before { content:''; position:absolute; top:0; bottom:0; left:-80%; width:40%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent); transition:left .4s ease; pointer-events:none; }
-        .db-btn-claim:hover::before { left:160%; }
-        .db-btn-claim:disabled { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); color:rgba(255,255,255,.32); cursor:not-allowed; box-shadow:none; transform:none !important; }
+        .d-btn::before { content:''; position:absolute; top:0; bottom:0; left:-120%; width:50%;
+          background:linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent);
+          transition:left .4s ease; pointer-events:none; }
+        .d-btn:hover { transform:translateY(-2px); box-shadow:0 0 36px rgba(109,40,217,.6),0 8px 20px rgba(0,0,0,.4); }
+        .d-btn:hover::before { left:120%; }
+        .d-btn:disabled { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.07);
+          color:rgba(255,255,255,.3); box-shadow:none; cursor:not-allowed; transform:none !important; }
 
-        .db-ann {
-          padding:16px 18px; border-radius:16px;
-          background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.05);
-          cursor:pointer; transition:all .18s;
-          animation: db-in .45s cubic-bezier(.22,1,.36,1) both;
+        .d-bar-bg { height:5px; border-radius:99px; background:rgba(255,255,255,.06); overflow:hidden; }
+        .d-bar-fill { height:100%; border-radius:99px; position:relative; overflow:hidden;
+          animation:_bar .9s cubic-bezier(.22,1,.36,1) both;
         }
-        .db-ann:hover { background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.09); }
+        .d-bar-fill::after { content:''; position:absolute; top:0; bottom:0; left:-120%; width:50%;
+          background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
+          animation:_shi 2.4s ease-in-out infinite; }
 
-        .db-redeem {
-          padding:7px 16px; border-radius:10px; border:1px solid rgba(251,191,36,.28); cursor:pointer;
-          font-family:inherit; font-size:11px; font-weight:800;
-          background:linear-gradient(135deg,rgba(251,191,36,.14),rgba(245,158,11,.07));
-          color:#fbbf24; transition:all .2s; white-space:nowrap;
-          display:flex; align-items:center; gap:5px;
+        .d-ann {
+          border-radius:14px; padding:14px 16px; cursor:pointer;
+          background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.055);
+          transition:all .18s;
         }
-        .db-redeem:hover { background:linear-gradient(135deg,rgba(251,191,36,.24),rgba(245,158,11,.14)); box-shadow:0 0 16px rgba(245,158,11,.28); }
-        .db-redeem:disabled { opacity:.35; cursor:not-allowed; }
+        .d-ann:hover { background:rgba(255,255,255,.045); border-color:rgba(255,255,255,.1); }
 
-        .db-g4 { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
-        .db-g3 { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
-        .db-g2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-        .db-g21 { display:grid; grid-template-columns:1fr 1.7fr; gap:20px; }
+        .d-shimmer {
+          position:absolute; top:0; bottom:0; width:40%; pointer-events:none;
+          background:linear-gradient(90deg,transparent,rgba(255,255,255,.04),transparent);
+          animation:_shi 4s ease-in-out infinite;
+        }
 
-        @media(max-width:900px) { .db-g4{grid-template-columns:repeat(2,1fr)} .db-g3{grid-template-columns:repeat(2,1fr)} .db-g21{grid-template-columns:1fr} }
-        @media(max-width:600px) { .db-g4{grid-template-columns:1fr 1fr} .db-g3{grid-template-columns:1fr 1fr} .db-g2{grid-template-columns:1fr} }
-
-        /* ══ JETON CARDS ══ */
-        .jeton-card {
-          position: relative; z-index: 2;
-          width: 148px; flex-shrink: 0;
-          background: linear-gradient(160deg,rgba(255,255,255,.06) 0%,rgba(255,255,255,.02) 100%);
-          border: 1px solid rgba(255,255,255,.1);
-          border-radius: 20px;
-          padding: 20px 16px 16px;
-          opacity: 0;
-          transform: translateY(28px) scale(0.94);
-          transition: opacity .55s cubic-bezier(.22,1,.36,1), transform .55s cubic-bezier(.22,1,.36,1), border-color .25s, box-shadow .25s;
-        }
-        .jeton-card.jc-visible {
-          opacity: 1;
-          transform: translateY(0) scale(1);
-        }
-        .jeton-card:hover {
-          border-color: rgba(255,255,255,.2);
-          box-shadow: 0 16px 48px rgba(0,0,0,.45);
-          transform: translateY(-4px) scale(1.02) !important;
-        }
-        .jeton-card-featured {
-          background: linear-gradient(160deg,rgba(139,92,246,.15) 0%,rgba(109,40,217,.06) 100%);
-          border-color: rgba(139,92,246,.35);
-          box-shadow: 0 0 40px rgba(109,40,217,.2);
-        }
-        .jeton-card-featured:hover {
-          box-shadow: 0 0 60px rgba(109,40,217,.35), 0 16px 48px rgba(0,0,0,.5) !important;
-        }
-        .jeton-card-dot {
-          position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
-          width: 10px; height: 10px; border-radius: 50%;
-          border: 2px solid rgba(14,8,32,1);
-          opacity: 0; transition: opacity .3s .3s;
-          box-shadow: 0 0 10px currentColor;
-        }
-        .jeton-card.jc-visible .jeton-card-dot { opacity: 1; }
-        .jeton-card-icon {
-          width: 44px; height: 44px; border-radius: 13px;
-          display: flex; align-items: center; justify-content: center;
-          margin-bottom: 14px;
-        }
-        .jeton-card-name {
-          font-size: 12px; font-weight: 700;
-          color: rgba(255,255,255,.55);
-          letter-spacing: .01em; margin-bottom: 4px;
-        }
-        .jeton-card-val {
-          font-size: 22px; font-weight: 900;
-          color: #fff; letter-spacing: -.04em;
-          line-height: 1; margin-bottom: 5px;
-        }
-        .jeton-card-sub {
-          font-size: 10px; font-weight: 600;
-          color: rgba(255,255,255,.28);
-          text-transform: uppercase; letter-spacing: .1em;
-        }
-        .jeton-spacer { width: 48px; flex-shrink: 0; position: relative; z-index: 1; }
+        .d-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+        .d-grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+        .d-grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
 
         @media(max-width:860px) {
-          .jeton-card { width: 120px; padding: 16px 12px 14px; }
-          .jeton-spacer { width: 24px; }
-          .jeton-card-val { font-size: 18px; }
+          .d-grid4 { grid-template-columns:1fr 1fr; }
+          .d-grid3 { grid-template-columns:1fr 1fr; }
         }
-        @media(max-width:620px) {
-          #jeton-row { flex-wrap: wrap; gap: 10px; justify-content: center; }
-          .jeton-card { width: 140px; }
-          .jeton-spacer { display: none; }
-          #jeton-line-svg { display: none; }
+        @media(max-width:500px) {
+          .d-grid4 { grid-template-columns:1fr 1fr; }
+          .d-grid3 { grid-template-columns:1fr; }
+          .d-grid2 { grid-template-columns:1fr; }
         }
       `}</style>
 
@@ -595,339 +521,291 @@ export default function DashboardPage() {
           onRedeem={(pts)=>{ setBonusPoints(pts); setShowRewardModal(false); }}/>
       )}
 
-      {/* ══ JETON-STYLE HERO — animated line + floating cards ══ */}
-      <div className="db-hero" style={{ padding:'0',marginBottom:26,overflow:'hidden' }}>
-        {/* Static BG layers */}
-        <div style={{ position:'absolute',inset:0,overflow:'hidden',pointerEvents:'none' }}>
-          <div style={{ position:'absolute',top:'-15%',left:'-5%',width:'50%',height:'130%',background:'radial-gradient(ellipse,rgba(109,40,217,.18) 0%,transparent 65%)',filter:'blur(2px)' }}/>
-          <div style={{ position:'absolute',top:'10%',right:'-8%',width:'38%',height:'80%',background:'radial-gradient(ellipse,rgba(67,37,110,.2) 0%,transparent 65%)' }}/>
-          <div style={{ position:'absolute',bottom:'-20%',left:'35%',width:'35%',height:'70%',background:'radial-gradient(ellipse,rgba(84,67,136,.12) 0%,transparent 65%)' }}/>
-          <div style={{ position:'absolute',inset:0,backgroundImage:'linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px)',backgroundSize:'44px 44px',opacity:.7 }}/>
-          <div style={{ position:'absolute',top:0,left:0,right:0,height:2,background:'linear-gradient(90deg,transparent,rgba(139,92,246,.7),rgba(167,139,250,.4),transparent)' }}/>
+      {/* ── WELCOME HEADER ─────────────────────────────────────── */}
+      <div style={{ marginBottom:28, animation:'_in .5s both' }}>
+        <div className="d-live" style={{ marginBottom:10 }}>
+          <div className="d-live-dot"/>
+          {isSystemOnline ? 'System Online' : 'Maintenance'}
         </div>
-
-        {/* ── TOP: welcome text ── */}
-        <div style={{ position:'relative',zIndex:1,padding:'34px 34px 28px',display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:16 }}>
-          <div style={{ animation:'db-in .5s both' }}>
-            <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:10 }}>
-              <div className="db-live-dot"/>
-              <span style={{ fontSize:10,fontWeight:800,letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(94,247,166,.75)' }}>
-                {isSystemOnline?'System Online':'Maintenance Mode'}
-              </span>
-            </div>
-            <h1 style={{ fontSize:'clamp(22px,4vw,34px)',fontWeight:900,color:'#fff',letterSpacing:'-.03em',margin:0,lineHeight:1.1,marginBottom:8 }}>
-              Welcome Back,{' '}
-              <span style={{ background:'linear-gradient(125deg,#ddd6fe,#a78bfa,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>{firstName}</span>
-            </h1>
-            <div style={{ fontSize:10,fontWeight:700,color:'rgba(255,255,255,.25)',letterSpacing:'.2em',textTransform:'uppercase' }}>
-              1999X FREE FIRE PANEL
-            </div>
-          </div>
-          <div style={{ display:'flex',alignItems:'center',gap:8,padding:'9px 16px',borderRadius:999,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',backdropFilter:'blur(12px)',animation:'db-in .5s .1s both',alignSelf:'flex-start' }}>
-            <Shield size={12} color="#a78bfa"/>
-            <span style={{ fontSize:11,fontWeight:700,color:'rgba(255,255,255,.6)' }}>OB52 Undetected</span>
-            <div style={{ width:5,height:5,borderRadius:'50%',background:'#5EF7A6',boxShadow:'0 0 7px #5EF7A6' }}/>
-          </div>
-        </div>
-
-        {/* ── JETON LINE + CARDS SECTION ── */}
-        <div style={{ position:'relative',zIndex:1,padding:'0 20px 36px' }}>
-
-          {/* Section label */}
-          <div style={{ textAlign:'center',marginBottom:32 }}>
-            <div style={{ fontSize:9,fontWeight:800,letterSpacing:'.28em',textTransform:'uppercase',color:'rgba(255,255,255,.18)',marginBottom:10 }}>— EVERYTHING IN ONE PLACE —</div>
-            <div style={{ fontSize:'clamp(24px,5vw,40px)',fontWeight:900,color:'#fff',letterSpacing:'-.04em',lineHeight:1.1 }}>
-              1999X <span style={{ background:'linear-gradient(135deg,#a78bfa,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>SHOP</span>
-            </div>
-          </div>
-
-          {/* Cards + line wrapper */}
-          <div id="jeton-row" style={{ position:'relative',display:'flex',alignItems:'center',justifyContent:'center',gap:0,maxWidth:900,margin:'0 auto' }}>
-
-            {/* SVG animated line — sits behind cards */}
-            <svg
-              id="jeton-line-svg"
-              style={{ position:'absolute',top:'50%',left:0,width:'100%',height:'8px',transform:'translateY(-50%)',pointerEvents:'none',overflow:'visible',zIndex:0 }}
-              viewBox="0 0 900 8"
-              preserveAspectRatio="none"
-            >
-              <defs>
-                <linearGradient id="jlg" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%"   stopColor="#7c3aed" stopOpacity="0"/>
-                  <stop offset="15%"  stopColor="#7c3aed" stopOpacity="1"/>
-                  <stop offset="85%"  stopColor="#c4b5fd" stopOpacity="1"/>
-                  <stop offset="100%" stopColor="#c4b5fd" stopOpacity="0"/>
-                </linearGradient>
-                <linearGradient id="jgg" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%"   stopColor="#8b5cf6" stopOpacity="0"/>
-                  <stop offset="50%"  stopColor="#8b5cf6" stopOpacity="0.5"/>
-                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0"/>
-                </linearGradient>
-              </defs>
-              {/* Track */}
-              <line x1="40" y1="4" x2="860" y2="4" stroke="rgba(255,255,255,.07)" strokeWidth="1"/>
-              {/* Glow layer */}
-              <line id="jl-glow"  x1="40" y1="4" x2="40" y2="4" stroke="url(#jgg)" strokeWidth="10" strokeLinecap="round"/>
-              {/* Main line */}
-              <line id="jl-main"  x1="40" y1="4" x2="40" y2="4" stroke="url(#jlg)" strokeWidth="2"  strokeLinecap="round"/>
-            </svg>
-
-            {/* CARD 1 */}
-            <div id="jc-0" className="jeton-card" style={{ transitionDelay:'0ms' }}>
-              <div className="jeton-card-dot" style={{ background:'#7c3aed' }}/>
-              <div className="jeton-card-icon" style={{ background:'rgba(124,58,237,.15)',border:'1px solid rgba(124,58,237,.28)' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-              </div>
-              <div className="jeton-card-name">Balance</div>
-              <div className="jeton-card-val">${balance.toFixed(2)}</div>
-              <div className="jeton-card-sub">Wallet funds</div>
-            </div>
-
-            <div className="jeton-spacer"/>
-
-            {/* CARD 2 */}
-            <div id="jc-1" className="jeton-card" style={{ transitionDelay:'120ms' }}>
-              <div className="jeton-card-dot" style={{ background:'#8b5cf6' }}/>
-              <div className="jeton-card-icon" style={{ background:'rgba(139,92,246,.15)',border:'1px solid rgba(139,92,246,.28)' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="2" strokeLinecap="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-              </div>
-              <div className="jeton-card-name">Active Keys</div>
-              <div className="jeton-card-val">{active.length}</div>
-              <div className="jeton-card-sub">Live licenses</div>
-            </div>
-
-            <div className="jeton-spacer"/>
-
-            {/* CARD 3 — centre with brand text */}
-            <div id="jc-2" className="jeton-card jeton-card-featured" style={{ transitionDelay:'240ms' }}>
-              <div className="jeton-card-dot" style={{ background:'#a78bfa' }}/>
-              <div className="jeton-card-icon" style={{ background:'rgba(167,139,250,.18)',border:'1px solid rgba(167,139,250,.35)' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ddd6fe" strokeWidth="2" strokeLinecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              </div>
-              <div className="jeton-card-name" style={{ color:'#ddd6fe' }}>Bonus Points</div>
-              <div className="jeton-card-val" style={{ color:'#c4b5fd' }}>{bonusPoints}</div>
-              <div className="jeton-card-sub">Earn &amp; redeem</div>
-            </div>
-
-            <div className="jeton-spacer"/>
-
-            {/* CARD 4 */}
-            <div id="jc-3" className="jeton-card" style={{ transitionDelay:'360ms' }}>
-              <div className="jeton-card-dot" style={{ background:'#5EF7A6' }}/>
-              <div className="jeton-card-icon" style={{ background:'rgba(94,247,166,.12)',border:'1px solid rgba(94,247,166,.25)' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5EF7A6" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              </div>
-              <div className="jeton-card-name">Free Trial</div>
-              <div className="jeton-card-val" style={{ color:'#5EF7A6' }}>24h</div>
-              <div className="jeton-card-sub">Daily reset</div>
-            </div>
-
-            <div className="jeton-spacer"/>
-
-            {/* CARD 5 */}
-            <div id="jc-4" className="jeton-card" style={{ transitionDelay:'480ms' }}>
-              <div className="jeton-card-dot" style={{ background:'#38bdf8' }}/>
-              <div className="jeton-card-icon" style={{ background:'rgba(56,189,248,.12)',border:'1px solid rgba(56,189,248,.25)' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              </div>
-              <div className="jeton-card-name">Reseller</div>
-              <div className="jeton-card-val" style={{ color:'#38bdf8' }}>{approved}</div>
-              <div className="jeton-card-sub">Approved deals</div>
-            </div>
-
-          </div>
-
-          {/* Live stats strip */}
-          <div style={{ marginTop:32 }}>
-            <div style={{ fontSize:9,fontWeight:800,letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(255,255,255,.15)',marginBottom:12,textAlign:'center' }}>— LIVE STATISTICS —</div>
-            <div className="db-g3" style={{ gap:10,maxWidth:900,margin:'0 auto' }}>
-              {[
-                { label:'Total Users',  val:statsLoading?'—':totalUsers.toLocaleString()+'+', icon:<Users size={14}/>,    color:'#818cf8', bg:'rgba(129,140,248,.09)', bc:'rgba(129,140,248,.18)' },
-                { label:'Live Playing', val:statsLoading?'—':totalOnline.toLocaleString(),     icon:<Activity size={14}/>, color:'#5EF7A6', bg:'rgba(94,247,166,.09)',  bc:'rgba(94,247,166,.18)',  live:true },
-                { label:'OB52 Status',  val:'Undetected',                                       icon:<Shield size={14}/>,   color:'#f59e0b', bg:'rgba(245,158,11,.09)', bc:'rgba(245,158,11,.18)' },
-              ].map((s,i)=>(
-                <div key={s.label} style={{ padding:'14px 16px',borderRadius:14,background:s.bg,border:`1px solid ${s.bc}`,animation:`db-in .5s ${.15+i*.08}s both`,position:'relative',overflow:'hidden' }}>
-                  <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${s.color}35,transparent)` }}/>
-                  <div style={{ display:'flex',alignItems:'center',gap:7,marginBottom:7 }}>
-                    <div style={{ color:s.color }}>{s.icon}</div>
-                    {(s as any).live && <div className="db-live-dot" style={{ width:5,height:5 }}/>}
-                  </div>
-                  <div style={{ fontSize:20,fontWeight:900,color:s.color,letterSpacing:'-.02em',marginBottom:2 }}>{s.val}</div>
-                  <div style={{ fontSize:9,fontWeight:700,color:'rgba(255,255,255,.28)',textTransform:'uppercase',letterSpacing:'.12em' }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <h1 style={{ fontSize:'clamp(26px,5vw,40px)', fontWeight:900, color:'#fff',
+          letterSpacing:'-.04em', margin:0, lineHeight:1.1, marginBottom:6 }}>
+          Welcome back,{' '}
+          <span style={{ background:'linear-gradient(120deg,#ddd6fe,#a78bfa,#7c3aed)',
+            WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+            {firstName}
+          </span>
+        </h1>
+        <p style={{ fontSize:12, color:'rgba(255,255,255,.28)', margin:0,
+          fontWeight:700, letterSpacing:'.18em', textTransform:'uppercase' }}>
+          1999X FREE FIRE PANEL
+        </p>
       </div>
 
-      {/* ══ PERSONAL STATS ══ */}
-      <div className="db-g4" style={{ marginBottom:22 }}>
-        {[
-          { label:'Balance',      val:`$${balance.toFixed(2)}`, emoji:'💰', color:'#5EF7A6', d:0   },
-          { label:'Active Keys',  val:active.length,             emoji:'🔑', color:'#818cf8', d:.07 },
-          { label:'Approved',     val:approved,                  emoji:'✅', color:'#38bdf8', d:.14 },
-          { label:'Bonus Points', val:bonusPoints,               emoji:'⭐', color:'#fbbf24', d:.21 },
-        ].map(s=>(
-          <div key={s.label} className="db-stat" style={{ animationDelay:`${s.d}s` }}>
-            <div style={{ fontSize:20,marginBottom:10 }}>{s.emoji}</div>
-            <div style={{ fontSize:26,fontWeight:900,color:s.color,letterSpacing:'-.04em',lineHeight:1,marginBottom:4 }}>{s.val}</div>
-            <div style={{ fontSize:10,fontWeight:600,color:'rgba(255,255,255,.32)',textTransform:'uppercase',letterSpacing:'.1em' }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* ══ BONUS + FREE KEY + ANNOUNCEMENTS ══ */}
-      <div className="db-g21" style={{ marginBottom:20 }}>
-
-        {/* LEFT COLUMN */}
-        <div style={{ display:'flex',flexDirection:'column',gap:16 }}>
-
-          {/* BONUS CARD */}
-          <div className="db-float-card" style={{ padding:'26px 24px',animation:'db-in .6s .1s both' }}>
-            <div style={{ position:'absolute',top:-35,right:-15,width:120,height:120,borderRadius:'50%',background:'radial-gradient(circle,rgba(139,92,246,.16) 0%,transparent 70%)',pointerEvents:'none' }}/>
-            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18 }}>
-              <div style={{ display:'flex',alignItems:'center',gap:11 }}>
-                <div style={{ width:42,height:42,borderRadius:14,background:'linear-gradient(135deg,rgba(139,92,246,.22),rgba(109,40,217,.08))',border:'1px solid rgba(139,92,246,.25)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 16px rgba(109,40,217,.18)' }}>
-                  <Gift size={18} color="#a78bfa"/>
-                </div>
-                <div>
-                  <div style={{ fontSize:15,fontWeight:800,color:'#fff',letterSpacing:'-.01em' }}>Daily Bonus</div>
-                  <div style={{ fontSize:11,color:'rgba(255,255,255,.35)' }}>+10 pts every 24h</div>
-                </div>
-              </div>
-              {bonusPoints>=100 && (
-                <button onClick={()=>setShowRewardModal(true)} className="db-redeem">
-                  <Star size={10}/> Redeem
-                </button>
-              )}
-            </div>
-
-            <div style={{ marginBottom:16 }}>
-              <div style={{ display:'flex',alignItems:'baseline',gap:5,marginBottom:10 }}>
-                <span style={{ fontSize:40,fontWeight:900,color:'#fff',letterSpacing:'-.05em',lineHeight:1 }}>{bonusPoints}</span>
-                <span style={{ fontSize:14,color:'rgba(255,255,255,.28)',fontWeight:600 }}>pts</span>
-                <span style={{ fontSize:10,color:'rgba(255,255,255,.22)',marginLeft:3 }}>/ 100</span>
-              </div>
-              <div className="db-bar">
-                <div className="db-bar-fill" style={{ width:`${Math.min(progressPct===0&&bonusPoints>=100?100:progressPct,100)}%` }}/>
-              </div>
-              <div style={{ display:'flex',justifyContent:'space-between',marginTop:5 }}>
-                <span style={{ fontSize:10,color:'rgba(255,255,255,.22)',fontWeight:600 }}>{progressPct}/100 this cycle</span>
-                {bonusPoints>=100 && <span style={{ fontSize:10,color:'#fbbf24',fontWeight:800,animation:'db-badge .4s both' }}>🎁 Ready!</span>}
-              </div>
-            </div>
-
-            <button onClick={handleClaimBonus} disabled={!canClaimBonus||claimingBonus} className="db-btn-claim">
-              {claimingBonus
-                ? <><Loader2 size={13} className="animate-spin"/> Claiming…</>
-                : canClaimBonus
-                  ? <><Sparkles size={13}/> Claim +10 Points</>
-                  : <><Clock size={12}/> {bonusCooldown}</>
-              }
-            </button>
-          </div>
-
-          {/* FREE KEY */}
-          <div style={{ animation:'db-in .6s .18s both' }}>
-            <FreeKeyCard/>
-          </div>
-        </div>
-
-        {/* RIGHT — ANNOUNCEMENTS */}
-        <div className="db-float-card" style={{ padding:'26px',animation:'db-in .6s .08s both',display:'flex',flexDirection:'column',minHeight:360 }}>
-          <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18 }}>
-            <div>
-              <div style={{ fontSize:15,fontWeight:800,color:'#fff',letterSpacing:'-.01em' }}>System Broadcasts</div>
-              <div style={{ fontSize:11,color:'rgba(255,255,255,.3)',marginTop:2 }}>
-                {annLoading?'Loading…':anns.length===0?'No active broadcasts':`${anns.length} active`}
-              </div>
-            </div>
-            {isMod && (
+      {/* ── ANNOUNCEMENTS — hidden unless something posted ──────── */}
+      {!annLoading && anns.length > 0 && (
+        <div style={{ marginBottom:20, animation:'_in .4s both' }}>
+          {isMod && (
+            <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
               <button onClick={()=>setShowForm(!showForm)}
-                style={{ display:'flex',alignItems:'center',gap:5,padding:'7px 13px',borderRadius:10,background:showForm?'rgba(248,113,113,.08)':'rgba(255,255,255,.05)',border:`1px solid ${showForm?'rgba(248,113,113,.18)':'rgba(255,255,255,.09)'}`,cursor:'pointer',color:showForm?'#f87171':'rgba(255,255,255,.5)',fontSize:12,fontFamily:'inherit',fontWeight:700,transition:'all .15s' }}>
-                {showForm?<><X size={11}/> Close</>:<><Plus size={11}/> Post</>}
-              </button>
-            )}
-          </div>
-
-          {showForm && isMod && (
-            <div style={{ padding:'18px',borderRadius:14,background:'rgba(255,255,255,.022)',border:'1px solid rgba(255,255,255,.07)',marginBottom:16 }}>
-              <div style={{ display:'flex',gap:7,marginBottom:12,flexWrap:'wrap' }}>
-                {(['update','feature','maintenance'] as const).map(tp=>(
-                  <button key={tp} onClick={()=>setFType(tp)} style={{ padding:'5px 12px',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer',border:`1px solid ${fType===tp?TYPE_CFG[tp].color:TYPE_CFG[tp].border}`,background:fType===tp?TYPE_CFG[tp].bg:'transparent',color:fType===tp?TYPE_CFG[tp].color:'rgba(255,255,255,.38)',fontFamily:'inherit',textTransform:'capitalize' }}>{tp}</button>
-                ))}
-              </div>
-              <input value={fTitle} onChange={e=>setFTitle(e.target.value)} placeholder="Broadcast title…"
-                style={{ width:'100%',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:9,padding:'10px 13px',color:'#fff',fontSize:13,outline:'none',marginBottom:9,fontFamily:'inherit',boxSizing:'border-box' }}/>
-              <textarea value={fContent} onChange={e=>setFContent(e.target.value)} placeholder="Broadcast details…" rows={2}
-                style={{ width:'100%',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:9,padding:'10px 13px',color:'#fff',fontSize:13,outline:'none',resize:'vertical',fontFamily:'inherit',marginBottom:11,boxSizing:'border-box' }}/>
-              <button onClick={handlePublishAnn} disabled={publishing}
-                style={{ width:'100%',padding:'10px',borderRadius:10,background:'linear-gradient(135deg,#7c3aed,#6d28d9)',border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:800,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',gap:7 }}>
-                {publishing?<><Loader2 size={12} className="animate-spin"/>Transmitting…</>:<><Send size={12}/> Transmit</>}
+                style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 13px',borderRadius:10,
+                  background:showForm?'rgba(248,113,113,.08)':'rgba(255,255,255,.05)',
+                  border:`1px solid ${showForm?'rgba(248,113,113,.18)':'rgba(255,255,255,.09)'}`,
+                  cursor:'pointer',color:showForm?'#f87171':'rgba(255,255,255,.5)',
+                  fontSize:11,fontFamily:'inherit',fontWeight:700 }}>
+                {showForm?<><X size={11}/>Close</>:<><Plus size={11}/>Post</>}
               </button>
             </div>
           )}
-
-          {/* List */}
-          <div style={{ flex:1,display:'flex',flexDirection:'column',gap:9,overflowY:'auto',maxHeight:400 }} className="custom-scroll">
-            {annLoading ? (
-              <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'40px 0',color:'rgba(255,255,255,.22)',fontSize:13 }}>
-                <Loader2 size={13} className="animate-spin"/> Loading…
+          {showForm && isMod && (
+            <div style={{ padding:'16px',borderRadius:14,background:'rgba(255,255,255,.025)',
+              border:'1px solid rgba(255,255,255,.07)',marginBottom:12 }}>
+              <div style={{ display:'flex',gap:7,marginBottom:10,flexWrap:'wrap' }}>
+                {(['update','feature','maintenance'] as const).map(tp=>(
+                  <button key={tp} onClick={()=>setFType(tp)}
+                    style={{ padding:'4px 12px',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer',
+                      border:`1px solid ${fType===tp?TYPE_CFG[tp].color:TYPE_CFG[tp].border}`,
+                      background:fType===tp?TYPE_CFG[tp].bg:'transparent',
+                      color:fType===tp?TYPE_CFG[tp].color:'rgba(255,255,255,.38)',
+                      fontFamily:'inherit',textTransform:'capitalize' }}>{tp}</button>
+                ))}
               </div>
-            ) : anns.length === 0 ? (
-              <div style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 0',gap:12 }}>
-                <div style={{ width:52,height:52,borderRadius:16,background:'rgba(255,255,255,.022)',border:'1px solid rgba(255,255,255,.05)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22 }}>📡</div>
-                <div style={{ textAlign:'center' }}>
-                  <div style={{ fontSize:14,fontWeight:700,color:'rgba(255,255,255,.28)' }}>All Clear</div>
-                  <div style={{ fontSize:12,color:'rgba(255,255,255,.16)',marginTop:3 }}>No active broadcasts at this time</div>
-                </div>
-              </div>
-            ) : anns.map((ann,i)=>{
+              <input value={fTitle} onChange={e=>setFTitle(e.target.value)} placeholder="Title…"
+                style={{ width:'100%',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',
+                  borderRadius:8,padding:'9px 12px',color:'#fff',fontSize:12,outline:'none',
+                  marginBottom:8,fontFamily:'inherit',boxSizing:'border-box' }}/>
+              <textarea value={fContent} onChange={e=>setFContent(e.target.value)} placeholder="Content…" rows={2}
+                style={{ width:'100%',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',
+                  borderRadius:8,padding:'9px 12px',color:'#fff',fontSize:12,outline:'none',
+                  resize:'vertical',fontFamily:'inherit',marginBottom:10,boxSizing:'border-box' }}/>
+              <button onClick={handlePublishAnn} disabled={publishing}
+                style={{ width:'100%',padding:'9px',borderRadius:9,background:'linear-gradient(135deg,#7c3aed,#6d28d9)',
+                  border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:800,color:'#fff',
+                  display:'flex',alignItems:'center',justifyContent:'center',gap:6 }}>
+                {publishing?<><Loader2 size={12} className="animate-spin"/>Sending…</>:<><Send size={12}/>Publish</>}
+              </button>
+            </div>
+          )}
+          <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
+            {anns.map((ann,i)=>{
               const cfg = TYPE_CFG[ann.type]??TYPE_CFG.update;
-              const isExpanded = expandedAnn===ann.id;
+              const expanded = expandedAnn===ann.id;
               return (
-                <div key={ann.id} className="db-ann" style={{ animationDelay:`${i*.06}s`,borderLeft:`3px solid ${cfg.color}50` }}
-                  onClick={()=>setExpandedAnn(isExpanded?null:ann.id)}>
-                  <div style={{ display:'flex',alignItems:'center',gap:10 }}>
-                    <span style={{ fontSize:15,flexShrink:0 }}>{cfg.emoji}</span>
+                <div key={ann.id} className="d-ann"
+                  style={{ borderLeft:`3px solid ${cfg.color}60`, animationDelay:`${i*.05}s` }}
+                  onClick={()=>setExpandedAnn(expanded?null:ann.id)}>
+                  <div style={{ display:'flex',alignItems:'center',gap:9 }}>
+                    <span style={{ fontSize:14 }}>{cfg.emoji}</span>
                     <div style={{ flex:1,minWidth:0 }}>
-                      <div style={{ display:'flex',alignItems:'center',gap:8 }}>
-                        <span style={{ fontSize:13,fontWeight:700,color:'#fff',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:isExpanded?'normal':'nowrap' }}>{ann.title}</span>
-                        <span style={{ fontSize:8,fontWeight:800,padding:'2px 7px',borderRadius:99,background:cfg.bg,color:cfg.color,border:`1px solid ${cfg.border}`,letterSpacing:'.06em',textTransform:'uppercase',flexShrink:0 }}>{ann.type}</span>
+                      <div style={{ fontSize:13,fontWeight:700,color:'#fff',
+                        overflow:'hidden',textOverflow:'ellipsis',whiteSpace:expanded?'normal':'nowrap' }}>
+                        {ann.title}
                       </div>
-                      {!isExpanded && <p style={{ fontSize:11,color:'rgba(255,255,255,.35)',margin:'3px 0 0',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{ann.content}</p>}
+                      {!expanded&&<div style={{ fontSize:11,color:'rgba(255,255,255,.35)',
+                        overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:2 }}>
+                        {ann.content}
+                      </div>}
                     </div>
                     <div style={{ display:'flex',alignItems:'center',gap:5,flexShrink:0 }}>
-                      {isMod && (
-                        <button onClick={e=>{e.stopPropagation();handleDeleteAnn(ann.id);}}
-                          style={{ padding:'3px 5px',borderRadius:6,background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,.18)',transition:'color .15s' }}
-                          onMouseEnter={e=>e.currentTarget.style.color='#f87171'}
-                          onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,.18)'}><Trash2 size={11}/></button>
-                      )}
-                      <ChevronRight size={12} color="rgba(255,255,255,.2)" style={{ transform:isExpanded?'rotate(90deg)':'none',transition:'transform .2s' }}/>
+                      <span style={{ fontSize:8,fontWeight:800,padding:'2px 7px',borderRadius:99,
+                        background:cfg.bg,color:cfg.color,border:`1px solid ${cfg.border}`,
+                        letterSpacing:'.06em',textTransform:'uppercase' }}>{ann.type}</span>
+                      {isMod&&<button onClick={e=>{e.stopPropagation();handleDeleteAnn(ann.id);}}
+                        style={{ padding:'3px 5px',borderRadius:6,background:'transparent',border:'none',
+                          cursor:'pointer',color:'rgba(255,255,255,.2)' }}
+                        onMouseEnter={e=>e.currentTarget.style.color='#f87171'}
+                        onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,.2)'}><Trash2 size={11}/></button>}
                     </div>
                   </div>
-                  {isExpanded && (
-                    <div style={{ paddingLeft:25,paddingTop:10 }}>
-                      <p style={{ fontSize:12,color:'rgba(255,255,255,.5)',lineHeight:1.65,margin:'0 0 8px' }}>{ann.content}</p>
-                      <div style={{ fontSize:10,color:'rgba(255,255,255,.22)',fontWeight:600 }}>
-                        {new Date(ann.created_at).toLocaleDateString('en-US',{ month:'long',day:'numeric',year:'numeric' })}
-                      </div>
-                    </div>
-                  )}
+                  {expanded&&<p style={{ fontSize:12,color:'rgba(255,255,255,.5)',
+                    lineHeight:1.6,margin:'10px 0 0 23px' }}>{ann.content}</p>}
                 </div>
               );
             })}
           </div>
         </div>
+      )}
+
+      {/* admin post button when no anns exist */}
+      {isMod && anns.length===0 && (
+        <div style={{ marginBottom:20,display:'flex',alignItems:'center',gap:10 }}>
+          <button onClick={()=>setShowForm(!showForm)}
+            style={{ display:'flex',alignItems:'center',gap:6,padding:'7px 14px',borderRadius:10,
+              background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',
+              cursor:'pointer',color:'rgba(255,255,255,.45)',fontSize:12,fontFamily:'inherit',fontWeight:700 }}>
+            <Plus size={12}/> Post Announcement
+          </button>
+          {showForm && (
+            <div style={{ flex:1,display:'flex',flexDirection:'column',gap:8,padding:'14px',
+              borderRadius:12,background:'rgba(255,255,255,.025)',border:'1px solid rgba(255,255,255,.07)' }}>
+              <div style={{ display:'flex',gap:6,flexWrap:'wrap' }}>
+                {(['update','feature','maintenance'] as const).map(tp=>(
+                  <button key={tp} onClick={()=>setFType(tp)}
+                    style={{ padding:'4px 11px',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer',
+                      border:`1px solid ${fType===tp?TYPE_CFG[tp].color:TYPE_CFG[tp].border}`,
+                      background:fType===tp?TYPE_CFG[tp].bg:'transparent',
+                      color:fType===tp?TYPE_CFG[tp].color:'rgba(255,255,255,.35)',fontFamily:'inherit' }}>{tp}</button>
+                ))}
+              </div>
+              <input value={fTitle} onChange={e=>setFTitle(e.target.value)} placeholder="Title…"
+                style={{ background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',
+                  borderRadius:8,padding:'8px 11px',color:'#fff',fontSize:12,outline:'none',fontFamily:'inherit' }}/>
+              <textarea value={fContent} onChange={e=>setFContent(e.target.value)} placeholder="Content…" rows={2}
+                style={{ background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',
+                  borderRadius:8,padding:'8px 11px',color:'#fff',fontSize:12,outline:'none',
+                  resize:'vertical',fontFamily:'inherit' }}/>
+              <button onClick={handlePublishAnn} disabled={publishing}
+                style={{ padding:'9px',borderRadius:9,background:'linear-gradient(135deg,#7c3aed,#6d28d9)',
+                  border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:800,color:'#fff',
+                  display:'flex',alignItems:'center',justifyContent:'center',gap:6 }}>
+                {publishing?<><Loader2 size={12} className="animate-spin"/>Sending…</>:<><Send size={12}/>Publish</>}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TOP ROW: Balance arc + 3 stat cards ─────────────────── */}
+      <div className="d-grid2" style={{ marginBottom:14 }}>
+
+        {/* Balance — arc gauge card (Squire-style) */}
+        <div className="d-card" style={{ padding:'28px 24px 24px', animation:'_in .5s both' }}>
+          <div className="d-shimmer"/>
+          <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20 }}>
+            <span className="d-label">BALANCE</span>
+            <span className="d-chip" style={{ background:'rgba(94,247,166,.1)',
+              border:'1px solid rgba(94,247,166,.2)',color:'#5EF7A6' }}>
+              <div className="d-live-dot" style={{ width:5,height:5 }}/> Active
+            </span>
+          </div>
+          {/* Arc SVG */}
+          <div style={{ display:'flex',justifyContent:'center',marginBottom:16 }}>
+            <div style={{ position:'relative',width:160,height:100 }}>
+              <svg width="160" height="100" viewBox="0 0 160 100">
+                <path d="M16 90 A64 64 0 0 1 144 90" fill="none" stroke="rgba(255,255,255,.07)" strokeWidth="10" strokeLinecap="round"/>
+                <path d="M16 90 A64 64 0 0 1 144 90" fill="none" stroke="rgba(94,247,166,.25)" strokeWidth="10" strokeLinecap="round"
+                  strokeDasharray="201" strokeDashoffset={201 - Math.min(201, (balance / Math.max(balance+20, 100)) * 201)}
+                  style={{ transition:'stroke-dashoffset 1s cubic-bezier(.22,1,.36,1)' }}/>
+                <path d="M16 90 A64 64 0 0 1 144 90" fill="none" stroke="#5EF7A6" strokeWidth="10" strokeLinecap="round"
+                  strokeDasharray="201"
+                  strokeDashoffset={201 - Math.min(201, (balance / Math.max(balance+20, 100)) * 201 * 0.85)}
+                  style={{ transition:'stroke-dashoffset 1s cubic-bezier(.22,1,.36,1)',
+                    filter:'drop-shadow(0 0 6px rgba(94,247,166,.7))' }}/>
+              </svg>
+              <div style={{ position:'absolute',inset:0,display:'flex',flexDirection:'column',
+                alignItems:'center',justifyContent:'flex-end',paddingBottom:8 }}>
+                <div style={{ fontSize:28,fontWeight:900,color:'#fff',letterSpacing:'-.05em',lineHeight:1 }}>
+                  ${balance.toFixed(2)}
+                </div>
+                <div style={{ fontSize:10,color:'rgba(255,255,255,.3)',fontWeight:600,marginTop:3 }}>WALLET BALANCE</div>
+              </div>
+            </div>
+          </div>
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10 }}>
+            <div style={{ padding:'10px 12px',borderRadius:11,
+              background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)' }}>
+              <div className="d-label" style={{ marginBottom:3 }}>ACTIVE KEYS</div>
+              <div style={{ fontSize:22,fontWeight:900,color:'#818cf8',letterSpacing:'-.03em' }}>{active.length}</div>
+            </div>
+            <div style={{ padding:'10px 12px',borderRadius:11,
+              background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)' }}>
+              <div className="d-label" style={{ marginBottom:3 }}>BONUS PTS</div>
+              <div style={{ fontSize:22,fontWeight:900,color:'#fbbf24',letterSpacing:'-.03em' }}>{bonusPoints}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right column — 3 live stat cards stacked */}
+        <div style={{ display:'flex',flexDirection:'column',gap:14 }}>
+          {[
+            { label:'TOTAL USERS',  val:statsLoading?'—':totalUsers.toLocaleString()+'+', sub:'Registered accounts', color:'#818cf8', bg:'rgba(129,140,248,.09)', bc:'rgba(129,140,248,.18)', d:.06 },
+            { label:'LIVE PLAYING', val:statsLoading?'—':totalOnline.toLocaleString(),    sub:'Active sessions now', color:'#5EF7A6', bg:'rgba(94,247,166,.09)',  bc:'rgba(94,247,166,.18)',  d:.12, live:true },
+            { label:'ANTIBAN OB52', val:'Protected',                                        sub:'Fully undetected',   color:'#f59e0b', bg:'rgba(245,158,11,.09)', bc:'rgba(245,158,11,.18)', d:.18 },
+          ].map(s=>(
+            <div key={s.label} className="d-card" style={{
+              padding:'16px 18px', flex:1, animation:`_in .5s ${s.d}s both`,
+              background:`linear-gradient(135deg,${s.bg},rgba(255,255,255,.015))`,
+              borderColor:s.bc }}>
+              <div style={{ position:'absolute',top:0,left:0,right:0,height:1,
+                background:`linear-gradient(90deg,transparent,${s.color}30,transparent)` }}/>
+              <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4 }}>
+                <span className="d-label">{s.label}</span>
+                {(s as any).live && <div className="d-live-dot" style={{ width:6,height:6 }}/>}
+              </div>
+              <div style={{ fontSize:24,fontWeight:900,color:s.color,letterSpacing:'-.03em',lineHeight:1,marginBottom:2 }}>{s.val}</div>
+              <div style={{ fontSize:10,color:'rgba(255,255,255,.28)',fontWeight:600 }}>{s.sub}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── BOTTOM ROW: Bonus + Free Key ─────────────────────────── */}
+      <div className="d-grid2" style={{ marginBottom:14 }}>
+
+        {/* Bonus card */}
+        <div className="d-card" style={{ padding:'24px 22px', animation:'_in .5s .1s both' }}>
+          <div className="d-shimmer"/>
+          {/* top */}
+          <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18 }}>
+            <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+              <div style={{ width:38,height:38,borderRadius:12,
+                background:'linear-gradient(135deg,rgba(139,92,246,.22),rgba(109,40,217,.08))',
+                border:'1px solid rgba(139,92,246,.28)',display:'flex',alignItems:'center',
+                justifyContent:'center',boxShadow:'0 0 14px rgba(109,40,217,.2)' }}>
+                <Gift size={17} color="#a78bfa"/>
+              </div>
+              <div>
+                <div style={{ fontSize:14,fontWeight:800,color:'#fff',letterSpacing:'-.01em' }}>Daily Bonus</div>
+                <div style={{ fontSize:11,color:'rgba(255,255,255,.32)' }}>+10 pts · resets 24h</div>
+              </div>
+            </div>
+            {bonusPoints>=100 && (
+              <button onClick={()=>setShowRewardModal(true)}
+                style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 13px',borderRadius:9,
+                  background:'linear-gradient(135deg,rgba(251,191,36,.16),rgba(245,158,11,.07))',
+                  border:'1px solid rgba(251,191,36,.28)',cursor:'pointer',fontFamily:'inherit',
+                  fontSize:11,fontWeight:800,color:'#fbbf24' }}>
+                <Star size={10}/> Redeem
+              </button>
+            )}
+          </div>
+
+          {/* Points + bar */}
+          <div style={{ marginBottom:16 }}>
+            <div style={{ display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:8 }}>
+              <div style={{ display:'flex',alignItems:'baseline',gap:5 }}>
+                <span style={{ fontSize:38,fontWeight:900,color:'#fff',letterSpacing:'-.05em',lineHeight:1 }}>{bonusPoints}</span>
+                <span style={{ fontSize:13,color:'rgba(255,255,255,.28)',fontWeight:600 }}>pts</span>
+              </div>
+              <span style={{ fontSize:11,color:'rgba(255,255,255,.22)',fontWeight:600 }}>{progressPct}/100</span>
+            </div>
+            <div className="d-bar-bg">
+              <div className="d-bar-fill" style={{
+                background:'linear-gradient(90deg,#7c3aed,#a78bfa,#c4b5fd)',
+                boxShadow:'0 0 10px rgba(139,92,246,.5)',
+                '--bw':`${Math.min(progressPct===0&&bonusPoints>=100?100:progressPct,100)}%`
+              } as any}/>
+            </div>
+            {bonusPoints>=100 && (
+              <div style={{ textAlign:'right',marginTop:5,fontSize:10,color:'#fbbf24',fontWeight:800 }}>
+                🎁 Ready to redeem!
+              </div>
+            )}
+          </div>
+
+          <button onClick={handleClaimBonus} disabled={!canClaimBonus||claimingBonus} className="d-btn">
+            {claimingBonus
+              ? <><Loader2 size={13} className="animate-spin"/>Claiming…</>
+              : canClaimBonus
+                ? <><Sparkles size={13}/>Claim +10 Points</>
+                : <><Clock size={12}/>{bonusCooldown}</>}
+          </button>
+        </div>
+
+        {/* Free Key card */}
+        <FreeKeyCard/>
+
       </div>
 
     </div>
   );
-}
-
-// helper to avoid literal template literal issues
-function clamp(min: number, val: number, unit: string, max: number): string {
-  return `clamp(${min}px,${val}${unit},${max}px)`;
 }
