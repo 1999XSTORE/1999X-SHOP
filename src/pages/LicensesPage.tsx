@@ -223,28 +223,28 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
 
       {/* ── SLEEK GLOWING KEY SECTION ── */}
       <div style={{ padding: '16px 22px 0', position: 'relative' }}>
-        <div style={{ 
-          padding: '12px 14px', borderRadius: 16, 
-          background: `linear-gradient(90deg, ${accentBg}.1), rgba(0,0,0,.4))`, 
-          border: `1px solid ${accentBg}.3)`, 
-          display: 'flex', alignItems: 'center', gap: 12, 
+        <div style={{
+          padding: '12px 14px', borderRadius: 16,
+          background: `linear-gradient(90deg, ${accentBg}.1), rgba(0,0,0,.4))`,
+          border: `1px solid ${accentBg}.3)`,
+          display: 'flex', alignItems: 'center', gap: 12,
           boxShadow: `0 0 24px ${accentBg}.15)`,
           backdropFilter: 'blur(10px)'
         }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, background: `${accentBg}.15)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Key size={16} color={accent} />
           </div>
-          
-          <code style={{ 
-            flex: 1, fontSize: 15, fontWeight: 700, fontFamily: 'monospace', 
-            color: '#fff', letterSpacing: keyVisible ? '2px' : '0', 
-            filter: keyVisible ? 'none' : 'blur(5px)', 
+
+          <code style={{
+            flex: 1, fontSize: 15, fontWeight: 700, fontFamily: 'monospace',
+            color: '#fff', letterSpacing: keyVisible ? '2px' : '0',
+            filter: keyVisible ? 'none' : 'blur(5px)',
             transition: 'all .35s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             textShadow: keyVisible ? `0 0 16px ${accentBg}.5)` : 'none'
           }}>
             {displayKey || '(no key)'}
           </code>
-          
+
           <button onClick={() => setKeyVisible(!keyVisible)} style={{ padding: '8px 10px', borderRadius: 10, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)', cursor: 'pointer', color: 'rgba(255,255,255,.6)', flexShrink: 0, transition: 'all .15s', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600 }}>
             {keyVisible ? <EyeOff size={14} /> : <Eye size={14} />}
           </button>
@@ -566,7 +566,7 @@ export default function LicensesPage() {
           {intActive.length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,.4)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 12 }}>
-                1999X Internal Panel
+                INTERNAL PANEL
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {intActive.map((l: any) => <LicenseCard key={l?.id || Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} variant="internal" />)}
@@ -576,7 +576,7 @@ export default function LicensesPage() {
           {lagActive.length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,.4)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 12 }}>
-                1999X Fake Lag Panel
+                FAKELAG PANEL
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {lagActive.map((l: any) => <LicenseCard key={l?.id || Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} variant="lag" />)}
