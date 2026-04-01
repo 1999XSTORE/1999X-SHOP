@@ -484,6 +484,36 @@ export default function LicensesPage() {
         }
       }
 
+      // ── Also sync free_trial_keys into user_licenses if active ──────
+      // This ensures free trial keys claimed on Dashboard always appear here
+      const { data: freeTrialData } = await supabase
+        .from('free_trial_keys')
+        .select('lag_key,internal_key,claimed_at,expires_at')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (freeTrialData && new Date(freeTrialData.expires_at).getTime() > Date.now()) {
+        const freeRows: any[] = [];
+        const existingKeys = new Set(rows.map(r => r.license_key));
+        if (freeTrialData.lag_key && !existingKeys.has(freeTrialData.lag_key)) {
+          freeRows.push({ user_id: user.id, user_email: user.email, product_id: 'keyauth-lag', product_name: 'Fake Lag (Free Trial)', license_key: freeTrialData.lag_key, keyauth_username: freeTrialData.lag_key, hwid: '', last_login: freeTrialData.claimed_at, expires_at: freeTrialData.expires_at, status: 'active', ip: '', device: '', hwid_resets_used: 0, hwid_reset_month: new Date().getMonth() });
+        }
+        if (freeTrialData.internal_key && !existingKeys.has(freeTrialData.internal_key + '_INTERNAL')) {
+          freeRows.push({ user_id: user.id, user_email: user.email, product_id: 'keyauth-internal', product_name: 'Internal (Free Trial)', license_key: freeTrialData.internal_key + '_INTERNAL', keyauth_username: freeTrialData.internal_key, hwid: '', last_login: freeTrialData.claimed_at, expires_at: freeTrialData.expires_at, status: 'active', ip: '', device: '', hwid_resets_used: 0, hwid_reset_month: new Date().getMonth() });
+        }
+        if (freeRows.length > 0) {
+          const { data: savedFreeRows } = await supabase
+            .from('user_licenses')
+            .upsert(freeRows, { onConflict: 'user_id,license_key' })
+            .select('*');
+          if (savedFreeRows) {
+            // Merge into rows, avoiding duplicates
+            const savedKeys = new Set(savedFreeRows.map((r: any) => r.license_key));
+            rows = [...rows.filter(r => !savedKeys.has(r.license_key)), ...(savedFreeRows as UserLicenseRow[])];
+          }
+        }
+      }
+
       if (!alive) return;
       const mapped = rows
         .map(mapDbLicense)

@@ -1,50 +1,43 @@
 import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { logActivity, notifyAll, sendNotificationEmail } from '@/lib/activity';
-import { Wallet, Key, Gift, Clock, TrendingUp, Zap, Copy, CheckCircle, Eye, EyeOff, Loader2, Sparkles, Wrench, RefreshCw, Users, Globe, Plus, Trash2, Send, X, Activity, ArrowRight } from 'lucide-react';
+import {
+  Wallet, Key, Gift, Clock, Zap, Copy, CheckCircle, Eye, EyeOff,
+  Loader2, Sparkles, Wrench, Send, X, Plus, Trash2,
+  Users, Activity, ChevronRight, Shield, Star
+} from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { canManageAnnouncements } from '@/lib/roles';
 import { safeFetch } from '@/lib/safeFetch';
 
-const SUPA_URL  = 'https://awjouzwzdkrevvnlenvn.supabase.co';
+const SUPA_URL = 'https://awjouzwzdkrevvnlenvn.supabase.co';
 const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3am91end6ZGtyZXZ2bmxlbnZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTg4MjEsImV4cCI6MjA5MDAzNDgyMX0._I_I-WA_8-YqDfaRzKiVgpEAhkH9faxlEIV6e766A0M';
-
 const BONUS_COOLDOWN = 86400000;
 const FREE_KEY_COOLDOWN = 172800000;
 const FREE_KEY_TTL = 86400000;
 
-interface FreeRow {
-  lag_key: string | null;
-  internal_key: string | null;
-  claimed_at: string;
-  expires_at: string;
-}
-
-interface BonusRow {
-  bonus_points: number;
-  last_claim_time: string | null;
-}
+interface FreeRow { lag_key: string|null; internal_key: string|null; claimed_at: string; expires_at: string; }
+interface BonusRow { bonus_points: number; last_claim_time: string|null; }
 interface DBAnn { id:string; title:string; content:string; type:'update'|'maintenance'|'feature'; created_at:string; created_by?:string; }
 
-const TYPE_CFG = {
-  update:      { Icon: Sparkles, c:'#5EF7A6', bg:'rgba(94,247,166,0.1)' },
-  maintenance: { Icon: Wrench,   c:'#544388', bg:'rgba(84,67,136,0.1)' },
-  feature:     { Icon: Zap,      c:'#EA226B', bg:'rgba(234,34,107,0.1)' },
-} as const;
+const OFFLINE = { status:'offline', numUsers:'0', numKeys:'0', onlineUsers:'0', version:'—' };
+const safeNum = (v: any) => { const n = parseInt(String(v??'0')); return isNaN(n)?0:n; };
+const norm = (r: any) => { if (!r||r.status==='offline') return OFFLINE; return { status:r.status??'online', numUsers:String(safeNum(r.numUsers??r.registered??0)), numKeys:String(safeNum(r.numKeys??r.keys??0)), onlineUsers:String(safeNum(r.onlineUsers??r.numOnlineUsers??0)), version:String(r.version??'—') }; };
 
-const OFFLINE  = { status:'offline', numUsers:'0', numKeys:'0', onlineUsers:'0', version:'—' };
-const safeNum  = (v: any) => { const n = parseInt(String(v ?? '0')); return isNaN(n) ? 0 : n; };
-const norm     = (r: any) => { if (!r || r.status === 'offline') return OFFLINE; return { status:r.status??'online', numUsers:String(safeNum(r.numUsers??r.registered??0)), numKeys:String(safeNum(r.numKeys??r.keys??0)), onlineUsers:String(safeNum(r.onlineUsers??r.numOnlineUsers??0)), version:String(r.version??'—') }; };
-
-async function fetchBonusRow(userId: string): Promise<BonusRow | null> {
+async function fetchBonusRow(userId: string): Promise<BonusRow|null> {
   const { data, error } = await supabase.from('user_bonus').select('bonus_points,last_claim_time').eq('user_id', userId).maybeSingle();
-  if (error) return null; return data as BonusRow | null;
+  if (error) return null; return data as BonusRow|null;
 }
-
-async function upsertBonusRow(userId: string, userEmail: string, bonusPoints: number, lastClaimTime: string | null) {
-  return supabase.from('user_bonus').upsert({ user_id: userId, user_email: userEmail, bonus_points: bonusPoints, last_claim_time: lastClaimTime, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+async function upsertBonusRow(userId: string, userEmail: string, bonusPoints: number, lastClaimTime: string|null) {
+  return supabase.from('user_bonus').upsert({ user_id:userId, user_email:userEmail, bonus_points:bonusPoints, last_claim_time:lastClaimTime, updated_at:new Date().toISOString() }, { onConflict:'user_id' });
+}
+async function generateKey(panelType: 'lag'|'internal', days: number) {
+  try {
+    const res = await fetch(`${SUPA_URL}/functions/v1/generate-key`, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${ANON}`, apikey:ANON }, body:JSON.stringify({ panel_type:panelType, days }) });
+    return await res.json();
+  } catch(e) { return { success:false, message:String(e) }; }
 }
 
 function MiniCountdown({ ms }: { ms: number }) {
@@ -53,161 +46,207 @@ function MiniCountdown({ ms }: { ms: number }) {
     const tick = () => {
       const left = ms - Date.now();
       if (left <= 0) { setTxt(''); return; }
-      const d = Math.floor(left / 86400000);
-      const h = String(Math.floor((left % 86400000) / 3600000)).padStart(2, '0');
-      const m = String(Math.floor((left % 3600000) / 60000)).padStart(2, '0');
-      const s = String(Math.floor((left % 60000) / 1000)).padStart(2, '0');
-      setTxt(d > 0 ? `${d}d ${h}:${m}:${s}` : `${h}:${m}:${s}`);
+      const h = String(Math.floor((left%86400000)/3600000)).padStart(2,'0');
+      const m = String(Math.floor((left%3600000)/60000)).padStart(2,'0');
+      const s = String(Math.floor((left%60000)/1000)).padStart(2,'0');
+      setTxt(`${h}:${m}:${s}`);
     };
-    tick(); const id = setInterval(tick, 1000); return () => clearInterval(id);
+    tick(); const id = setInterval(tick,1000); return ()=>clearInterval(id);
   }, [ms]);
-  return <span className="mono" style={{ fontWeight:500, color:'rgba(255,255,255,0.7)' }}>{txt}</span>;
+  return <span>{txt}</span>;
 }
 
-function Ticker({ expiresAt }: { expiresAt: string }) {
-  const { t } = useTranslation();
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id); }, []);
+function RewardModal({ bonusPoints, userId, userEmail, onClose, onRedeem }: {
+  bonusPoints: number; userId: string; userEmail: string;
+  onClose: () => void; onRedeem: (pts: number) => void;
+}) {
+  const { addBalance, addLicense } = useAppStore();
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState<null|'balance'|'key'>(null);
+  const [genKey, setGenKey] = useState('');
+  const [copied, setCopied] = useState(false);
+  const keyExpiry = new Date(Date.now()+3*86400000).toISOString();
 
-  const diff = new Date(expiresAt).getTime() - now;
-  if (diff <= 0) return <span style={{ color:'var(--red)', fontWeight:500, fontSize:12 }}>{t('common.expired')}</span>;
-
-  const d = Math.floor(diff / 86400000);
-  const h = String(Math.floor((diff % 86400000) / 3600000)).padStart(2, '0');
-  const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
-  const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+  const claimBalance = async () => {
+    addBalance(3); onRedeem(bonusPoints-100);
+    await upsertBonusRow(userId, userEmail, bonusPoints-100, null);
+    setSuccess('balance'); toast.success('$3 added to your balance!');
+  };
+  const claimKey = async () => {
+    setLoading(true);
+    let result = await generateKey('internal', 3);
+    if (!result.success) result = await generateKey('lag', 3);
+    if (result.success && result.key) {
+      const newPts = bonusPoints-100;
+      const panelId = result.panel_type==='lag'?'keyauth-lag':'keyauth-internal';
+      const panelName = result.panel_type==='lag'?'Fake Lag':'Internal';
+      const bonusKey = result.panel_type==='lag' ? result.key : result.key+'_INTERNAL';
+      addLicense({ id:`bonus_${Math.random().toString(36).slice(2,10)}`, productId:panelId, productName:`${panelName} (Bonus)`, key:bonusKey, hwid:'', lastLogin:new Date().toISOString(), expiresAt:keyExpiry, status:'active', ip:'', device:'', hwidResetsUsed:0, hwidResetMonth:new Date().getMonth() });
+      // Also save to user_licenses so LicensesPage picks it up
+      await supabase.from('user_licenses').upsert([{
+        user_id:userId, user_email:userEmail, product_id:panelId, product_name:`${panelName} (Bonus)`,
+        license_key:bonusKey, keyauth_username:result.key, hwid:'', last_login:new Date().toISOString(),
+        expires_at:keyExpiry, status:'active', ip:'', device:'', hwid_resets_used:0, hwid_reset_month:new Date().getMonth(),
+      }], { onConflict:'user_id,license_key' });
+      onRedeem(newPts); await upsertBonusRow(userId, userEmail, newPts, null);
+      setGenKey(result.key); setSuccess('key'); toast.success('3-Day key generated!');
+    } else { toast.error('Key generation failed'); }
+    setLoading(false);
+  };
 
   return (
-    <div style={{ display:'flex', alignItems:'baseline', gap:2 }} className="mono">
-      {d > 0 && <><span style={{ fontSize:15, fontWeight:500, color:'#fff' }}>{d}</span><span style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginRight:4 }}>d</span></>}
-      <span style={{ fontSize:15, fontWeight:500, color:'#fff' }}>{h}</span>
-      <span style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>:</span>
-      <span style={{ fontSize:15, fontWeight:500, color:'#fff' }}>{m}</span>
-      <span style={{ fontSize:12, color:'rgba(255,255,255,0.4)' }}>:</span>
-      <span style={{ fontSize:14, fontWeight:500, color:'rgba(255,255,255,0.5)' }}>{s}</span>
-    </div>
-  );
-}
-
-function LicCard({ lic, accent }: { lic: any; accent: 'p' | 'b' }) {
-  const key = lic.key.replace('_INTERNAL', '');
-  const dLeft = Math.max(0, Math.floor((new Date(lic.expiresAt).getTime() - Date.now()) / 86400000));
-  const total = Math.max(30, Math.ceil((new Date(lic.expiresAt).getTime() - new Date(lic.lastLogin).getTime()) / 86400000));
-  const pct = Math.min(100, (dLeft / total) * 100);
-  
-  return (
-    <div className="aq-card" style={{ padding: '24px', display:'flex', flexDirection:'column', gap:'12px', transition:'transform 0.2s', cursor:'pointer' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:34, height:34, borderRadius:'50%', background:'linear-gradient(135deg, rgba(84,67,136,0.3), rgba(67,37,110,0.1))', display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid rgba(255,255,255,0.05)' }}>
-            <Key size={14} color="#A0A0A5" />
+    <div style={{ position:'fixed',inset:0,zIndex:70,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.88)',backdropFilter:'blur(20px)',padding:16 }}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{ width:'100%',maxWidth:400,borderRadius:28,background:'linear-gradient(160deg,rgba(25,15,70,.97),rgba(12,8,40,.97))',border:'1px solid rgba(139,92,246,.3)',boxShadow:'0 0 80px rgba(109,40,217,.25),0 32px 80px rgba(0,0,0,.8)',padding:'32px 28px',position:'relative' }}>
+        <button onClick={onClose} style={{ position:'absolute',top:16,right:16,background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,width:32,height:32,cursor:'pointer',color:'rgba(255,255,255,.5)',display:'flex',alignItems:'center',justifyContent:'center' }}><X size={14}/></button>
+        {!success ? (
+          <>
+            <div style={{ textAlign:'center',marginBottom:28 }}>
+              <div style={{ fontSize:40,marginBottom:12 }}>🎁</div>
+              <div style={{ fontSize:20,fontWeight:900,color:'#fff',letterSpacing:'-.02em',marginBottom:6 }}>Choose Your Reward</div>
+              <p style={{ fontSize:13,color:'rgba(255,255,255,.45)' }}>100 points → pick your reward</p>
+            </div>
+            <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+              <button onClick={claimBalance} style={{ padding:'18px 20px',borderRadius:16,background:'rgba(16,232,152,.07)',border:'1px solid rgba(16,232,152,.2)',cursor:'pointer',display:'flex',alignItems:'center',gap:14,transition:'all .2s',fontFamily:'inherit',textAlign:'left' }}
+                onMouseEnter={e=>{e.currentTarget.style.background='rgba(16,232,152,.14)';}}
+                onMouseLeave={e=>{e.currentTarget.style.background='rgba(16,232,152,.07)';}}>
+                <span style={{ fontSize:28 }}>💰</span>
+                <div><div style={{ fontSize:15,fontWeight:800,color:'#fff' }}>$3 Balance</div><div style={{ fontSize:12,color:'rgba(255,255,255,.4)' }}>Add $3 to your wallet</div></div>
+              </button>
+              <button onClick={claimKey} disabled={loading} style={{ padding:'18px 20px',borderRadius:16,background:'rgba(139,92,246,.07)',border:'1px solid rgba(139,92,246,.22)',cursor:'pointer',display:'flex',alignItems:'center',gap:14,transition:'all .2s',fontFamily:'inherit',textAlign:'left' }}
+                onMouseEnter={e=>{e.currentTarget.style.background='rgba(139,92,246,.14)';}}
+                onMouseLeave={e=>{e.currentTarget.style.background='rgba(139,92,246,.07)';}}>
+                {loading?<Loader2 size={22} className="animate-spin" color="#a78bfa"/>:<span style={{ fontSize:28 }}>🔑</span>}
+                <div><div style={{ fontSize:15,fontWeight:800,color:'#fff' }}>3-Day License Key</div><div style={{ fontSize:12,color:'rgba(255,255,255,.4)' }}>Get a free 3-day panel key</div></div>
+              </button>
+            </div>
+          </>
+        ) : success==='balance' ? (
+          <div style={{ textAlign:'center',padding:'12px 0' }}>
+            <div style={{ fontSize:48,marginBottom:12 }}>✅</div>
+            <div style={{ fontSize:18,fontWeight:800,color:'#fff',marginBottom:20 }}>$3 Added to Wallet!</div>
+            <button onClick={onClose} style={{ padding:'12px 28px',borderRadius:12,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.12)',cursor:'pointer',color:'#fff',fontFamily:'inherit',fontWeight:700 }}>Done</button>
           </div>
-          <div>
-            <div style={{ fontSize:14, fontWeight:500, color:'#fff', letterSpacing:'-0.01em' }}>{lic.productName}</div>
-            <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)' }}>Active Instance</div>
+        ) : (
+          <div style={{ textAlign:'center',padding:'12px 0' }}>
+            <div style={{ fontSize:48,marginBottom:12 }}>🔑</div>
+            <div style={{ fontSize:18,fontWeight:800,color:'#fff',marginBottom:16 }}>Key Generated!</div>
+            <div style={{ background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.09)',borderRadius:12,padding:'12px 14px',marginBottom:16,display:'flex',alignItems:'center',gap:10 }}>
+              <code style={{ flex:1,fontSize:11,fontFamily:'monospace',color:'#fff',wordBreak:'break-all' }}>{genKey}</code>
+              <button onClick={()=>{navigator.clipboard.writeText(genKey);setCopied(true);setTimeout(()=>setCopied(false),2000);}} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',borderRadius:7,padding:'5px 8px',cursor:'pointer',color:'rgba(255,255,255,.6)',flexShrink:0 }}>{copied?<CheckCircle size={13}/>:<Copy size={13}/>}</button>
+            </div>
+            <button onClick={onClose} style={{ padding:'12px 28px',borderRadius:12,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.12)',cursor:'pointer',color:'#fff',fontFamily:'inherit',fontWeight:700 }}>Done</button>
           </div>
-        </div>
-        <div style={{ background:'rgba(255,255,255,0.03)', padding:'4px 10px', borderRadius:20, fontSize:10, color:'#fff', fontWeight:500, border:'1px solid rgba(255,255,255,0.06)' }}>
-          {dLeft} Days Left
-        </div>
-      </div>
-      
-      <div style={{ height:3, borderRadius:999, background:'rgba(255,255,255,0.04)', overflow:'hidden', marginTop:10 }}>
-        <div style={{ height:'100%', width:`${pct}%`, borderRadius:999, background:'linear-gradient(90deg, #544388, #8b5cf6)', boxShadow:'0 0 10px rgba(139,92,246,0.5)' }} />
-      </div>
-
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:4 }}>
-        <Ticker expiresAt={lic.expiresAt} />
-        <code style={{ fontSize:10, fontFamily:'monospace', color:'rgba(255,255,255,0.3)', letterSpacing:'0.05em' }}>{key.slice(0,18)}…</code>
+        )}
       </div>
     </div>
   );
 }
 
 function FreeKeyCard() {
-  const { t } = useTranslation();
   const { addLicense, user } = useAppStore();
-  const [row, setRow] = useState<FreeRow | null>(null);
+  const [row, setRow] = useState<FreeRow|null>(null);
   const [dbLoading, setDbLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [canClaim, setCanClaim] = useState(false);
   const [cooldownMs, setCooldownMs] = useState(0);
+  const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
     supabase.from('free_trial_keys').select('lag_key,internal_key,claimed_at,expires_at').eq('user_id', user.id).maybeSingle()
-      .then(({ data }) => { setRow(data as FreeRow | null); setDbLoading(false); });
+      .then(({ data }) => { setRow(data as FreeRow|null); setDbLoading(false); });
   }, [user?.id]);
 
   useEffect(() => {
     const tick = () => {
       if (!row) { setCanClaim(true); setCooldownMs(0); return; }
-      const next = new Date(row.claimed_at).getTime() + FREE_KEY_COOLDOWN;
-      const left = next - Date.now();
-      if (left <= 0) { setCanClaim(true); setCooldownMs(0); } else { setCanClaim(false); setCooldownMs(next); }
+      const next = new Date(row.claimed_at).getTime()+FREE_KEY_COOLDOWN;
+      const left = next-Date.now();
+      if (left<=0) { setCanClaim(true); setCooldownMs(0); } else { setCanClaim(false); setCooldownMs(next); }
     };
-    tick(); const id = setInterval(tick, 1000); return () => clearInterval(id);
+    tick(); const id = setInterval(tick,1000); return ()=>clearInterval(id);
   }, [row?.claimed_at]);
 
   const handleClaim = async () => {
-    if (!canClaim || generating || !user) return;
+    if (!canClaim||generating||!user) return;
     setGenerating(true);
-    toast.loading('Generating 1-day trial credentials...', { id:'free-trial' });
-
+    toast.loading('Generating trial…', { id:'free-trial' });
     try {
       const [lagRes, intRes] = await Promise.all([
-        fetch(`${SUPA_URL}/functions/v1/generate-key`, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${ANON}`, apikey:ANON }, body:JSON.stringify({ panel_type:'lag', days:1, hours:0, mask:'1999X-FREE-****' }) }).then(r => r.json()),
-        fetch(`${SUPA_URL}/functions/v1/generate-key`, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${ANON}`, apikey:ANON }, body:JSON.stringify({ panel_type:'internal', days:1, hours:0, mask:'1999X-FREE-****' }) }).then(r => r.json()),
+        fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${ANON}`,apikey:ANON},body:JSON.stringify({panel_type:'lag',days:1,hours:0,mask:'1999X-FREE-****'})}).then(r=>r.json()),
+        fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${ANON}`,apikey:ANON},body:JSON.stringify({panel_type:'internal',days:1,hours:0,mask:'1999X-FREE-****'})}).then(r=>r.json()),
       ]);
-
-      const lagKey = lagRes?.success ? lagRes.key : null;
-      const intKey = intRes?.success ? intRes.key : null;
-
-      if (!lagKey && !intKey) { toast.dismiss('free-trial'); toast.error('Activation Failed'); setGenerating(false); return; }
-
+      const lagKey = lagRes?.success?lagRes.key:null;
+      const intKey = intRes?.success?intRes.key:null;
+      if (!lagKey&&!intKey) { toast.dismiss('free-trial'); toast.error('Generation Failed'); setGenerating(false); return; }
       const now = new Date().toISOString();
-      const expiresAt = new Date(Date.now() + FREE_KEY_TTL).toISOString();
-      const { error } = await supabase.from('free_trial_keys').upsert({ user_id:user.id, user_email:user.email, lag_key:lagKey, internal_key:intKey, claimed_at:now, expires_at:expiresAt }, { onConflict:'user_id' });
-
+      const expiresAt = new Date(Date.now()+FREE_KEY_TTL).toISOString();
+      const { error } = await supabase.from('free_trial_keys').upsert({ user_id:user.id,user_email:user.email,lag_key:lagKey,internal_key:intKey,claimed_at:now,expires_at:expiresAt },{ onConflict:'user_id' });
       if (error) { toast.dismiss('free-trial'); toast.error(error.message); setGenerating(false); return; }
-
-      if (lagKey) addLicense({ id:`free_lag_${Date.now()}`, productId:'keyauth-lag', productName:'Fake Lag (Free 1 Day Trial)', key:lagKey, hwid:'', lastLogin:now, expiresAt, status:'active', ip:'', device:'', hwidResetsUsed:0, hwidResetMonth:new Date().getMonth() });
-      if (intKey) addLicense({ id:`free_int_${Date.now()}`, productId:'keyauth-internal', productName:'Internal (Free 1 Day Trial)', key:`${intKey}_INTERNAL`, hwid:'', lastLogin:now, expiresAt, status:'active', ip:'', device:'', hwidResetsUsed:0, hwidResetMonth:new Date().getMonth() });
-
-      setRow({ lag_key:lagKey, internal_key:intKey, claimed_at:now, expires_at:expiresAt });
-      logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'free_key_claim', product:'Free 1-Day Trial Key', status:'success', meta:{ lag:!!lagKey, internal:!!intKey, expires:expiresAt } });
-      toast.dismiss('free-trial'); toast.success('Trial Initialized');
-    } catch (error) { toast.dismiss('free-trial'); toast.error(String(error)); }
+      // Write to user_licenses so LicensesPage auto-picks them up
+      const licRows: any[] = [];
+      if (lagKey) {
+        addLicense({ id:`free_lag_${Date.now()}`,productId:'keyauth-lag',productName:'Fake Lag (Free Trial)',key:lagKey,hwid:'',lastLogin:now,expiresAt,status:'active',ip:'',device:'',hwidResetsUsed:0,hwidResetMonth:new Date().getMonth() });
+        licRows.push({ user_id:user.id,user_email:user.email,product_id:'keyauth-lag',product_name:'Fake Lag (Free Trial)',license_key:lagKey,keyauth_username:lagKey,hwid:'',last_login:now,expires_at:expiresAt,status:'active',ip:'',device:'',hwid_resets_used:0,hwid_reset_month:new Date().getMonth() });
+      }
+      if (intKey) {
+        addLicense({ id:`free_int_${Date.now()}`,productId:'keyauth-internal',productName:'Internal (Free Trial)',key:`${intKey}_INTERNAL`,hwid:'',lastLogin:now,expiresAt,status:'active',ip:'',device:'',hwidResetsUsed:0,hwidResetMonth:new Date().getMonth() });
+        licRows.push({ user_id:user.id,user_email:user.email,product_id:'keyauth-internal',product_name:'Internal (Free Trial)',license_key:`${intKey}_INTERNAL`,keyauth_username:intKey,hwid:'',last_login:now,expires_at:expiresAt,status:'active',ip:'',device:'',hwid_resets_used:0,hwid_reset_month:new Date().getMonth() });
+      }
+      if (licRows.length > 0) {
+        await supabase.from('user_licenses').upsert(licRows, { onConflict:'user_id,license_key' });
+      }
+      setRow({ lag_key:lagKey,internal_key:intKey,claimed_at:now,expires_at:expiresAt });
+      toast.dismiss('free-trial'); toast.success('Trial Activated! Keys are now active in Licenses tab.');
+    } catch(e) { toast.dismiss('free-trial'); toast.error(String(e)); }
     setGenerating(false);
   };
 
-  if (dbLoading) return <div className="aqua-card" style={{ padding:'24px', textAlign:'center', color:'rgba(255,255,255,0.4)', fontSize:13 }}>Loading Module...</div>;
-
-  const isActive = !!row && new Date(row.expires_at).getTime() > Date.now();
-  const dDiff = cooldownMs - Date.now();
-  const dCo = dDiff > 0 ? `${Math.floor(dDiff/3600000)}h ${Math.floor((dDiff%3600000)/60000)}m left` : '';
+  if (dbLoading) return null;
+  const isActive = !!row && new Date(row.expires_at).getTime()>Date.now();
 
   return (
-    <div className="aqua-card" style={{ padding:'32px', display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', animationDelay:'250ms' }}>
-      <div style={{ width:64, height:64, borderRadius:'50%', background:'linear-gradient(135deg, rgba(84,67,136,0.2), rgba(94,247,166,0.1))', border:'1px solid rgba(255,255,255,0.08)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:20, boxShadow:'0 0 30px rgba(94,247,166,0.1)' }}>
-        <Zap size={26} color="#5EF7A6" />
+    <div className="db-float-card" style={{ padding:'26px 24px',position:'relative',overflow:'hidden' }}>
+      <div style={{ position:'absolute',top:-30,right:-20,width:120,height:120,borderRadius:'50%',background:'radial-gradient(circle,rgba(94,247,166,.1) 0%,transparent 70%)',pointerEvents:'none' }}/>
+      <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:18 }}>
+        <div style={{ width:42,height:42,borderRadius:14,background:'linear-gradient(135deg,rgba(94,247,166,.18),rgba(94,247,166,.04))',border:'1px solid rgba(94,247,166,.22)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+          <Zap size={18} color="#5EF7A6"/>
+        </div>
+        <div>
+          <div style={{ fontSize:15,fontWeight:800,color:'#fff',letterSpacing:'-.01em' }}>Free Daily Trial</div>
+          <div style={{ fontSize:11,color:'rgba(255,255,255,.35)' }}>24hr • Internal + Fake Lag</div>
+        </div>
       </div>
-      <h3 style={{ fontSize:20, fontWeight:400, color:'#FFF', letterSpacing:'-0.02em', margin:'0 0 8px 0' }}>Trial Node Instance</h3>
-      <p style={{ fontSize:13, color:'rgba(255,255,255,0.4)', margin:'0 0 24px 0', maxWidth:200 }}>Generate a secure 24-hr trial node credential set.</p>
-
       {isActive && row ? (
-        <div style={{ background:'rgba(94,247,166,0.05)', border:'1px solid rgba(94,247,166,0.2)', padding:'10px 16px', borderRadius:16, width:'100%', marginBottom:16 }}>
-          <div style={{ fontSize:11, color:'#5EF7A6', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:8 }}>Trial Active</div>
-          <div style={{ fontSize:18, color:'#fff', fontWeight:500 }}><MiniCountdown ms={new Date(row.expires_at).getTime()} /></div>
+        <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+          <div style={{ padding:'12px 14px',borderRadius:12,background:'rgba(94,247,166,.05)',border:'1px solid rgba(94,247,166,.15)' }}>
+            <div style={{ fontSize:9,color:'#5EF7A6',fontWeight:800,letterSpacing:'.1em',textTransform:'uppercase',marginBottom:4 }}>TRIAL ACTIVE — EXPIRES IN</div>
+            <div style={{ fontSize:22,fontWeight:900,color:'#fff',fontFamily:'monospace' }}><MiniCountdown ms={new Date(row.expires_at).getTime()}/></div>
+          </div>
+          <button onClick={()=>setRevealed(!revealed)} style={{ padding:'8px 12px',borderRadius:10,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',cursor:'pointer',color:'rgba(255,255,255,.5)',fontSize:12,fontFamily:'inherit',display:'flex',alignItems:'center',gap:6,justifyContent:'center' }}>
+            {revealed?<EyeOff size={12}/>:<Eye size={12}/>} {revealed?'Hide Keys':'View Keys'}
+          </button>
+          {revealed && (
+            <div style={{ display:'flex',flexDirection:'column',gap:6 }}>
+              {row.lag_key&&<div style={{ padding:'8px 12px',borderRadius:10,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)' }}><div style={{ fontSize:9,color:'rgba(255,255,255,.3)',fontWeight:700,marginBottom:3,letterSpacing:'.08em' }}>FAKE LAG</div><code style={{ fontSize:11,color:'rgba(255,255,255,.65)',fontFamily:'monospace',wordBreak:'break-all' }}>{row.lag_key}</code></div>}
+              {row.internal_key&&<div style={{ padding:'8px 12px',borderRadius:10,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)' }}><div style={{ fontSize:9,color:'rgba(255,255,255,.3)',fontWeight:700,marginBottom:3,letterSpacing:'.08em' }}>INTERNAL</div><code style={{ fontSize:11,color:'rgba(255,255,255,.65)',fontFamily:'monospace',wordBreak:'break-all' }}>{row.internal_key}</code></div>}
+            </div>
+          )}
         </div>
       ) : canClaim ? (
-         <button onClick={handleClaim} disabled={generating} className="aqua-btn" style={{ background:'rgba(94,247,166,0.1)', borderColor:'rgba(94,247,166,0.3)', color:'#5EF7A6', width:'100%', justifyContent:'center', padding:'12px' }}>
-            {generating ? <Loader2 size={16} className="animate-spin" /> : 'Deploy Trial Node'}
-         </button>
+        <button onClick={handleClaim} disabled={generating}
+          style={{ width:'100%',padding:'12px',borderRadius:13,background:'linear-gradient(135deg,rgba(94,247,166,.13),rgba(94,247,166,.04))',border:'1px solid rgba(94,247,166,.22)',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:700,color:'#5EF7A6',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'all .2s' }}
+          onMouseEnter={e=>{e.currentTarget.style.background='linear-gradient(135deg,rgba(94,247,166,.2),rgba(94,247,166,.08))';}}
+          onMouseLeave={e=>{e.currentTarget.style.background='linear-gradient(135deg,rgba(94,247,166,.13),rgba(94,247,166,.04))';}}>
+          {generating?<Loader2 size={14} className="animate-spin"/>:<Zap size={14}/>}
+          {generating?'Generating…':'Claim Free Trial'}
+        </button>
       ) : (
-         <button className="aqua-btn" style={{ width:'100%', justifyContent:'center', padding:'12px', opacity:0.6, cursor:'not-allowed' }}>
-            <Clock size={14} /> Network Cooldown: {dCo}
-         </button>
+        <div style={{ padding:'12px 14px',borderRadius:12,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)',textAlign:'center' }}>
+          <div style={{ fontSize:9,color:'rgba(255,255,255,.28)',fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',marginBottom:4 }}>NEXT TRIAL IN</div>
+          <div style={{ fontSize:18,fontWeight:900,color:'rgba(255,255,255,.45)',fontFamily:'monospace' }}><MiniCountdown ms={cooldownMs}/></div>
+        </div>
       )}
     </div>
   );
@@ -216,39 +255,35 @@ function FreeKeyCard() {
 export default function DashboardPage() {
   const { t } = useTranslation();
   const { balance, licenses, transactions, user, systemStatus } = useAppStore();
-  const isSystemOnline = systemStatus === 'online';
+  const isSystemOnline = systemStatus==='online';
   const isMod = canManageAnnouncements(user?.role);
 
-  // Bonus
   const [bonusPoints, setBonusPoints] = useState(0);
-  const [lastBonusClaim, setLastBonusClaim] = useState<string | null>(null);
+  const [lastBonusClaim, setLastBonusClaim] = useState<string|null>(null);
   const [bonusCooldown, setBonusCooldown] = useState('');
   const [canClaimBonus, setCanClaimBonus] = useState(false);
   const [claimingBonus, setClaimingBonus] = useState(false);
   const [bonusLoaded, setBonusLoaded] = useState(false);
+  const [showRewardModal, setShowRewardModal] = useState(false);
 
-  // Status variables
   const [lag, setLag] = useState(OFFLINE);
   const [int, setInt] = useState(OFFLINE);
   const [statsLoading, setStatsLoading] = useState(false);
-  const [lastStatsUpdate, setLastStatsUpdate] = useState(new Date());
 
-  // Announcements
   const [anns, setAnns] = useState<DBAnn[]>([]);
   const [annLoading, setAnnLoading] = useState(true);
-  
-  // Announcement Admin Form
   const [showForm, setShowForm] = useState(false);
   const [fTitle, setFTitle] = useState('');
   const [fContent, setFContent] = useState('');
   const [fType, setFType] = useState<'update'|'maintenance'|'feature'>('update');
   const [publishing, setPublishing] = useState(false);
+  const [expandedAnn, setExpandedAnn] = useState<string|null>(null);
 
   useEffect(() => {
     if (!user?.id) return;
     setBonusLoaded(false);
-    fetchBonusRow(user.id).then((row) => {
-      if (row) { setBonusPoints(row.bonus_points ?? 0); setLastBonusClaim(row.last_claim_time ?? null); }
+    fetchBonusRow(user.id).then(row => {
+      if (row) { setBonusPoints(row.bonus_points??0); setLastBonusClaim(row.last_claim_time??null); }
       setBonusLoaded(true);
     });
   }, [user?.id]);
@@ -256,309 +291,458 @@ export default function DashboardPage() {
   useEffect(() => {
     const tick = () => {
       if (!lastBonusClaim) { setCanClaimBonus(true); setBonusCooldown(''); return; }
-      const diff = BONUS_COOLDOWN - (Date.now() - new Date(lastBonusClaim).getTime());
-      if (diff <= 0) { setCanClaimBonus(true); setBonusCooldown(''); return; }
+      const diff = BONUS_COOLDOWN-(Date.now()-new Date(lastBonusClaim).getTime());
+      if (diff<=0) { setCanClaimBonus(true); setBonusCooldown(''); return; }
       setCanClaimBonus(false);
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
+      const h=Math.floor(diff/3600000), m=Math.floor((diff%3600000)/60000), s=Math.floor((diff%60000)/1000);
       setBonusCooldown(`${h}h ${m}m ${s}s`);
     };
-    tick(); const id = setInterval(tick, 1000); return () => clearInterval(id);
+    tick(); const id=setInterval(tick,1000); return ()=>clearInterval(id);
   }, [lastBonusClaim]);
 
-  // Load live stats
   const loadKeyAuthStats = async () => {
     setStatsLoading(true);
     try {
-      const res = await safeFetch('https://awjouzwzdkrevvnlenvn.supabase.co/functions/v1/keyauth-stats', { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${ANON}`, apikey:ANON }, body:'{}' }, 10000);
-      if (res?.ok) { const d = await res.json(); if (d?.lag) setLag(norm(d.lag)); if (d?.internal) setInt(norm(d.internal)); }
+      const res = await safeFetch(`${SUPA_URL}/functions/v1/keyauth-stats`,{ method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${ANON}`,apikey:ANON},body:'{}' },10000);
+      if (res?.ok) { const d=await res.json(); if(d?.lag) setLag(norm(d.lag)); if(d?.internal) setInt(norm(d.internal)); }
     } catch {}
-    setStatsLoading(false); setLastStatsUpdate(new Date());
+    setStatsLoading(false);
   };
 
-  useEffect(() => {
-    loadKeyAuthStats();
-    const i = setInterval(loadKeyAuthStats, 60000);
-    return () => clearInterval(i);
-  }, []);
+  useEffect(() => { loadKeyAuthStats(); const i=setInterval(loadKeyAuthStats,60000); return ()=>clearInterval(i); }, []);
 
-  // Announcements Loader
   useEffect(() => {
-    supabase.from('announcements').select('*').order('created_at', { ascending:false }).limit(10)
+    supabase.from('announcements').select('*').order('created_at',{ ascending:false }).limit(10)
       .then(({ data }) => { if (data) setAnns(data as DBAnn[]); setAnnLoading(false); });
-
-    const ch = supabase.channel('status-anns')
-      .on('postgres_changes', { event:'INSERT', schema:'public', table:'announcements' }, ({ new: r }) => {
-        setAnns(prev => [r as DBAnn, ...prev]);
-      })
-      .on('postgres_changes', { event:'DELETE', schema:'public', table:'announcements' }, ({ old: r }) => {
-        setAnns(prev => prev.filter(a => a.id !== (r as any).id));
-      })
+    const ch = supabase.channel('dash-anns')
+      .on('postgres_changes',{ event:'INSERT',schema:'public',table:'announcements' },({ new:r })=>setAnns(prev=>[r as DBAnn,...prev]))
+      .on('postgres_changes',{ event:'DELETE',schema:'public',table:'announcements' },({ old:r })=>setAnns(prev=>prev.filter(a=>a.id!==(r as any).id)))
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return ()=>{ supabase.removeChannel(ch); };
   }, []);
 
   const handleClaimBonus = async () => {
-    if (!user || !canClaimBonus || claimingBonus || !bonusLoaded) return;
+    if (!user||!canClaimBonus||claimingBonus||!bonusLoaded) return;
     setClaimingBonus(true);
     const latest = await fetchBonusRow(user.id);
-    if (latest?.last_claim_time && (BONUS_COOLDOWN - (Date.now() - new Date(latest.last_claim_time).getTime()) > 0)) {
-        setLastBonusClaim(latest.last_claim_time); setCanClaimBonus(false); setClaimingBonus(false); toast.error('Already claimed recently.'); return;
+    if (latest?.last_claim_time&&(BONUS_COOLDOWN-(Date.now()-new Date(latest.last_claim_time).getTime())>0)) {
+      setLastBonusClaim(latest.last_claim_time); setCanClaimBonus(false); setClaimingBonus(false); toast.error('Already claimed recently.'); return;
     }
-    const nextPoints = (latest?.bonus_points ?? bonusPoints) + 10;
-    const claimTime = new Date().toISOString();
-    const { error } = await upsertBonusRow(user.id, user.email, nextPoints, claimTime);
-    if (error) { toast.error(t('common.error')); setClaimingBonus(false); return; }
-    setBonusPoints(nextPoints); setLastBonusClaim(claimTime); setClaimingBonus(false); toast.success(t('bonus.claimed'));
-    logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'bonus_claim', status:'success', meta:{ points:10, total:nextPoints } });
+    const nextPoints=(latest?.bonus_points??bonusPoints)+10;
+    const claimTime=new Date().toISOString();
+    const { error } = await upsertBonusRow(user.id,user.email,nextPoints,claimTime);
+    if (error) { toast.error('Error claiming bonus'); setClaimingBonus(false); return; }
+    setBonusPoints(nextPoints); setLastBonusClaim(claimTime); setClaimingBonus(false);
+    toast.success('+10 bonus points claimed!');
+    logActivity({ userId:user.id,userEmail:user.email,userName:user.name,action:'bonus_claim',status:'success',meta:{ points:10,total:nextPoints } });
   };
 
   const handlePublishAnn = async () => {
-    if (!fTitle.trim() || !fContent.trim()) { toast.error('Fill title and content'); return; }
+    if (!fTitle.trim()||!fContent.trim()) { toast.error('Fill title and content'); return; }
     setPublishing(true);
-    const { error } = await supabase.from('announcements').insert({ title: fTitle.trim(), content: fContent.trim(), type: fType, created_by: user?.email ?? '' });
-    if (error) toast.error('Failed: ' + error.message);
+    const { error } = await supabase.from('announcements').insert({ title:fTitle.trim(),content:fContent.trim(),type:fType,created_by:user?.email??'' });
+    if (error) toast.error('Failed: '+error.message);
     else {
-      toast.success(t('status.published'));
-      notifyAll({ type:'announcement', title:`📢 ${fTitle.trim()}`, body:fContent.trim().slice(0,80), linkPath:'/' });
-      sendNotificationEmail({ mode:'broadcast', subject:fTitle.trim(), html:`<h2>${fTitle.trim()}</h2><p>${fContent.trim()}</p>` });
-      if (user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'announcement_posted', product:fTitle.trim(), status:'success', meta:{ type:fType } });
+      toast.success('Broadcast published');
+      notifyAll({ type:'announcement',title:`📢 ${fTitle.trim()}`,body:fContent.trim().slice(0,80),linkPath:'/' });
+      sendNotificationEmail({ mode:'broadcast',subject:fTitle.trim(),html:`<h2>${fTitle.trim()}</h2><p>${fContent.trim()}</p>` });
+      if (user) logActivity({ userId:user.id,userEmail:user.email,userName:user.name,action:'announcement_posted',product:fTitle.trim(),status:'success',meta:{ type:fType } });
       setFTitle(''); setFContent(''); setFType('update'); setShowForm(false);
     }
     setPublishing(false);
   };
 
   const handleDeleteAnn = async (id: string) => {
-    const { error } = await supabase.from('announcements').delete().eq('id', id);
-    if (error) toast.error('Delete failed: ' + error.message);
+    const { error } = await supabase.from('announcements').delete().eq('id',id);
+    if (error) toast.error('Delete failed');
   };
 
-  const active = licenses.filter((license) => new Date(license.expiresAt).getTime() > Date.now());
-  const lagLicenses = active.filter((license) => license.productId === 'keyauth-lag');
-  const internalLicenses = active.filter((license) => license.productId === 'keyauth-internal' || license.key.endsWith('_INTERNAL'));
-  const approved = (transactions as any[]).filter((tx: any) => tx.status === 'approved').length;
+  const active = licenses.filter(l=>new Date(l.expiresAt).getTime()>Date.now());
+  const approved = (transactions as any[]).filter((tx: any)=>tx.status==='approved').length;
+  const totalOnline = safeNum(lag.onlineUsers)+safeNum(int.onlineUsers);
+  const totalUsers = safeNum(lag.numUsers)+safeNum(int.numUsers);
+  const progressPct = bonusPoints%100;
+  const firstName = user?.name?.split(' ')[0] || 'User';
 
-  const totalOnline = safeNum(lag.onlineUsers) + safeNum(int.onlineUsers);
-  const totalUsers  = safeNum(lag.numUsers)    + safeNum(int.numUsers);
-
-  const stats = [
-    { label:t('dashboard.balance'), val:`$${balance.toFixed(2)}` },
-    { label:t('dashboard.activeKeys'), val:active.length },
-    { label:t('dashboard.approved'), val:approved },
-    { label:t('dashboard.bonusPoints'), val:bonusPoints },
-  ];
+  const TYPE_CFG = {
+    update:      { emoji:'✨', color:'#5EF7A6', bg:'rgba(94,247,166,.08)',  border:'rgba(94,247,166,.18)'  },
+    maintenance: { emoji:'🔧', color:'#a78bfa', bg:'rgba(167,139,250,.08)', border:'rgba(167,139,250,.18)' },
+    feature:     { emoji:'⚡', color:'#f59e0b', bg:'rgba(245,158,11,.08)',  border:'rgba(245,158,11,.18)'  },
+  } as const;
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:28, paddingBottom: 60, fontFamily:'Inter, sans-serif' }}>
+    <div style={{ display:'flex',flexDirection:'column',gap:0,paddingBottom:60,fontFamily:'Inter,sans-serif',position:'relative' }}>
       <style>{`
-        /* AquaFi Aesthetic */
-        @keyframes fadeUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:none } }
-        
-        .aqua-card {
-          background: linear-gradient(160deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.01) 100%);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 20px;
-          backdrop-filter: blur(28px);
-          -webkit-backdrop-filter: blur(28px);
-          position: relative; overflow: hidden;
-          animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both;
-        }
-        .aqua-card::before {
-          content: ""; position: absolute; top:0; left:0; right:0; height:1px;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-          opacity: 0.6;
-        }
-        .aqua-card:hover { border-color: rgba(255,255,255,0.1); }
-        
-        .aqua-stat { display:flex; flex-direction:column; align-items:flex-start; animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both; }
-        .aqua-stat-val { font-size: 38px; font-weight: 400; color: #FFFFFF; letter-spacing: -0.03em; line-height: 1; margin-bottom: 6px; }
-        .aqua-stat-lbl { font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.5); letter-spacing: -0.01em; }
-        
-        .aqua-btn {
-          background: rgba(255,255,255,0.05); color: #fff;
-          border: 1px solid rgba(255,255,255,0.1); border-radius: 99px;
-          padding: 8px 20px; font-size: 13px; font-weight: 500;
-          cursor: pointer; transition: all 0.2s; display:inline-flex; align-items:center; gap:8px;
-        }
-        .aqua-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); transform:scale(1.02); }
-        .aqua-btn-primary { background: #544388; border-color: #6C5AA6; }
-        .aqua-btn-primary:hover { background: #6C5AA6; border-color: #8D7ABF; box-shadow: 0 0 20px rgba(84,67,136,0.4); }
+        @keyframes db-in { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:none} }
+        @keyframes db-glow { 0%,100%{opacity:.55} 50%{opacity:1} }
+        @keyframes db-shimmer { 0%{left:-100%} 100%{left:200%} }
+        @keyframes db-badge { from{transform:scale(0.7);opacity:0} to{transform:scale(1);opacity:1} }
 
-        .aqua-grid { display: grid; grid-template-columns: 240px 1fr 240px; gap: 32px; align-items: center; min-height: 380px; position: relative; }
-        @media (max-width: 1024px) { .aqua-grid { grid-template-columns: 1fr; gap:24px; min-height: auto; } }
+        .db-float-card {
+          background: linear-gradient(160deg,rgba(255,255,255,.035) 0%,rgba(255,255,255,.012) 100%);
+          border: 1px solid rgba(255,255,255,.07);
+          border-radius: 22px;
+          position: relative; overflow: hidden;
+          transition: border-color .25s, transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s;
+        }
+        .db-float-card::before {
+          content:''; position:absolute; top:0; left:0; right:0; height:1px;
+          background: linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);
+        }
+        .db-float-card:hover { border-color:rgba(255,255,255,.12); transform:translateY(-3px); box-shadow:0 18px 50px rgba(0,0,0,.4); }
+
+        .db-stat {
+          animation: db-in .55s cubic-bezier(.22,1,.36,1) both;
+          flex:1; padding:22px 20px;
+          background: linear-gradient(160deg,rgba(255,255,255,.04) 0%,rgba(255,255,255,.015) 100%);
+          border: 1px solid rgba(255,255,255,.08); border-radius:20px;
+          position:relative; overflow:hidden;
+          transition: transform .28s cubic-bezier(.22,1,.36,1), border-color .2s;
+          min-width:0;
+        }
+        .db-stat::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent); }
+        .db-stat:hover { transform:translateY(-4px); border-color:rgba(255,255,255,.13); }
+
+        .db-hero {
+          border-radius:28px; overflow:hidden; position:relative;
+          background: linear-gradient(145deg,#0e0820 0%,#120a2e 40%,#0a0f1a 100%);
+          border: 1px solid rgba(139,92,246,.18);
+          box-shadow: 0 0 80px rgba(109,40,217,.1), 0 32px 64px rgba(0,0,0,.5);
+          animation: db-in .5s cubic-bezier(.22,1,.36,1) both;
+        }
+
+        .db-live-dot {
+          width:7px; height:7px; border-radius:50%;
+          background:#5EF7A6;
+          box-shadow: 0 0 8px #5EF7A6, 0 0 18px rgba(94,247,166,.35);
+          animation: db-glow 2s ease-in-out infinite;
+        }
+
+        .db-bar { height:5px; border-radius:999px; background:rgba(255,255,255,.06); overflow:hidden; position:relative; }
+        .db-bar-fill {
+          height:100%; border-radius:999px;
+          background:linear-gradient(90deg,#7c3aed,#a78bfa,#c4b5fd);
+          box-shadow:0 0 12px rgba(139,92,246,.55);
+          transition: width .8s cubic-bezier(.22,1,.36,1);
+          position:relative; overflow:hidden;
+        }
+        .db-bar-fill::after {
+          content:''; position:absolute; top:0; bottom:0; left:-100%;
+          width:50%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);
+          animation: db-shimmer 2.2s ease-in-out infinite;
+        }
+
+        .db-btn-claim {
+          width:100%; padding:13px; border-radius:14px; border:none; cursor:pointer;
+          font-family:inherit; font-size:13px; font-weight:800;
+          display:flex; align-items:center; justify-content:center; gap:8px;
+          transition: all .25s cubic-bezier(.22,1,.36,1);
+          position:relative; overflow:hidden;
+          background: linear-gradient(135deg,#7c3aed,#6d28d9);
+          color:#fff;
+          box-shadow: 0 0 24px rgba(109,40,217,.4), 0 4px 16px rgba(0,0,0,.3);
+        }
+        .db-btn-claim:hover { transform:translateY(-2px); box-shadow:0 0 38px rgba(109,40,217,.6),0 8px 22px rgba(0,0,0,.4); }
+        .db-btn-claim::before { content:''; position:absolute; top:0; bottom:0; left:-80%; width:40%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent); transition:left .4s ease; pointer-events:none; }
+        .db-btn-claim:hover::before { left:160%; }
+        .db-btn-claim:disabled { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); color:rgba(255,255,255,.32); cursor:not-allowed; box-shadow:none; transform:none !important; }
+
+        .db-ann {
+          padding:16px 18px; border-radius:16px;
+          background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.05);
+          cursor:pointer; transition:all .18s;
+          animation: db-in .45s cubic-bezier(.22,1,.36,1) both;
+        }
+        .db-ann:hover { background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.09); }
+
+        .db-redeem {
+          padding:7px 16px; border-radius:10px; border:1px solid rgba(251,191,36,.28); cursor:pointer;
+          font-family:inherit; font-size:11px; font-weight:800;
+          background:linear-gradient(135deg,rgba(251,191,36,.14),rgba(245,158,11,.07));
+          color:#fbbf24; transition:all .2s; white-space:nowrap;
+          display:flex; align-items:center; gap:5px;
+        }
+        .db-redeem:hover { background:linear-gradient(135deg,rgba(251,191,36,.24),rgba(245,158,11,.14)); box-shadow:0 0 16px rgba(245,158,11,.28); }
+        .db-redeem:disabled { opacity:.35; cursor:not-allowed; }
+
+        .db-g4 { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+        .db-g3 { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+        .db-g2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .db-g21 { display:grid; grid-template-columns:1fr 1.7fr; gap:20px; }
+
+        @media(max-width:900px) { .db-g4{grid-template-columns:repeat(2,1fr)} .db-g3{grid-template-columns:repeat(2,1fr)} .db-g21{grid-template-columns:1fr} }
+        @media(max-width:600px) { .db-g4{grid-template-columns:1fr 1fr} .db-g3{grid-template-columns:1fr 1fr} .db-g2{grid-template-columns:1fr} }
       `}</style>
 
-      {/* ══ THE AMAZING AQUA-FI HERO SECTION ══ */}
-      <div style={{ position:'relative', borderRadius:28, background:'#161316', border:'1px solid rgba(255,255,255,0.04)', overflow:'hidden', boxShadow:'inset 0 0 100px rgba(0,0,0,0.5)' }} className="aqua-card">
-        {/* Background Lights */}
-        <div style={{ position:'absolute', top:'-10%', left:'15%', width:'600px', height:'600px', background:'radial-gradient(circle, rgba(84,67,136,0.2) 0%, transparent 60%)', filter:'blur(40px)', pointerEvents:'none' }} />
-        <div style={{ position:'absolute', bottom:'-20%', right:'0%', width:'500px', height:'500px', background:'radial-gradient(circle, rgba(67,37,110,0.3) 0%, transparent 60%)', filter:'blur(40px)', pointerEvents:'none' }} />
-        <div style={{ position:'absolute', inset:0, background:'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.02\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")', opacity:0.7, pointerEvents:'none'}} />
+      {showRewardModal && user && (
+        <RewardModal bonusPoints={bonusPoints} userId={user.id} userEmail={user.email}
+          onClose={()=>setShowRewardModal(false)}
+          onRedeem={(pts)=>{ setBonusPoints(pts); setShowRewardModal(false); }}/>
+      )}
 
-        <div className="aqua-grid" style={{ padding:'48px 40px', zIndex:10, position:'relative' }}>
-          
-          {/* Left Stats Column */}
-          <div style={{ display:'flex', flexDirection:'column', gap:32 }}>
-            <div className="aqua-stat" style={{ animationDelay:'50ms' }}>
-              <div className="aqua-stat-val">{stats[0].val}</div>
-              <div className="aqua-stat-lbl">{stats[0].label}</div>
-            </div>
-            <div className="aqua-stat" style={{ animationDelay:'100ms' }}>
-              <div className="aqua-stat-val">{stats[1].val}</div>
-              <div className="aqua-stat-lbl">{stats[1].label}</div>
-            </div>
-            <div className="aqua-stat" style={{ animationDelay:'150ms' }}>
-              <div className="aqua-stat-val">{stats[2].val}</div>
-              <div className="aqua-stat-lbl">{stats[2].label}</div>
-            </div>
-          </div>
+      {/* ══ HERO ══ */}
+      <div className="db-hero" style={{ padding:'38px 34px 34px',marginBottom:26 }}>
+        {/* BG layers */}
+        <div style={{ position:'absolute',inset:0,overflow:'hidden',pointerEvents:'none' }}>
+          <div style={{ position:'absolute',top:'-15%',left:'-5%',width:'50%',height:'130%',background:'radial-gradient(ellipse,rgba(109,40,217,.2) 0%,transparent 65%)',filter:'blur(2px)' }}/>
+          <div style={{ position:'absolute',top:'10%',right:'-8%',width:'38%',height:'80%',background:'radial-gradient(ellipse,rgba(67,37,110,.22) 0%,transparent 65%)' }}/>
+          <div style={{ position:'absolute',bottom:'-20%',left:'35%',width:'35%',height:'70%',background:'radial-gradient(ellipse,rgba(84,67,136,.14) 0%,transparent 65%)' }}/>
+          <div style={{ position:'absolute',inset:0,backgroundImage:'linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px)',backgroundSize:'44px 44px',opacity:.7 }}/>
+          <div style={{ position:'absolute',top:0,left:0,right:0,height:2,background:'linear-gradient(90deg,transparent,rgba(139,92,246,.7),rgba(167,139,250,.4),transparent)' }}/>
+        </div>
 
-          {/* Center Main Copy */}
-          <div style={{ textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center' }}>
-            <div style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:99, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.02)', fontSize:12, fontWeight:400, color:'rgba(255,255,255,0.7)', marginBottom:24, backdropFilter:'blur(10px)' }}>
-              <Sparkles size={12} color="#5EF7A6" /> Premium Architecture
+        <div style={{ position:'relative',zIndex:1,display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:20,marginBottom:30 }}>
+          <div style={{ animation:'db-in .5s both' }}>
+            <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:10 }}>
+              <div className="db-live-dot"/>
+              <span style={{ fontSize:10,fontWeight:800,letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(94,247,166,.75)' }}>
+                {isSystemOnline?'System Online':'Maintenance Mode'}
+              </span>
             </div>
-            <h1 style={{ fontSize:42, fontWeight:400, color:'#FFF', letterSpacing:'-0.03em', lineHeight:1.15, marginBottom:16 }}>
-              Seamless Experience with <br/>
-              <span style={{ color:'#8b5cf6' }}>1999X Digital Finance</span>
+            <h1 style={{ fontSize:clamp(22,4,'vw',36),fontWeight:900,color:'#fff',letterSpacing:'-.03em',margin:0,lineHeight:1.1,marginBottom:8 }}>
+              Welcome Back,<br/>
+              <span style={{ background:'linear-gradient(125deg,#ddd6fe,#a78bfa,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>{firstName}</span>
             </h1>
-            <p style={{ fontSize:14, fontWeight:400, color:'rgba(255,255,255,0.4)', lineHeight:1.6, maxWidth:400, margin:'0 auto 32px' }}>
-              An advanced AI-powered system that analyzes user preferences and delivers highly personalized content, ensuring a seamless and engaging experience.
-            </p>
-            {isSystemOnline ? (
-               <button className="aqua-btn aqua-btn-primary" style={{ padding:'12px 28px', fontSize:14 }}>Get Started <ArrowRight size={16} /></button>
-            ) : (
-               <button className="aqua-btn" style={{ padding:'12px 28px', fontSize:14, background:'rgba(234,34,107,0.1)', borderColor:'rgba(234,34,107,0.3)', color:'#EA226B' }}>Network Maintenance <Wrench size={16} /></button>
-            )}
+            <div style={{ fontSize:10,fontWeight:700,color:'rgba(255,255,255,.25)',letterSpacing:'.2em',textTransform:'uppercase' }}>
+              1999X FREE FIRE PANEL
+            </div>
           </div>
+          <div style={{ display:'flex',alignItems:'center',gap:8,padding:'9px 16px',borderRadius:999,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',backdropFilter:'blur(12px)',animation:'db-in .5s .1s both' }}>
+            <Shield size={12} color="#a78bfa"/>
+            <span style={{ fontSize:11,fontWeight:700,color:'rgba(255,255,255,.6)' }}>OB52 Undetected</span>
+            <div style={{ width:5,height:5,borderRadius:'50%',background:'#5EF7A6',boxShadow:'0 0 7px #5EF7A6' }}/>
+          </div>
+        </div>
 
-          {/* Right Network Column */}
-          <div style={{ display:'flex', flexDirection:'column', gap:32, alignItems:'flex-end', textAlign:'right' }}>
-            <div className="aqua-stat" style={{ alignItems:'flex-end', animationDelay:'200ms' }}>
-              <div className="aqua-stat-val">{totalUsers.toLocaleString()}+</div>
-              <div className="aqua-stat-lbl">Total Users</div>
-            </div>
-            <div className="aqua-stat" style={{ alignItems:'flex-end', animationDelay:'250ms' }}>
-              <div className="aqua-stat-val">{totalOnline.toLocaleString()}</div>
-              <div className="aqua-stat-lbl">Online Sessions</div>
-            </div>
-            <div className="aqua-stat" style={{ alignItems:'flex-end', animationDelay:'300ms' }}>
-              <div className="aqua-stat-val" style={{ color:'#5EF7A6' }}>Active</div>
-              <div className="aqua-stat-lbl">Network Status</div>
-            </div>
+        {/* Live stats strip */}
+        <div style={{ position:'relative',zIndex:1 }}>
+          <div style={{ fontSize:9,fontWeight:800,letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(255,255,255,.18)',marginBottom:12 }}>— LIVE STATISTICS —</div>
+          <div className="db-g3" style={{ gap:10 }}>
+            {[
+              { label:'Total Users', val:statsLoading?'—':totalUsers.toLocaleString()+'+', icon:<Users size={14}/>, color:'#818cf8', bg:'rgba(129,140,248,.09)', bc:'rgba(129,140,248,.18)' },
+              { label:'Live Playing', val:statsLoading?'—':totalOnline.toLocaleString(), icon:<Activity size={14}/>, color:'#5EF7A6', bg:'rgba(94,247,166,.09)', bc:'rgba(94,247,166,.18)', live:true },
+              { label:'OB52 Status', val:'Undetected', icon:<Shield size={14}/>, color:'#f59e0b', bg:'rgba(245,158,11,.09)', bc:'rgba(245,158,11,.18)' },
+            ].map((s,i)=>(
+              <div key={s.label} style={{ padding:'14px 16px',borderRadius:14,background:s.bg,border:`1px solid ${s.bc}`,animation:`db-in .5s ${.15+i*.08}s both`,position:'relative',overflow:'hidden' }}>
+                <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${s.color}35,transparent)` }}/>
+                <div style={{ display:'flex',alignItems:'center',gap:7,marginBottom:7 }}>
+                  <div style={{ color:s.color }}>{s.icon}</div>
+                  {(s as any).live && <div className="db-live-dot" style={{ width:5,height:5 }}/>}
+                </div>
+                <div style={{ fontSize:20,fontWeight:900,color:s.color,letterSpacing:'-.02em',marginBottom:2 }}>{s.val}</div>
+                <div style={{ fontSize:9,fontWeight:700,color:'rgba(255,255,255,.28)',textTransform:'uppercase',letterSpacing:'.12em' }}>{s.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* ══ DIVIDED BOTTOM METRICS ══ */}
-      <div style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr', gap:28 }}>
-        
-        {/* Announcments Aqua Card */}
-        <div className="aqua-card" style={{ padding:'32px', display:'flex', flexDirection:'column', animationDelay:'150ms' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
-            <h2 style={{ fontSize:20, fontWeight:400, color:'#FFF', letterSpacing:'-0.02em', margin:0 }}>System Broadcasts</h2>
-            {isMod && (
-                <button onClick={() => setShowForm(!showForm)} className="aqua-btn" style={{ padding:'6px 14px', fontSize:12 }}>
-                  {showForm ? <><X size={12}/> Close</> : <><Plus size={12}/> Broadcast</>}
+      {/* ══ PERSONAL STATS ══ */}
+      <div className="db-g4" style={{ marginBottom:22 }}>
+        {[
+          { label:'Balance',      val:`$${balance.toFixed(2)}`, emoji:'💰', color:'#5EF7A6', d:0   },
+          { label:'Active Keys',  val:active.length,             emoji:'🔑', color:'#818cf8', d:.07 },
+          { label:'Approved',     val:approved,                  emoji:'✅', color:'#38bdf8', d:.14 },
+          { label:'Bonus Points', val:bonusPoints,               emoji:'⭐', color:'#fbbf24', d:.21 },
+        ].map(s=>(
+          <div key={s.label} className="db-stat" style={{ animationDelay:`${s.d}s` }}>
+            <div style={{ fontSize:20,marginBottom:10 }}>{s.emoji}</div>
+            <div style={{ fontSize:26,fontWeight:900,color:s.color,letterSpacing:'-.04em',lineHeight:1,marginBottom:4 }}>{s.val}</div>
+            <div style={{ fontSize:10,fontWeight:600,color:'rgba(255,255,255,.32)',textTransform:'uppercase',letterSpacing:'.1em' }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ══ BONUS + FREE KEY + ANNOUNCEMENTS ══ */}
+      <div className="db-g21" style={{ marginBottom:20 }}>
+
+        {/* LEFT COLUMN */}
+        <div style={{ display:'flex',flexDirection:'column',gap:16 }}>
+
+          {/* BONUS CARD */}
+          <div className="db-float-card" style={{ padding:'26px 24px',animation:'db-in .6s .1s both' }}>
+            <div style={{ position:'absolute',top:-35,right:-15,width:120,height:120,borderRadius:'50%',background:'radial-gradient(circle,rgba(139,92,246,.16) 0%,transparent 70%)',pointerEvents:'none' }}/>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18 }}>
+              <div style={{ display:'flex',alignItems:'center',gap:11 }}>
+                <div style={{ width:42,height:42,borderRadius:14,background:'linear-gradient(135deg,rgba(139,92,246,.22),rgba(109,40,217,.08))',border:'1px solid rgba(139,92,246,.25)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 16px rgba(109,40,217,.18)' }}>
+                  <Gift size={18} color="#a78bfa"/>
+                </div>
+                <div>
+                  <div style={{ fontSize:15,fontWeight:800,color:'#fff',letterSpacing:'-.01em' }}>Daily Bonus</div>
+                  <div style={{ fontSize:11,color:'rgba(255,255,255,.35)' }}>+10 pts every 24h</div>
+                </div>
+              </div>
+              {bonusPoints>=100 && (
+                <button onClick={()=>setShowRewardModal(true)} className="db-redeem">
+                  <Star size={10}/> Redeem
                 </button>
+              )}
+            </div>
+
+            <div style={{ marginBottom:16 }}>
+              <div style={{ display:'flex',alignItems:'baseline',gap:5,marginBottom:10 }}>
+                <span style={{ fontSize:40,fontWeight:900,color:'#fff',letterSpacing:'-.05em',lineHeight:1 }}>{bonusPoints}</span>
+                <span style={{ fontSize:14,color:'rgba(255,255,255,.28)',fontWeight:600 }}>pts</span>
+                <span style={{ fontSize:10,color:'rgba(255,255,255,.22)',marginLeft:3 }}>/ 100</span>
+              </div>
+              <div className="db-bar">
+                <div className="db-bar-fill" style={{ width:`${Math.min(progressPct===0&&bonusPoints>=100?100:progressPct,100)}%` }}/>
+              </div>
+              <div style={{ display:'flex',justifyContent:'space-between',marginTop:5 }}>
+                <span style={{ fontSize:10,color:'rgba(255,255,255,.22)',fontWeight:600 }}>{progressPct}/100 this cycle</span>
+                {bonusPoints>=100 && <span style={{ fontSize:10,color:'#fbbf24',fontWeight:800,animation:'db-badge .4s both' }}>🎁 Ready!</span>}
+              </div>
+            </div>
+
+            <button onClick={handleClaimBonus} disabled={!canClaimBonus||claimingBonus} className="db-btn-claim">
+              {claimingBonus
+                ? <><Loader2 size={13} className="animate-spin"/> Claiming…</>
+                : canClaimBonus
+                  ? <><Sparkles size={13}/> Claim +10 Points</>
+                  : <><Clock size={12}/> {bonusCooldown}</>
+              }
+            </button>
+          </div>
+
+          {/* FREE KEY */}
+          <div style={{ animation:'db-in .6s .18s both' }}>
+            <FreeKeyCard/>
+          </div>
+        </div>
+
+        {/* RIGHT — ANNOUNCEMENTS */}
+        <div className="db-float-card" style={{ padding:'26px',animation:'db-in .6s .08s both',display:'flex',flexDirection:'column',minHeight:360 }}>
+          <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18 }}>
+            <div>
+              <div style={{ fontSize:15,fontWeight:800,color:'#fff',letterSpacing:'-.01em' }}>System Broadcasts</div>
+              <div style={{ fontSize:11,color:'rgba(255,255,255,.3)',marginTop:2 }}>
+                {annLoading?'Loading…':anns.length===0?'No active broadcasts':`${anns.length} active`}
+              </div>
+            </div>
+            {isMod && (
+              <button onClick={()=>setShowForm(!showForm)}
+                style={{ display:'flex',alignItems:'center',gap:5,padding:'7px 13px',borderRadius:10,background:showForm?'rgba(248,113,113,.08)':'rgba(255,255,255,.05)',border:`1px solid ${showForm?'rgba(248,113,113,.18)':'rgba(255,255,255,.09)'}`,cursor:'pointer',color:showForm?'#f87171':'rgba(255,255,255,.5)',fontSize:12,fontFamily:'inherit',fontWeight:700,transition:'all .15s' }}>
+                {showForm?<><X size={11}/> Close</>:<><Plus size={11}/> Post</>}
+              </button>
             )}
           </div>
 
           {showForm && isMod && (
-            <div style={{ padding:'20px', borderRadius:16, background:'rgba(0,0,0,0.2)', border:'1px solid rgba(255,255,255,0.05)', marginBottom:20 }}>
-               <div style={{ display:'flex', gap:8, marginBottom:16 }}>
-                  {(['update','feature','maintenance'] as const).map(tp => (
-                     <button key={tp} onClick={() => setFType(tp)} style={{ padding:'6px 14px', borderRadius:20, fontSize:11, fontWeight:400, cursor:'pointer', border:`1px solid ${fType===tp?TYPE_CFG[tp].c:'rgba(255,255,255,0.05)'}`, background:fType===tp?TYPE_CFG[tp].bg:'transparent', color:fType===tp?TYPE_CFG[tp].c:'rgba(255,255,255,0.4)', textTransform:'capitalize' }}>
-                        {tp}
-                     </button>
-                  ))}
-               </div>
-               <input value={fTitle} onChange={e=>setFTitle(e.target.value)} placeholder="Forecast Title" style={{ width:'100%', background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:8, padding:'12px 14px', color:'#fff', fontSize:13, outline:'none', marginBottom:12 }}/>
-               <textarea value={fContent} onChange={e=>setFContent(e.target.value)} placeholder="Transmission details..." rows={2} style={{ width:'100%', background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:8, padding:'12px 14px', color:'#fff', fontSize:13, outline:'none', resize:'vertical', marginBottom:16 }}/>
-               <button onClick={handlePublishAnn} disabled={publishing} className="aqua-btn aqua-btn-primary" style={{ width:'100%', justifyContent:'center', padding:'10px' }}>
-                  {publishing ? <><Loader2 size={14} className="animate-spin" /> Transmitting...</> : <><Send size={14} /> Transmit Broadcast</>}
-               </button>
+            <div style={{ padding:'18px',borderRadius:14,background:'rgba(255,255,255,.022)',border:'1px solid rgba(255,255,255,.07)',marginBottom:16 }}>
+              <div style={{ display:'flex',gap:7,marginBottom:12,flexWrap:'wrap' }}>
+                {(['update','feature','maintenance'] as const).map(tp=>(
+                  <button key={tp} onClick={()=>setFType(tp)} style={{ padding:'5px 12px',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer',border:`1px solid ${fType===tp?TYPE_CFG[tp].color:TYPE_CFG[tp].border}`,background:fType===tp?TYPE_CFG[tp].bg:'transparent',color:fType===tp?TYPE_CFG[tp].color:'rgba(255,255,255,.38)',fontFamily:'inherit',textTransform:'capitalize' }}>{tp}</button>
+                ))}
+              </div>
+              <input value={fTitle} onChange={e=>setFTitle(e.target.value)} placeholder="Broadcast title…"
+                style={{ width:'100%',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:9,padding:'10px 13px',color:'#fff',fontSize:13,outline:'none',marginBottom:9,fontFamily:'inherit',boxSizing:'border-box' }}/>
+              <textarea value={fContent} onChange={e=>setFContent(e.target.value)} placeholder="Broadcast details…" rows={2}
+                style={{ width:'100%',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:9,padding:'10px 13px',color:'#fff',fontSize:13,outline:'none',resize:'vertical',fontFamily:'inherit',marginBottom:11,boxSizing:'border-box' }}/>
+              <button onClick={handlePublishAnn} disabled={publishing}
+                style={{ width:'100%',padding:'10px',borderRadius:10,background:'linear-gradient(135deg,#7c3aed,#6d28d9)',border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:13,fontWeight:800,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',gap:7 }}>
+                {publishing?<><Loader2 size={12} className="animate-spin"/>Transmitting…</>:<><Send size={12}/> Transmit</>}
+              </button>
             </div>
           )}
 
-          <div style={{ flex:1, display:'flex', flexDirection:'column', gap:10, overflowY:'auto', maxHeight: showForm?'180px':'300px', paddingRight:'10px' }} className="custom-scroll">
+          {/* List */}
+          <div style={{ flex:1,display:'flex',flexDirection:'column',gap:9,overflowY:'auto',maxHeight:400 }} className="custom-scroll">
             {annLoading ? (
-               <div style={{ textAlign:'center', color:'rgba(255,255,255,0.3)', fontSize:13, padding:'30px 0' }}>Decrypting streams...</div>
+              <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'40px 0',color:'rgba(255,255,255,.22)',fontSize:13 }}>
+                <Loader2 size={13} className="animate-spin"/> Loading…
+              </div>
             ) : anns.length === 0 ? (
-               <div style={{ textAlign:'center', color:'rgba(255,255,255,0.3)', fontSize:13, padding:'40px 0', border:'1px dashed rgba(255,255,255,0.08)', borderRadius:16 }}>No active broadcasts</div>
-            ) : (
-              anns.map((ann) => {
-                const cfg = TYPE_CFG[ann.type] ?? TYPE_CFG.update;
-                return (
-                  <div key={ann.id} style={{ display:'flex', gap:16, padding:'16px', borderRadius:16, background:'rgba(255,255,255,0.015)', border:'1px solid rgba(255,255,255,0.03)', position:'relative', transition:'background 0.2s', cursor:'default' }} onMouseOver={e => e.currentTarget.style.background='rgba(255,255,255,0.03)'} onMouseOut={e => e.currentTarget.style.background='rgba(255,255,255,0.015)'}>
-                     <div style={{ width:32, height:32, borderRadius:'50%', background:cfg.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                        <cfg.Icon size={14} color={cfg.c} />
-                     </div>
-                     <div style={{ flex:1, minWidth:0, paddingTop:2 }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
-                           <span style={{ fontSize:15, fontWeight:500, color:'#fff', letterSpacing:'-0.01em' }}>{ann.title}</span>
-                           <span style={{ fontSize:10, color:cfg.c, border:`1px solid ${cfg.c}40`, padding:'2px 8px', borderRadius:20 }}>{ann.type}</span>
-                        </div>
-                        <p style={{ fontSize:13, color:'rgba(255,255,255,0.5)', lineHeight:1.6, margin:0 }}>{ann.content}</p>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:12 }}>{new Date(ann.created_at).toLocaleDateString()}</div>
-                     </div>
-                     {isMod && (
-                        <button onClick={() => handleDeleteAnn(ann.id)} style={{ position:'absolute', top:22, right:16, color:'rgba(255,255,255,0.2)', background:'none', border:'none', cursor:'pointer' }}>
-                          <Trash2 size={14}/>
-                        </button>
-                     )}
+              <div style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 0',gap:12 }}>
+                <div style={{ width:52,height:52,borderRadius:16,background:'rgba(255,255,255,.022)',border:'1px solid rgba(255,255,255,.05)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22 }}>📡</div>
+                <div style={{ textAlign:'center' }}>
+                  <div style={{ fontSize:14,fontWeight:700,color:'rgba(255,255,255,.28)' }}>All Clear</div>
+                  <div style={{ fontSize:12,color:'rgba(255,255,255,.16)',marginTop:3 }}>No active broadcasts at this time</div>
+                </div>
+              </div>
+            ) : anns.map((ann,i)=>{
+              const cfg = TYPE_CFG[ann.type]??TYPE_CFG.update;
+              const isExpanded = expandedAnn===ann.id;
+              return (
+                <div key={ann.id} className="db-ann" style={{ animationDelay:`${i*.06}s`,borderLeft:`3px solid ${cfg.color}50` }}
+                  onClick={()=>setExpandedAnn(isExpanded?null:ann.id)}>
+                  <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                    <span style={{ fontSize:15,flexShrink:0 }}>{cfg.emoji}</span>
+                    <div style={{ flex:1,minWidth:0 }}>
+                      <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+                        <span style={{ fontSize:13,fontWeight:700,color:'#fff',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:isExpanded?'normal':'nowrap' }}>{ann.title}</span>
+                        <span style={{ fontSize:8,fontWeight:800,padding:'2px 7px',borderRadius:99,background:cfg.bg,color:cfg.color,border:`1px solid ${cfg.border}`,letterSpacing:'.06em',textTransform:'uppercase',flexShrink:0 }}>{ann.type}</span>
+                      </div>
+                      {!isExpanded && <p style={{ fontSize:11,color:'rgba(255,255,255,.35)',margin:'3px 0 0',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{ann.content}</p>}
+                    </div>
+                    <div style={{ display:'flex',alignItems:'center',gap:5,flexShrink:0 }}>
+                      {isMod && (
+                        <button onClick={e=>{e.stopPropagation();handleDeleteAnn(ann.id);}}
+                          style={{ padding:'3px 5px',borderRadius:6,background:'transparent',border:'none',cursor:'pointer',color:'rgba(255,255,255,.18)',transition:'color .15s' }}
+                          onMouseEnter={e=>e.currentTarget.style.color='#f87171'}
+                          onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,.18)'}><Trash2 size={11}/></button>
+                      )}
+                      <ChevronRight size={12} color="rgba(255,255,255,.2)" style={{ transform:isExpanded?'rotate(90deg)':'none',transition:'transform .2s' }}/>
+                    </div>
                   </div>
-                );
-              })
-            )}
+                  {isExpanded && (
+                    <div style={{ paddingLeft:25,paddingTop:10 }}>
+                      <p style={{ fontSize:12,color:'rgba(255,255,255,.5)',lineHeight:1.65,margin:'0 0 8px' }}>{ann.content}</p>
+                      <div style={{ fontSize:10,color:'rgba(255,255,255,.22)',fontWeight:600 }}>
+                        {new Date(ann.created_at).toLocaleDateString('en-US',{ month:'long',day:'numeric',year:'numeric' })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
-
-        {/* Bonus & Mini Network */}
-        <div style={{ display:'flex', flexDirection:'column', gap:28 }}>
-          
-          <div className="aqua-card" style={{ padding:'32px', display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', animationDelay:'200ms' }}>
-            <div style={{ width:64, height:64, borderRadius:'50%', background:'linear-gradient(135deg, rgba(84,67,136,0.2), rgba(234,34,107,0.1))', border:'1px solid rgba(255,255,255,0.08)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:20, boxShadow:'0 0 30px rgba(84,67,136,0.1)' }}>
-              <Gift size={26} color="#ffffff" />
-            </div>
-            <h3 style={{ fontSize:20, fontWeight:400, color:'#FFF', letterSpacing:'-0.02em', margin:'0 0 8px 0' }}>Daily Reward Network</h3>
-            <p style={{ fontSize:13, color:'rgba(255,255,255,0.4)', margin:'0 0 24px 0', maxWidth:200 }}>Initialize your daily sync bonus to amplify credentials.</p>
-            
-            <div style={{ fontSize:32, fontWeight:400, color:'#fff', letterSpacing:'-0.03em', marginBottom:4 }}>{bonusPoints}<span style={{fontSize:18, color:'rgba(255,255,255,0.4)'}}> pts</span></div>
-
-            <div style={{ height:2, width:'100%', background:'rgba(255,255,255,0.05)', borderRadius:4, overflow:'hidden', margin:'16px 0 24px' }}>
-              <div style={{ height:'100%', width:`${bonusPoints % 100}%`, background:'#544388' }} />
-            </div>
-
-            {canClaimBonus ? (
-               <button onClick={handleClaimBonus} disabled={claimingBonus} className="aqua-btn aqua-btn-primary" style={{ width:'100%', justifyContent:'center', padding:'12px' }}>
-                  {claimingBonus ? <Loader2 size={16} className="animate-spin" /> : 'Sync Bonus Now'}
-               </button>
-            ) : (
-               <button className="aqua-btn" style={{ width:'100%', justifyContent:'center', padding:'12px', opacity:0.6, cursor:'not-allowed' }}>
-                  <Clock size={14} /> {bonusCooldown}
-               </button>
-            )}
-          </div>
-
-          <FreeKeyCard />
-
-        </div>
-
       </div>
 
-      {/* ══ ACTIVE SUBSCRIPTIONS ══ */}
+      {/* ══ ACTIVE LICENSES ══ */}
       {active.length > 0 && (
-         <div style={{ animationDelay:'250ms' }}>
-            <h2 style={{ fontSize:20, fontWeight:400, color:'#FFF', letterSpacing:'-0.02em', marginBottom:20, paddingLeft:4 }}>Connected Environments</h2>
-            <div style={{ display:'grid', gap:20, gridTemplateColumns: internalLicenses.length > 0 && lagLicenses.length > 0 ? 'repeat(auto-fit,minmax(280px,1fr))' : '1fr' }}>
-               {internalLicenses.map((license) => <LicCard key={license.id} lic={license} accent="b" />)}
-               {lagLicenses.map((license) => <LicCard key={license.id} lic={license} accent="p" />)}
-            </div>
-         </div>
+        <div style={{ animation:'db-in .6s .25s both' }}>
+          <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:14 }}>
+            <div style={{ width:4,height:18,borderRadius:2,background:'linear-gradient(180deg,#8b5cf6,#6d28d9)' }}/>
+            <div style={{ fontSize:15,fontWeight:800,color:'#fff',letterSpacing:'-.01em' }}>Active Environments</div>
+            <div style={{ fontSize:11,color:'rgba(255,255,255,.3)',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:99,padding:'2px 9px' }}>{active.length} active</div>
+          </div>
+          <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:13 }}>
+            {active.map(lic=>{
+              const dLeft = Math.max(0,Math.floor((new Date(lic.expiresAt).getTime()-Date.now())/86400000));
+              const isInt = lic.key.endsWith('_INTERNAL')||lic.productId==='keyauth-internal';
+              const displayKey = lic.key.replace('_INTERNAL','');
+              const c = isInt?'#818cf8':'#a78bfa';
+              const pct = Math.min(100,(dLeft/30)*100);
+              return (
+                <div key={lic.id} className="db-float-card" style={{ padding:'20px',background:`rgba(${isInt?'129,140,248':'167,139,250'},.05)`,borderColor:`rgba(${isInt?'129,140,248':'167,139,250'},.13)` }}>
+                  <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12 }}>
+                    <div style={{ display:'flex',alignItems:'center',gap:9 }}>
+                      <div style={{ width:32,height:32,borderRadius:10,background:`rgba(${isInt?'129,140,248':'167,139,250'},.14)`,border:`1px solid rgba(${isInt?'129,140,248':'167,139,250'},.22)`,display:'flex',alignItems:'center',justifyContent:'center' }}>
+                        <Key size={13} color={c}/>
+                      </div>
+                      <div>
+                        <div style={{ fontSize:13,fontWeight:700,color:'#fff' }}>{lic.productName}</div>
+                        <div style={{ fontSize:10,color:'rgba(255,255,255,.32)' }}>{isInt?'Internal Panel':'Fake Lag'}</div>
+                      </div>
+                    </div>
+                    <div style={{ padding:'3px 9px',borderRadius:20,background:`rgba(${isInt?'129,140,248':'167,139,250'},.1)`,border:`1px solid rgba(${isInt?'129,140,248':'167,139,250'},.18)`,fontSize:10,fontWeight:800,color:c }}>{dLeft}d</div>
+                  </div>
+                  <div style={{ height:3,borderRadius:999,background:'rgba(255,255,255,.05)',overflow:'hidden',marginBottom:10 }}>
+                    <div style={{ height:'100%',width:`${pct}%`,borderRadius:999,background:`linear-gradient(90deg,${c}70,${c})`,boxShadow:`0 0 8px ${c}50`,transition:'width .8s cubic-bezier(.22,1,.36,1)' }}/>
+                  </div>
+                  <code style={{ fontSize:10,fontFamily:'monospace',color:'rgba(255,255,255,.28)',letterSpacing:'.04em',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{displayKey.slice(0,22)}…</code>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
-
     </div>
   );
+}
+
+// helper to avoid literal template literal issues
+function clamp(min: number, val: number, unit: string, max: number): string {
+  return `clamp(${min}px,${val}${unit},${max}px)`;
 }
