@@ -211,40 +211,33 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
           <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '-.02em' }}>{lic?.productName ?? (isInternal ? 'Internal Panel' : 'Fake Lag Panel')}</div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,.35)', marginTop: 3 }}>KeyAuth · Bound to account</div>
         </div>
-        <div style={{ width: 48, height: 48, borderRadius: 16, background: `${accentBg}.12)`, border: `1px solid ${accentBg}.22)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 20px ${accentBg}.14)`, flexShrink: 0 }}>
-          {isInternal ? <Shield size={22} color={accent} /> : <Zap size={22} color={accent} />}
-        </div>
-      </div>
-
-      {/* ── EXPIRY COUNTDOWN — big ── */}
-      <div style={{ padding: '18px 22px 0', position: 'relative' }}>
-        <div style={{ padding: '16px 18px', borderRadius: 18, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.35)' }}>Time Remaining</div>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,.25)' }}>{daysLeft}d left</div>
-          </div>
-          <div style={{ fontSize: 32, fontWeight: 700, lineHeight: 1, marginBottom: 12 }}>
-            <ExpiryCountdown expiresAt={expiresAt} />
-          </div>
-          {/* Progress bar */}
-          <div style={{ height: 4, borderRadius: 99, background: 'rgba(255,255,255,.07)', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${progressPct}%`, borderRadius: 99, background: isExpired ? '#ef4444' : `linear-gradient(90deg,${accentBg}.6),${accent})`, boxShadow: isExpired ? 'none' : `0 0 10px ${accentBg}.5)`, transition: 'width .8s cubic-bezier(.22,1,.36,1)' }} />
+        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div style={{ padding: '8px 12px', borderRadius: 12, background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)' }}>Time Remaining</span>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', lineHeight: 1 }}><ExpiryCountdown expiresAt={expiresAt} /></div>
           </div>
         </div>
       </div>
 
-      {/* ── KEY ── */}
-      <div style={{ padding: '14px 22px 0', position: 'relative' }}>
-        <div style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(0,0,0,.25)', border: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <code style={{ flex: 1, fontSize: 12, fontFamily: 'monospace', color: 'rgba(255,255,255,.7)', letterSpacing: keyVisible ? '2px' : '0', filter: keyVisible ? 'none' : 'blur(7px)', transition: 'all .35s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      {/* ── BIG KEY SECTION ── */}
+      <div style={{ padding: '16px 22px 0', position: 'relative' }}>
+        <div style={{ padding: '20px 22px', borderRadius: 20, background: 'rgba(0,0,0,.45)', border: `1px solid ${accentBg}.2)`, display: 'flex', flexDirection: 'column', gap: 14, boxShadow: 'inset 0 4px 20px rgba(0,0,0,.4)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.16em', textTransform: 'uppercase', color: 'rgba(255,255,255,.4)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Key size={13} color="rgba(255,255,255,.4)" /> License Key
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setKeyVisible(!keyVisible)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 10, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.09)', cursor: 'pointer', color: 'rgba(255,255,255,.5)', fontSize: 11, fontWeight: 700, transition: 'all .15s' }}>
+                {keyVisible ? <><EyeOff size={13} /> Hide</> : <><Eye size={13} /> Show</>}
+              </button>
+              <button onClick={copy} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 10, background: copied ? `${accentBg}.15)` : `${accentBg}.05)`, border: `1px solid ${copied ? accentBg + '.3)' : accentBg + '.15)'}`, cursor: 'pointer', color: copied ? '#fff' : accent, fontSize: 11, fontWeight: 700, transition: 'all .18s', boxShadow: copied ? `0 0 16px ${accentBg}.3)` : 'none' }}>
+                {copied ? <><CheckCircle size={13} /> Copied</> : <><Copy size={13} /> Copy</>}
+              </button>
+            </div>
+          </div>
+          <code style={{ fontSize: 22, fontWeight: 800, fontFamily: 'monospace', color: accent, letterSpacing: keyVisible ? '2px' : '0', filter: keyVisible ? 'none' : 'blur(10px)', transition: 'all .35s', wordBreak: 'break-all', lineHeight: 1.3, textShadow: keyVisible ? `0 0 30px ${accentBg}.6)` : 'none', minHeight: '1.3em' }}>
             {displayKey || '(no key)'}
           </code>
-          <button onClick={() => setKeyVisible(!keyVisible)} style={{ padding: '6px 8px', borderRadius: 8, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.09)', cursor: 'pointer', color: 'rgba(255,255,255,.4)', flexShrink: 0, transition: 'all .15s' }}>
-            {keyVisible ? <EyeOff size={13} /> : <Eye size={13} />}
-          </button>
-          <button onClick={copy} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 11px', borderRadius: 8, background: copied ? `${accentBg}.12)` : 'rgba(255,255,255,.05)', border: `1px solid ${copied ? accentBg + '.25)' : 'rgba(255,255,255,.09)'}`, cursor: 'pointer', color: copied ? accent : 'rgba(255,255,255,.5)', fontSize: 11, fontWeight: 600, flexShrink: 0, transition: 'all .18s' }}>
-            {copied ? <><CheckCircle size={11} />Copied</> : <><Copy size={11} />Copy</>}
-          </button>
         </div>
       </div>
 

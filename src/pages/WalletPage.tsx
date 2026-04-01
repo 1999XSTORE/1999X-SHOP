@@ -899,6 +899,32 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
     } else {
       toast.success('✅ Submitted! Admin will approve shortly.');
       logActivity({userId:user.id,userEmail:email.trim(),userName:user.name,action:'payment_submit',amount:selAmount,status:'success',meta:{method:methodId,txnId:txnId.trim()||'paypal-auto'}});
+      
+      const webhookUrl = (import.meta as any).env?.VITE_DISCORD_WEBHOOK_URL;
+      if (webhookUrl) {
+        fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: '@zubohh',
+            embeds: [
+              {
+                author: { name: '1999X eCommerce Platform' },
+                title: 'Balance Add Requested',
+                color: 3066993,
+                fields: [
+                  { name: 'User Name', value: user.name || 'Unknown', inline: false },
+                  { name: 'Amount', value: `$${selAmount.toFixed(2)}`, inline: true },
+                  { name: 'Gateway', value: selMethod.label, inline: true },
+                  { name: 'Transaction ID', value: txnId.trim(), inline: false },
+                  { name: 'User Email', value: email.trim(), inline: false }
+                ]
+              }
+            ]
+          })
+        }).catch(err => console.error('Webhook payload failed:', err));
+      }
+
       setStep(1); setTxnId(''); setCustom('');
       onSuccess();
     }
