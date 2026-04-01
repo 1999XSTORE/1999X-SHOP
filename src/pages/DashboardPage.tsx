@@ -343,17 +343,16 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
         {/* ── Active trial ── */}
         {isActive && row ? (
           <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
-            <div style={{ padding:'16px 18px',borderRadius:16,background:'rgba(124,92,255,.08)',border:'1px solid rgba(124,92,255,.2)',position:'relative',overflow:'hidden' }}>
-              <div style={{ position:'absolute',inset:0,background:'linear-gradient(135deg,rgba(124,92,255,.07) 0%,transparent 55%)',pointerEvents:'none' }}/>
-              <div style={{ fontSize:9,color:'rgba(167,139,250,.65)',fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',marginBottom:6 }}>Trial Active — Expires In</div>
-              <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
-                <div style={{ fontSize:38,fontWeight:700,color:'#a78bfa',fontFamily:'monospace',letterSpacing:'.03em',lineHeight:1 }}>
+            <div style={{ padding:'14px 16px',borderRadius:14,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.08)',position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+              <div>
+                <div style={{ fontSize:9,color:'rgba(255,255,255,.3)',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',marginBottom:5 }}>Trial Active — Expires In</div>
+                <div style={{ fontSize:22,fontWeight:600,color:'rgba(255,255,255,.7)',fontFamily:'monospace',letterSpacing:'.04em',lineHeight:1 }}>
                   <LiveClock ms={new Date(row.expires_at).getTime()}/>
                 </div>
-                <div style={{ display:'inline-flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:99,background:'rgba(34,197,94,.1)',border:'1px solid rgba(34,197,94,.22)' }}>
-                  <span className="px-live-dot" style={{ width:6,height:6 }}/>
-                  <span style={{ fontSize:9,fontWeight:700,letterSpacing:'.1em',color:'#4ade80',textTransform:'uppercase' }}>Active</span>
-                </div>
+              </div>
+              <div style={{ display:'inline-flex',alignItems:'center',gap:5,padding:'5px 10px',borderRadius:99,background:'rgba(34,197,94,.08)',border:'1px solid rgba(34,197,94,.18)' }}>
+                <span className="px-live-dot" style={{ width:5,height:5 }}/>
+                <span style={{ fontSize:9,fontWeight:700,letterSpacing:'.08em',color:'#4ade80',textTransform:'uppercase' }}>Active</span>
               </div>
             </div>
             <button onClick={()=>setRevealed(!revealed)}
@@ -386,12 +385,12 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
             {generating?<><Loader2 size={15} className="animate-spin"/>Generating keys…</>:<><Zap size={15}/>Claim Free Trial</>}
           </button>
         ) : panelEnabled && !canClaim ? (
-          <div style={{ padding:'16px 18px',borderRadius:16,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)',textAlign:'center' }}>
-            <div style={{ fontSize:9,color:'rgba(255,255,255,.25)',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',marginBottom:8 }}>Next Free Trial In</div>
-            <div style={{ fontSize:34,fontWeight:700,color:'rgba(167,139,250,.5)',fontFamily:'monospace',letterSpacing:'.04em',lineHeight:1 }}>
+          <div style={{ padding:'14px 16px',borderRadius:14,background:'rgba(255,255,255,.02)',border:'1px solid rgba(255,255,255,.06)',textAlign:'center' }}>
+            <div style={{ fontSize:9,color:'rgba(255,255,255,.25)',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',marginBottom:6 }}>Next Free Trial In</div>
+            <div style={{ fontSize:24,fontWeight:600,color:'rgba(255,255,255,.55)',fontFamily:'monospace',letterSpacing:'.04em',lineHeight:1 }}>
               <LiveClock ms={cooldownMs}/>
             </div>
-            <div style={{ fontSize:10,color:'rgba(255,255,255,.18)',marginTop:6 }}>Come back when the timer hits 00:00:00</div>
+            <div style={{ fontSize:10,color:'rgba(255,255,255,.2)',marginTop:5 }}>Come back when the timer hits 00:00:00</div>
           </div>
         ) : (
           <button disabled className="px-btn px-btn-full" style={{ opacity:.35,cursor:'not-allowed',animation:'none' }}>
@@ -649,7 +648,7 @@ export default function DashboardPage() {
         /* ── Grids ── */
         .px-grid  { display:grid; gap:18px; }
         .px-top   { grid-template-columns: 1fr 1fr 1fr; align-items:start; }
-        .px-bot   { grid-template-columns: 1fr 1fr; align-items:start; }
+        .px-bot   { grid-template-columns: 1fr; align-items:stretch; }
         @media(max-width:900px) {
           .px-top { grid-template-columns:1fr 1fr; }
           .px-bot { grid-template-columns:1fr; }
@@ -795,8 +794,15 @@ export default function DashboardPage() {
                 <div style={{ width:1, height:38, background:'rgba(255,255,255,.07)' }}/>
                 <div style={{ paddingLeft:16 }}>
                   <div className="px-lbl" style={{ marginBottom:6 }}>Bonus Points</div>
-                  <div style={{ fontSize:28, fontWeight:700, color:'#a78bfa', letterSpacing:'-.04em', lineHeight:1 }}>
-                    <CountUp to={bonusPoints}/>
+                  <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+                    <div style={{ fontSize:28, fontWeight:700, color:'#a78bfa', letterSpacing:'-.04em', lineHeight:1 }}>
+                      <CountUp to={bonusPoints}/>
+                    </div>
+                    {isOwner(user?.role) && (
+                      <button onClick={()=>setBonusPoints(100)} title="Owner feature to test styling" style={{ fontSize:9,padding:'3px 6px',borderRadius:6,border:'1px solid rgba(255,255,255,.1)',background:'rgba(255,255,255,.05)',color:'#fff',cursor:'pointer' }}>
+                        Test 100 pt
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
