@@ -209,7 +209,7 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
             </span>
           </div>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '-.02em' }}>
-            {isInternal ? '1999X Internal Panel' : '1999X Fake Lag Panel'}
+            {isInternal ? 'INTERNAL PANEL' : 'FAKE LAG PANEL'}
           </div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,.35)', marginTop: 3 }}>KeyAuth · Bound to account</div>
         </div>
@@ -566,7 +566,7 @@ export default function LicensesPage() {
           {intActive.length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,.4)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 12 }}>
-                INTERNAL PANEL
+                1999X INTERNAL PANEL
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {intActive.map((l: any) => <LicenseCard key={l?.id || Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} variant="internal" />)}
@@ -576,7 +576,7 @@ export default function LicensesPage() {
           {lagActive.length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,.4)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 12 }}>
-                FAKELAG PANEL
+                1999X FAKELAG PANEL
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {lagActive.map((l: any) => <LicenseCard key={l?.id || Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} variant="lag" />)}
