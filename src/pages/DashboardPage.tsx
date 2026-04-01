@@ -2,8 +2,8 @@ import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { logActivity, notifyAll, sendNotificationEmail } from '@/lib/activity';
 import {
-  Wallet, Key, Gift, Clock, Zap, Copy, CheckCircle, Eye, EyeOff,
-  Loader2, Sparkles, Wrench, Send, X, Plus, Trash2,
+  Gift, Clock, Zap, Copy, CheckCircle, Eye, EyeOff,
+  Loader2, Sparkles, Send, X, Plus, Trash2,
   Users, Activity, ChevronRight, Shield, Star
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -311,6 +311,50 @@ export default function DashboardPage() {
 
   useEffect(() => { loadKeyAuthStats(); const i=setInterval(loadKeyAuthStats,60000); return ()=>clearInterval(i); }, []);
 
+  // ── Jeton line animation — runs once on mount ──────────────
+  useEffect(() => {
+    const LINE_START = 40;
+    const LINE_END   = 860;
+    const DURATION   = 1200;
+    const CARD_IDS   = ['jc-0','jc-1','jc-2','jc-3','jc-4'];
+    const NUM_CARDS  = CARD_IDS.length;
+
+    const mainLine = document.getElementById('jl-main');
+    const glowLine = document.getElementById('jl-glow');
+    if (!mainLine || !glowLine) return;
+
+    const setX = (x: number) => {
+      mainLine.setAttribute('x2', String(x));
+      glowLine.setAttribute('x2', String(x));
+    };
+
+    setX(LINE_START);
+    CARD_IDS.forEach(id => document.getElementById(id)?.classList.remove('jc-visible'));
+
+    const startTime = performance.now();
+
+    const animate = (now: number) => {
+      const t      = Math.min(1, (now - startTime) / DURATION);
+      const eased  = 1 - Math.pow(1 - t, 3);
+      const x      = LINE_START + eased * (LINE_END - LINE_START);
+      setX(x);
+
+      CARD_IDS.forEach((id, idx) => {
+        const threshold = (idx + 1) / (NUM_CARDS + 1);
+        if (eased >= threshold) document.getElementById(id)?.classList.add('jc-visible');
+      });
+
+      if (t < 1) requestAnimationFrame(animate);
+      else {
+        setX(LINE_END);
+        CARD_IDS.forEach(id => document.getElementById(id)?.classList.add('jc-visible'));
+      }
+    };
+
+    const timer = setTimeout(() => requestAnimationFrame(animate), 400);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     supabase.from('announcements').select('*').order('created_at',{ ascending:false }).limit(10)
       .then(({ data }) => { if (data) setAnns(data as DBAnn[]); setAnnLoading(false); });
@@ -472,6 +516,77 @@ export default function DashboardPage() {
 
         @media(max-width:900px) { .db-g4{grid-template-columns:repeat(2,1fr)} .db-g3{grid-template-columns:repeat(2,1fr)} .db-g21{grid-template-columns:1fr} }
         @media(max-width:600px) { .db-g4{grid-template-columns:1fr 1fr} .db-g3{grid-template-columns:1fr 1fr} .db-g2{grid-template-columns:1fr} }
+
+        /* ══ JETON CARDS ══ */
+        .jeton-card {
+          position: relative; z-index: 2;
+          width: 148px; flex-shrink: 0;
+          background: linear-gradient(160deg,rgba(255,255,255,.06) 0%,rgba(255,255,255,.02) 100%);
+          border: 1px solid rgba(255,255,255,.1);
+          border-radius: 20px;
+          padding: 20px 16px 16px;
+          opacity: 0;
+          transform: translateY(28px) scale(0.94);
+          transition: opacity .55s cubic-bezier(.22,1,.36,1), transform .55s cubic-bezier(.22,1,.36,1), border-color .25s, box-shadow .25s;
+        }
+        .jeton-card.jc-visible {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+        .jeton-card:hover {
+          border-color: rgba(255,255,255,.2);
+          box-shadow: 0 16px 48px rgba(0,0,0,.45);
+          transform: translateY(-4px) scale(1.02) !important;
+        }
+        .jeton-card-featured {
+          background: linear-gradient(160deg,rgba(139,92,246,.15) 0%,rgba(109,40,217,.06) 100%);
+          border-color: rgba(139,92,246,.35);
+          box-shadow: 0 0 40px rgba(109,40,217,.2);
+        }
+        .jeton-card-featured:hover {
+          box-shadow: 0 0 60px rgba(109,40,217,.35), 0 16px 48px rgba(0,0,0,.5) !important;
+        }
+        .jeton-card-dot {
+          position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
+          width: 10px; height: 10px; border-radius: 50%;
+          border: 2px solid rgba(14,8,32,1);
+          opacity: 0; transition: opacity .3s .3s;
+          box-shadow: 0 0 10px currentColor;
+        }
+        .jeton-card.jc-visible .jeton-card-dot { opacity: 1; }
+        .jeton-card-icon {
+          width: 44px; height: 44px; border-radius: 13px;
+          display: flex; align-items: center; justify-content: center;
+          margin-bottom: 14px;
+        }
+        .jeton-card-name {
+          font-size: 12px; font-weight: 700;
+          color: rgba(255,255,255,.55);
+          letter-spacing: .01em; margin-bottom: 4px;
+        }
+        .jeton-card-val {
+          font-size: 22px; font-weight: 900;
+          color: #fff; letter-spacing: -.04em;
+          line-height: 1; margin-bottom: 5px;
+        }
+        .jeton-card-sub {
+          font-size: 10px; font-weight: 600;
+          color: rgba(255,255,255,.28);
+          text-transform: uppercase; letter-spacing: .1em;
+        }
+        .jeton-spacer { width: 48px; flex-shrink: 0; position: relative; z-index: 1; }
+
+        @media(max-width:860px) {
+          .jeton-card { width: 120px; padding: 16px 12px 14px; }
+          .jeton-spacer { width: 24px; }
+          .jeton-card-val { font-size: 18px; }
+        }
+        @media(max-width:620px) {
+          #jeton-row { flex-wrap: wrap; gap: 10px; justify-content: center; }
+          .jeton-card { width: 140px; }
+          .jeton-spacer { display: none; }
+          #jeton-line-svg { display: none; }
+        }
       `}</style>
 
       {showRewardModal && user && (
@@ -480,18 +595,19 @@ export default function DashboardPage() {
           onRedeem={(pts)=>{ setBonusPoints(pts); setShowRewardModal(false); }}/>
       )}
 
-      {/* ══ HERO ══ */}
-      <div className="db-hero" style={{ padding:'38px 34px 34px',marginBottom:26 }}>
-        {/* BG layers */}
+      {/* ══ JETON-STYLE HERO — animated line + floating cards ══ */}
+      <div className="db-hero" style={{ padding:'0',marginBottom:26,overflow:'hidden' }}>
+        {/* Static BG layers */}
         <div style={{ position:'absolute',inset:0,overflow:'hidden',pointerEvents:'none' }}>
-          <div style={{ position:'absolute',top:'-15%',left:'-5%',width:'50%',height:'130%',background:'radial-gradient(ellipse,rgba(109,40,217,.2) 0%,transparent 65%)',filter:'blur(2px)' }}/>
-          <div style={{ position:'absolute',top:'10%',right:'-8%',width:'38%',height:'80%',background:'radial-gradient(ellipse,rgba(67,37,110,.22) 0%,transparent 65%)' }}/>
-          <div style={{ position:'absolute',bottom:'-20%',left:'35%',width:'35%',height:'70%',background:'radial-gradient(ellipse,rgba(84,67,136,.14) 0%,transparent 65%)' }}/>
-          <div style={{ position:'absolute',inset:0,backgroundImage:'linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px)',backgroundSize:'44px 44px',opacity:.7 }}/>
+          <div style={{ position:'absolute',top:'-15%',left:'-5%',width:'50%',height:'130%',background:'radial-gradient(ellipse,rgba(109,40,217,.18) 0%,transparent 65%)',filter:'blur(2px)' }}/>
+          <div style={{ position:'absolute',top:'10%',right:'-8%',width:'38%',height:'80%',background:'radial-gradient(ellipse,rgba(67,37,110,.2) 0%,transparent 65%)' }}/>
+          <div style={{ position:'absolute',bottom:'-20%',left:'35%',width:'35%',height:'70%',background:'radial-gradient(ellipse,rgba(84,67,136,.12) 0%,transparent 65%)' }}/>
+          <div style={{ position:'absolute',inset:0,backgroundImage:'linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px)',backgroundSize:'44px 44px',opacity:.7 }}/>
           <div style={{ position:'absolute',top:0,left:0,right:0,height:2,background:'linear-gradient(90deg,transparent,rgba(139,92,246,.7),rgba(167,139,250,.4),transparent)' }}/>
         </div>
 
-        <div style={{ position:'relative',zIndex:1,display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:20,marginBottom:30 }}>
+        {/* ── TOP: welcome text ── */}
+        <div style={{ position:'relative',zIndex:1,padding:'34px 34px 28px',display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:16 }}>
           <div style={{ animation:'db-in .5s both' }}>
             <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:10 }}>
               <div className="db-live-dot"/>
@@ -499,40 +615,148 @@ export default function DashboardPage() {
                 {isSystemOnline?'System Online':'Maintenance Mode'}
               </span>
             </div>
-            <h1 style={{ fontSize:clamp(22,4,'vw',36),fontWeight:900,color:'#fff',letterSpacing:'-.03em',margin:0,lineHeight:1.1,marginBottom:8 }}>
-              Welcome Back,<br/>
+            <h1 style={{ fontSize:'clamp(22px,4vw,34px)',fontWeight:900,color:'#fff',letterSpacing:'-.03em',margin:0,lineHeight:1.1,marginBottom:8 }}>
+              Welcome Back,{' '}
               <span style={{ background:'linear-gradient(125deg,#ddd6fe,#a78bfa,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>{firstName}</span>
             </h1>
             <div style={{ fontSize:10,fontWeight:700,color:'rgba(255,255,255,.25)',letterSpacing:'.2em',textTransform:'uppercase' }}>
               1999X FREE FIRE PANEL
             </div>
           </div>
-          <div style={{ display:'flex',alignItems:'center',gap:8,padding:'9px 16px',borderRadius:999,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',backdropFilter:'blur(12px)',animation:'db-in .5s .1s both' }}>
+          <div style={{ display:'flex',alignItems:'center',gap:8,padding:'9px 16px',borderRadius:999,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',backdropFilter:'blur(12px)',animation:'db-in .5s .1s both',alignSelf:'flex-start' }}>
             <Shield size={12} color="#a78bfa"/>
             <span style={{ fontSize:11,fontWeight:700,color:'rgba(255,255,255,.6)' }}>OB52 Undetected</span>
             <div style={{ width:5,height:5,borderRadius:'50%',background:'#5EF7A6',boxShadow:'0 0 7px #5EF7A6' }}/>
           </div>
         </div>
 
-        {/* Live stats strip */}
-        <div style={{ position:'relative',zIndex:1 }}>
-          <div style={{ fontSize:9,fontWeight:800,letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(255,255,255,.18)',marginBottom:12 }}>— LIVE STATISTICS —</div>
-          <div className="db-g3" style={{ gap:10 }}>
-            {[
-              { label:'Total Users', val:statsLoading?'—':totalUsers.toLocaleString()+'+', icon:<Users size={14}/>, color:'#818cf8', bg:'rgba(129,140,248,.09)', bc:'rgba(129,140,248,.18)' },
-              { label:'Live Playing', val:statsLoading?'—':totalOnline.toLocaleString(), icon:<Activity size={14}/>, color:'#5EF7A6', bg:'rgba(94,247,166,.09)', bc:'rgba(94,247,166,.18)', live:true },
-              { label:'OB52 Status', val:'Undetected', icon:<Shield size={14}/>, color:'#f59e0b', bg:'rgba(245,158,11,.09)', bc:'rgba(245,158,11,.18)' },
-            ].map((s,i)=>(
-              <div key={s.label} style={{ padding:'14px 16px',borderRadius:14,background:s.bg,border:`1px solid ${s.bc}`,animation:`db-in .5s ${.15+i*.08}s both`,position:'relative',overflow:'hidden' }}>
-                <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${s.color}35,transparent)` }}/>
-                <div style={{ display:'flex',alignItems:'center',gap:7,marginBottom:7 }}>
-                  <div style={{ color:s.color }}>{s.icon}</div>
-                  {(s as any).live && <div className="db-live-dot" style={{ width:5,height:5 }}/>}
-                </div>
-                <div style={{ fontSize:20,fontWeight:900,color:s.color,letterSpacing:'-.02em',marginBottom:2 }}>{s.val}</div>
-                <div style={{ fontSize:9,fontWeight:700,color:'rgba(255,255,255,.28)',textTransform:'uppercase',letterSpacing:'.12em' }}>{s.label}</div>
+        {/* ── JETON LINE + CARDS SECTION ── */}
+        <div style={{ position:'relative',zIndex:1,padding:'0 20px 36px' }}>
+
+          {/* Section label */}
+          <div style={{ textAlign:'center',marginBottom:32 }}>
+            <div style={{ fontSize:9,fontWeight:800,letterSpacing:'.28em',textTransform:'uppercase',color:'rgba(255,255,255,.18)',marginBottom:10 }}>— EVERYTHING IN ONE PLACE —</div>
+            <div style={{ fontSize:'clamp(24px,5vw,40px)',fontWeight:900,color:'#fff',letterSpacing:'-.04em',lineHeight:1.1 }}>
+              1999X <span style={{ background:'linear-gradient(135deg,#a78bfa,#7c3aed)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>SHOP</span>
+            </div>
+          </div>
+
+          {/* Cards + line wrapper */}
+          <div id="jeton-row" style={{ position:'relative',display:'flex',alignItems:'center',justifyContent:'center',gap:0,maxWidth:900,margin:'0 auto' }}>
+
+            {/* SVG animated line — sits behind cards */}
+            <svg
+              id="jeton-line-svg"
+              style={{ position:'absolute',top:'50%',left:0,width:'100%',height:'8px',transform:'translateY(-50%)',pointerEvents:'none',overflow:'visible',zIndex:0 }}
+              viewBox="0 0 900 8"
+              preserveAspectRatio="none"
+            >
+              <defs>
+                <linearGradient id="jlg" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%"   stopColor="#7c3aed" stopOpacity="0"/>
+                  <stop offset="15%"  stopColor="#7c3aed" stopOpacity="1"/>
+                  <stop offset="85%"  stopColor="#c4b5fd" stopOpacity="1"/>
+                  <stop offset="100%" stopColor="#c4b5fd" stopOpacity="0"/>
+                </linearGradient>
+                <linearGradient id="jgg" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%"   stopColor="#8b5cf6" stopOpacity="0"/>
+                  <stop offset="50%"  stopColor="#8b5cf6" stopOpacity="0.5"/>
+                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0"/>
+                </linearGradient>
+              </defs>
+              {/* Track */}
+              <line x1="40" y1="4" x2="860" y2="4" stroke="rgba(255,255,255,.07)" strokeWidth="1"/>
+              {/* Glow layer */}
+              <line id="jl-glow"  x1="40" y1="4" x2="40" y2="4" stroke="url(#jgg)" strokeWidth="10" strokeLinecap="round"/>
+              {/* Main line */}
+              <line id="jl-main"  x1="40" y1="4" x2="40" y2="4" stroke="url(#jlg)" strokeWidth="2"  strokeLinecap="round"/>
+            </svg>
+
+            {/* CARD 1 */}
+            <div id="jc-0" className="jeton-card" style={{ transitionDelay:'0ms' }}>
+              <div className="jeton-card-dot" style={{ background:'#7c3aed' }}/>
+              <div className="jeton-card-icon" style={{ background:'rgba(124,58,237,.15)',border:'1px solid rgba(124,58,237,.28)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
               </div>
-            ))}
+              <div className="jeton-card-name">Balance</div>
+              <div className="jeton-card-val">${balance.toFixed(2)}</div>
+              <div className="jeton-card-sub">Wallet funds</div>
+            </div>
+
+            <div className="jeton-spacer"/>
+
+            {/* CARD 2 */}
+            <div id="jc-1" className="jeton-card" style={{ transitionDelay:'120ms' }}>
+              <div className="jeton-card-dot" style={{ background:'#8b5cf6' }}/>
+              <div className="jeton-card-icon" style={{ background:'rgba(139,92,246,.15)',border:'1px solid rgba(139,92,246,.28)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="2" strokeLinecap="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              </div>
+              <div className="jeton-card-name">Active Keys</div>
+              <div className="jeton-card-val">{active.length}</div>
+              <div className="jeton-card-sub">Live licenses</div>
+            </div>
+
+            <div className="jeton-spacer"/>
+
+            {/* CARD 3 — centre with brand text */}
+            <div id="jc-2" className="jeton-card jeton-card-featured" style={{ transitionDelay:'240ms' }}>
+              <div className="jeton-card-dot" style={{ background:'#a78bfa' }}/>
+              <div className="jeton-card-icon" style={{ background:'rgba(167,139,250,.18)',border:'1px solid rgba(167,139,250,.35)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ddd6fe" strokeWidth="2" strokeLinecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+              <div className="jeton-card-name" style={{ color:'#ddd6fe' }}>Bonus Points</div>
+              <div className="jeton-card-val" style={{ color:'#c4b5fd' }}>{bonusPoints}</div>
+              <div className="jeton-card-sub">Earn &amp; redeem</div>
+            </div>
+
+            <div className="jeton-spacer"/>
+
+            {/* CARD 4 */}
+            <div id="jc-3" className="jeton-card" style={{ transitionDelay:'360ms' }}>
+              <div className="jeton-card-dot" style={{ background:'#5EF7A6' }}/>
+              <div className="jeton-card-icon" style={{ background:'rgba(94,247,166,.12)',border:'1px solid rgba(94,247,166,.25)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5EF7A6" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <div className="jeton-card-name">Free Trial</div>
+              <div className="jeton-card-val" style={{ color:'#5EF7A6' }}>24h</div>
+              <div className="jeton-card-sub">Daily reset</div>
+            </div>
+
+            <div className="jeton-spacer"/>
+
+            {/* CARD 5 */}
+            <div id="jc-4" className="jeton-card" style={{ transitionDelay:'480ms' }}>
+              <div className="jeton-card-dot" style={{ background:'#38bdf8' }}/>
+              <div className="jeton-card-icon" style={{ background:'rgba(56,189,248,.12)',border:'1px solid rgba(56,189,248,.25)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <div className="jeton-card-name">Reseller</div>
+              <div className="jeton-card-val" style={{ color:'#38bdf8' }}>{approved}</div>
+              <div className="jeton-card-sub">Approved deals</div>
+            </div>
+
+          </div>
+
+          {/* Live stats strip */}
+          <div style={{ marginTop:32 }}>
+            <div style={{ fontSize:9,fontWeight:800,letterSpacing:'.22em',textTransform:'uppercase',color:'rgba(255,255,255,.15)',marginBottom:12,textAlign:'center' }}>— LIVE STATISTICS —</div>
+            <div className="db-g3" style={{ gap:10,maxWidth:900,margin:'0 auto' }}>
+              {[
+                { label:'Total Users',  val:statsLoading?'—':totalUsers.toLocaleString()+'+', icon:<Users size={14}/>,    color:'#818cf8', bg:'rgba(129,140,248,.09)', bc:'rgba(129,140,248,.18)' },
+                { label:'Live Playing', val:statsLoading?'—':totalOnline.toLocaleString(),     icon:<Activity size={14}/>, color:'#5EF7A6', bg:'rgba(94,247,166,.09)',  bc:'rgba(94,247,166,.18)',  live:true },
+                { label:'OB52 Status',  val:'Undetected',                                       icon:<Shield size={14}/>,   color:'#f59e0b', bg:'rgba(245,158,11,.09)', bc:'rgba(245,158,11,.18)' },
+              ].map((s,i)=>(
+                <div key={s.label} style={{ padding:'14px 16px',borderRadius:14,background:s.bg,border:`1px solid ${s.bc}`,animation:`db-in .5s ${.15+i*.08}s both`,position:'relative',overflow:'hidden' }}>
+                  <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${s.color}35,transparent)` }}/>
+                  <div style={{ display:'flex',alignItems:'center',gap:7,marginBottom:7 }}>
+                    <div style={{ color:s.color }}>{s.icon}</div>
+                    {(s as any).live && <div className="db-live-dot" style={{ width:5,height:5 }}/>}
+                  </div>
+                  <div style={{ fontSize:20,fontWeight:900,color:s.color,letterSpacing:'-.02em',marginBottom:2 }}>{s.val}</div>
+                  <div style={{ fontSize:9,fontWeight:700,color:'rgba(255,255,255,.28)',textTransform:'uppercase',letterSpacing:'.12em' }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -699,45 +923,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ══ ACTIVE LICENSES ══ */}
-      {active.length > 0 && (
-        <div style={{ animation:'db-in .6s .25s both' }}>
-          <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:14 }}>
-            <div style={{ width:4,height:18,borderRadius:2,background:'linear-gradient(180deg,#8b5cf6,#6d28d9)' }}/>
-            <div style={{ fontSize:15,fontWeight:800,color:'#fff',letterSpacing:'-.01em' }}>Active Environments</div>
-            <div style={{ fontSize:11,color:'rgba(255,255,255,.3)',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:99,padding:'2px 9px' }}>{active.length} active</div>
-          </div>
-          <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:13 }}>
-            {active.map(lic=>{
-              const dLeft = Math.max(0,Math.floor((new Date(lic.expiresAt).getTime()-Date.now())/86400000));
-              const isInt = lic.key.endsWith('_INTERNAL')||lic.productId==='keyauth-internal';
-              const displayKey = lic.key.replace('_INTERNAL','');
-              const c = isInt?'#818cf8':'#a78bfa';
-              const pct = Math.min(100,(dLeft/30)*100);
-              return (
-                <div key={lic.id} className="db-float-card" style={{ padding:'20px',background:`rgba(${isInt?'129,140,248':'167,139,250'},.05)`,borderColor:`rgba(${isInt?'129,140,248':'167,139,250'},.13)` }}>
-                  <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12 }}>
-                    <div style={{ display:'flex',alignItems:'center',gap:9 }}>
-                      <div style={{ width:32,height:32,borderRadius:10,background:`rgba(${isInt?'129,140,248':'167,139,250'},.14)`,border:`1px solid rgba(${isInt?'129,140,248':'167,139,250'},.22)`,display:'flex',alignItems:'center',justifyContent:'center' }}>
-                        <Key size={13} color={c}/>
-                      </div>
-                      <div>
-                        <div style={{ fontSize:13,fontWeight:700,color:'#fff' }}>{lic.productName}</div>
-                        <div style={{ fontSize:10,color:'rgba(255,255,255,.32)' }}>{isInt?'Internal Panel':'Fake Lag'}</div>
-                      </div>
-                    </div>
-                    <div style={{ padding:'3px 9px',borderRadius:20,background:`rgba(${isInt?'129,140,248':'167,139,250'},.1)`,border:`1px solid rgba(${isInt?'129,140,248':'167,139,250'},.18)`,fontSize:10,fontWeight:800,color:c }}>{dLeft}d</div>
-                  </div>
-                  <div style={{ height:3,borderRadius:999,background:'rgba(255,255,255,.05)',overflow:'hidden',marginBottom:10 }}>
-                    <div style={{ height:'100%',width:`${pct}%`,borderRadius:999,background:`linear-gradient(90deg,${c}70,${c})`,boxShadow:`0 0 8px ${c}50`,transition:'width .8s cubic-bezier(.22,1,.36,1)' }}/>
-                  </div>
-                  <code style={{ fontSize:10,fontFamily:'monospace',color:'rgba(255,255,255,.28)',letterSpacing:'.04em',display:'block',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{displayKey.slice(0,22)}…</code>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
