@@ -678,6 +678,7 @@ function PanelProductCard({ group, balance, onBuy, onAddBalance }: { group: type
   return (
     <div style={{
       position:'relative', borderRadius:24, overflow:'hidden',
+      height:'100%', display:'flex', flexDirection:'column',
       background:'linear-gradient(180deg,rgba(9,10,18,.98) 0%,rgba(6,7,14,.99) 100%)',
       border:`1px solid ${group.bc}`,
       boxShadow: isFeatured
@@ -690,7 +691,7 @@ function PanelProductCard({ group, balance, onBuy, onAddBalance }: { group: type
     >
       {/* ── Image Preview Banner ── */}
       <div style={{
-        position:'relative', width:'100%', height:200, overflow:'hidden',
+        position:'relative', width:'100%', height:240, overflow:'hidden',
         background:`linear-gradient(135deg, ${group.gradFrom}, ${group.gradTo})`,
       }}>
         <img
@@ -741,7 +742,7 @@ function PanelProductCard({ group, balance, onBuy, onAddBalance }: { group: type
       </div>
 
       {/* ── Card Body ── */}
-      <div style={{ padding:'20px 22px 22px' }}>
+      <div style={{ padding:'24px 26px 28px', flex:1, display:'flex', flexDirection:'column' }}>
 
         {/* Name */}
         <div style={{ marginBottom:16 }}>
@@ -797,6 +798,7 @@ function PanelProductCard({ group, balance, onBuy, onAddBalance }: { group: type
         </div>
 
         {/* CTA */}
+        <div style={{ marginTop:'auto', paddingTop:8 }}>
         {can ? (
           <button onClick={()=>onBuy({
             ...plan, keyauthPanel:plan.keyauthPanel, duration:`${plan.days} days`,
@@ -1566,7 +1568,7 @@ export default function WalletPage() {
       {confirmPending&&<ConfirmModal product={{name:confirmPending.name||confirmPending.id,price:confirmPending.price,duration:`${confirmPending.days} days`,emoji:confirmPending.emoji}} onConfirm={()=>{const p=confirmPending;setConfirmPending(null);handleBuy(p);}} onCancel={()=>setConfirmPending(null)}/>}
       {purchaseSuccess&&<PurchaseSuccessModal data={purchaseSuccess} onClose={()=>setPurchaseSuccess(null)}/>}
 
-      <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+      <div style={{ display:'flex', flexDirection:'column', gap:20, flex:1, minHeight:0 }}>
 
 
 
@@ -1591,7 +1593,7 @@ export default function WalletPage() {
 
         {/* ══ PRODUCTS TAB ══ */}
         {activeTab==='products'&&(
-          <div style={{ animation:'w-slide-up .4s cubic-bezier(.22,1,.36,1) both' }}>
+          <div style={{ animation:'w-slide-up .4s cubic-bezier(.22,1,.36,1) both', flex:1 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24, flexWrap:'wrap', gap:12 }}>
               <div>
                 <div style={{ fontSize:22, fontWeight:900, color:'#fff', letterSpacing:'-.02em', marginBottom:4 }}>{t('wallet.choosePlan')}</div>
@@ -1607,7 +1609,7 @@ export default function WalletPage() {
                 </div>
               </div>
             </div>
-                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:18 }}>
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:18, alignItems:'stretch' }}>
               {PANEL_GROUPS.map(group=>(
                 <PanelProductCard key={group.id} group={group} balance={balance} onBuy={(p)=>setConfirmPending(p)} onAddBalance={() => setActiveTab('deposit')}/>
               ))}
@@ -1622,14 +1624,14 @@ export default function WalletPage() {
 
         {/* ══ DEPOSIT TAB ══ */}
         {activeTab==='deposit'&&(
-          <div style={{ animation:'w-slide-up .4s cubic-bezier(.22,1,.36,1) both' }}>
+          <div style={{ animation:'w-slide-up .4s cubic-bezier(.22,1,.36,1) both', flex:1, display:'flex', flexDirection:'column' }}>
             <AddBalanceUI user={user} onSuccess={loadTxns} referralEmail={activeReferral}/>
           </div>
         )}
 
         {/* ══ HISTORY TAB ══ */}
         {activeTab==='history'&&(
-          <div style={{ animation:'w-slide-up .4s cubic-bezier(.22,1,.36,1) both' }}>
+          <div style={{ animation:'w-slide-up .4s cubic-bezier(.22,1,.36,1) both', flex:1 }}>
             <style>{`
               @keyframes tx-in { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
 
