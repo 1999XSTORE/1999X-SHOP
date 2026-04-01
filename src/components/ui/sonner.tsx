@@ -7,12 +7,12 @@ type ToasterProps = React.ComponentProps<typeof Sonner>;
 export function Toaster({ ...props }: ToasterProps) {
   return (
     <Sonner
-      position="top-center"
+      position="bottom-right"
       expand={false}
       richColors={false}
-      closeButton={false}
-      duration={3500}
-      gap={8}
+      closeButton={true}
+      duration={4500}
+      gap={10}
       toastOptions={{
         classNames: {
           toast:   "nt-toast",

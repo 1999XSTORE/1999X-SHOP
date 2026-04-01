@@ -72,7 +72,7 @@ const App = () => (
     <TooltipProvider>
       <MouseGlow />
       <Toaster />
-      <Sonner position="top-center" />
+      <Sonner />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />

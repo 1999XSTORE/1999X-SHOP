@@ -1444,12 +1444,12 @@ export default function WalletPage() {
 
         /* ── Tabs ── */
         .w-tab {
-          padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 600;
+          padding: 11px 20px; border-radius: 12px; font-size: 13px; font-weight: 600;
           cursor: pointer; border: 1px solid transparent; background: transparent;
           color: rgba(255,255,255,.35); font-family: inherit;
           transition: all .25s cubic-bezier(.22,1,.36,1);
           display: flex; align-items: center; gap: 8px; white-space: nowrap;
-          letter-spacing: .01em;
+          letter-spacing: .01em; text-align: center;
         }
         .w-tab:hover {
           color: rgba(255,255,255,.72);
@@ -1566,19 +1566,19 @@ export default function WalletPage() {
       {confirmPending&&<ConfirmModal product={{name:confirmPending.name||confirmPending.id,price:confirmPending.price,duration:`${confirmPending.days} days`,emoji:confirmPending.emoji}} onConfirm={()=>{const p=confirmPending;setConfirmPending(null);handleBuy(p);}} onCancel={()=>setConfirmPending(null)}/>}
       {purchaseSuccess&&<PurchaseSuccessModal data={purchaseSuccess} onClose={()=>setPurchaseSuccess(null)}/>}
 
-      <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
+      <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
 
 
 
 
         {/* ══ TABS ══ */}
-        <div style={{ display:'flex', alignItems:'center', gap:3, padding:'4px', background:'rgba(255,255,255,.025)', borderRadius:15, border:'1px solid rgba(255,255,255,.06)', width:'fit-content', backdropFilter:'blur(12px)' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:3, padding:'4px', background:'rgba(255,255,255,.025)', borderRadius:15, border:'1px solid rgba(255,255,255,.06)', backdropFilter:'blur(12px)' }}>
           {([
             { id:'products', icon:<ShoppingBag size={13}/>, label:t('wallet.products')   },
             { id:'deposit',  icon:<Wallet      size={13}/>, label:t('wallet.addBalance') },
             { id:'history',  icon:<RefreshCw   size={13}/>, label:t('wallet.history')    },
           ] as const).map(tab=>(
-            <button key={tab.id} className={`w-tab${activeTab===tab.id?' wt-on':''}`} onClick={()=>setActiveTab(tab.id)}>
+            <button key={tab.id} className={`w-tab${activeTab===tab.id?' wt-on':''}`} onClick={()=>setActiveTab(tab.id)} style={{ flex:1, justifyContent:'center' }}>
               {tab.icon}{tab.label}
               {tab.id==='history' && myTxns.filter(t=>t.status==='pending').length > 0 && (
                 <span style={{ background:'linear-gradient(135deg,#f59e0b,#d97706)', color:'#000', fontSize:9, fontWeight:900, padding:'2px 7px', borderRadius:10, lineHeight:1.6 }}>
@@ -1607,7 +1607,7 @@ export default function WalletPage() {
                 </div>
               </div>
             </div>
-                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))', gap:20 }}>
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:18 }}>
               {PANEL_GROUPS.map(group=>(
                 <PanelProductCard key={group.id} group={group} balance={balance} onBuy={(p)=>setConfirmPending(p)} onAddBalance={() => setActiveTab('deposit')}/>
               ))}

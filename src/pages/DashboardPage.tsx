@@ -4,7 +4,7 @@ import { logActivity, notifyAll, sendNotificationEmail } from '@/lib/activity';
 import {
   Gift, Clock, Zap, Copy, CheckCircle, Eye, EyeOff,
   Loader2, Sparkles, Send, X, Plus, Trash2,
-  Users, Activity, Shield, Star, TrendingUp, Wallet
+  Users, Activity, Shield, Star
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
@@ -229,7 +229,7 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
       <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:22 }}>
         <div>
           <div style={{ fontSize:11,fontWeight:600,color:'rgba(255,255,255,.38)',letterSpacing:'.14em',textTransform:'uppercase',marginBottom:6 }}>Free Trial</div>
-          <div style={{ fontSize:20,fontWeight:700,color:'#fff',letterSpacing:'-.02em' }}>Daily Access</div>
+          <div style={{ fontSize:20,fontWeight:700,color:'#fff',letterSpacing:'-.02em' }}>Free Panel Every 2 Days</div>
           <div style={{ fontSize:12,color:'rgba(255,255,255,.3)',marginTop:3 }}>48hr cooldown · Internal + Lag</div>
         </div>
         <div style={{ width:44,height:44,borderRadius:14,background:'linear-gradient(135deg,rgba(124,92,255,.25),rgba(109,40,217,.1))',border:'1px solid rgba(124,92,255,.3)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 20px rgba(124,92,255,.2)' }}>
@@ -259,7 +259,7 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
           )}
         </div>
       ) : canClaim ? (
-        <button onClick={handleClaim} disabled={generating} className="px-btn px-btn-full" style={{ marginTop:4 }}>
+        <button onClick={handleClaim} disabled={generating} className="px-btn px-btn-full">
           {generating?<><Loader2 size={15} className="animate-spin"/>Generating…</>:<><Zap size={15}/>Claim Free Trial</>}
         </button>
       ) : (
@@ -435,123 +435,103 @@ export default function DashboardPage() {
   } as const;
 
   return (
-    <div style={{ position:'relative',paddingBottom:80,fontFamily:"'Inter',system-ui,sans-serif",minHeight:'100%' }}>
+    <div style={{ position:'relative', paddingBottom:100, fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100%' }}>
 
-      {/* ── STYLES ── */}
       <style>{`
-        @keyframes px-in  {from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
-        @keyframes px-pop {0%{transform:scale(0.85);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
-        @keyframes px-dot {0%,100%{transform:scale(.9);opacity:.6}50%{transform:scale(1.4);opacity:1;box-shadow:0 0 0 4px rgba(167,139,250,.2),0 0 16px rgba(139,92,246,.6)}}
-        @keyframes px-grd {0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-        @keyframes px-bar {from{width:0}to{width:var(--bw)}}
-        @keyframes px-shi {0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
-        @keyframes px-orb {0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.08)}66%{transform:translate(-20px,15px) scale(.95)}}
-        @keyframes px-rng {0%,100%{transform:scale(1);opacity:.4}50%{transform:scale(1.06);opacity:.7}}
+        @keyframes px-in   { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:none} }
+        @keyframes px-orb  { 0%,100%{transform:translate(0,0)}  40%{transform:translate(22px,-18px)}  70%{transform:translate(-16px,12px)} }
+        @keyframes px-grd  { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+        @keyframes px-bar  { from{width:0} to{width:var(--bw)} }
+        @keyframes px-shi  { 0%{transform:translateX(-120%)} 100%{transform:translateX(240%)} }
+        @keyframes px-spin { to{transform:rotate(360deg)} }
 
-        /* ── Panel (main card type) ── */
+        /* ── GREEN live dot ── */
+        @keyframes px-live-ring {
+          0%   { box-shadow: 0 0 0 0   rgba(34,197,94,.55), 0 0 8px  rgba(34,197,94,.4); }
+          60%  { box-shadow: 0 0 0 6px rgba(34,197,94,0),   0 0 16px rgba(34,197,94,.7); }
+          100% { box-shadow: 0 0 0 6px rgba(34,197,94,0),   0 0 8px  rgba(34,197,94,.4); }
+        }
+        .px-live-dot {
+          width:10px; height:10px; border-radius:50%;
+          background: radial-gradient(circle at 35% 35%, #4ade80, #16a34a);
+          animation: px-live-ring 1.8s ease-in-out infinite;
+          flex-shrink:0; display:inline-block;
+        }
+
+        /* ── Panel base ── */
         .px-panel {
           position:relative; overflow:hidden;
-          background:rgba(255,255,255,.028);
-          border:1px solid rgba(255,255,255,.07);
-          border-radius:24px;
-          padding:28px 26px;
-          backdrop-filter:blur(20px);
-          -webkit-backdrop-filter:blur(20px);
-          animation:px-in .6s cubic-bezier(.22,1,.36,1) both;
-          transition:border-color .25s, box-shadow .3s, transform .3s cubic-bezier(.22,1,.36,1);
-          will-change:transform;
+          background: rgba(255,255,255,.032);
+          border: 1px solid rgba(255,255,255,.08);
+          border-radius: 28px;
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          padding: 28px;
+          animation: px-in .65s cubic-bezier(.22,1,.36,1) both;
+          transition: border-color .28s, box-shadow .28s, transform .32s cubic-bezier(.22,1,.36,1);
         }
         .px-panel::after {
-          content:''; position:absolute; top:0; left:0; right:0; height:1px;
-          background:linear-gradient(90deg,transparent 0%,rgba(167,139,250,.3) 30%,rgba(255,255,255,.15) 50%,rgba(167,139,250,.3) 70%,transparent 100%);
-          pointer-events:none;
+          content:''; position:absolute; inset:0; border-radius:28px; pointer-events:none;
+          background: linear-gradient(145deg, rgba(255,255,255,.06) 0%, transparent 50%);
         }
         .px-panel:hover {
-          border-color:rgba(167,139,250,.25);
-          transform:translateY(-4px);
-          box-shadow:0 0 0 1px rgba(139,92,246,.12),0 24px 64px rgba(0,0,0,.55),0 0 60px rgba(109,40,217,.12);
+          border-color: rgba(167,139,250,.3);
+          transform: translateY(-5px);
+          box-shadow: 0 32px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(139,92,246,.15), 0 0 60px rgba(109,40,217,.14);
         }
-        .px-panel-glow {
-          position:absolute; inset:0; pointer-events:none;
-          opacity:.6; transition:opacity .3s;
-        }
-        .px-panel:hover .px-panel-glow { opacity:1; }
+        .px-glow { position:absolute; inset:0; pointer-events:none; transition:opacity .3s; }
+        .px-panel:hover .px-glow { opacity:1 !important; }
 
-        /* ── Live dot ── */
-        .px-dot {
-          display:inline-block; width:8px; height:8px; border-radius:50%;
-          background:linear-gradient(135deg,#a78bfa,#7c3aed);
-          animation:px-dot 2.4s ease-in-out infinite;
-          flex-shrink:0;
+        /* ── Stat card with coloured top border ── */
+        .px-stat-card {
+          border-radius:22px; padding:22px 20px; position:relative; overflow:hidden;
+          transition: transform .28s cubic-bezier(.22,1,.36,1), box-shadow .28s;
         }
+        .px-stat-card:hover { transform:translateY(-4px); }
 
-        /* ── Stat value ── */
-        .px-num {
-          font-size:52px; font-weight:700; line-height:1; letter-spacing:-.05em;
-          background:linear-gradient(135deg,#fff 0%,rgba(255,255,255,.7) 100%);
-          -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-          background-clip:text;
-        }
-        .px-num-violet {
-          background:linear-gradient(135deg,#c4b5fd 0%,#7c3aed 100%);
-          -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-          background-clip:text;
-        }
+        /* ── Labels ── */
+        .px-lbl { font-size:10px; font-weight:600; letter-spacing:.15em; text-transform:uppercase; color:rgba(255,255,255,.38); }
 
-        /* ── Label ── */
-        .px-label {
-          font-size:10px; font-weight:600; letter-spacing:.14em;
-          text-transform:uppercase; color:rgba(255,255,255,.38);
-        }
-
-        /* ── Primary button ── */
+        /* ── Buttons ── */
         .px-btn {
           display:inline-flex; align-items:center; justify-content:center; gap:8px;
-          padding:13px 28px; border-radius:14px; border:none; cursor:pointer;
+          padding:14px 28px; border-radius:15px; border:none; cursor:pointer;
           font-family:inherit; font-size:13px; font-weight:700; color:#fff;
-          background:linear-gradient(135deg,#7c3aed,#6d28d9,#4c1d95);
+          background: linear-gradient(135deg,#7c3aed,#6d28d9,#4c1d95);
           background-size:200% 200%; animation:px-grd 4s ease infinite;
-          box-shadow:0 0 28px rgba(109,40,217,.45),0 4px 16px rgba(0,0,0,.35);
-          transition:all .25s cubic-bezier(.22,1,.36,1); position:relative; overflow:hidden;
+          box-shadow: 0 0 28px rgba(109,40,217,.45), 0 4px 16px rgba(0,0,0,.3);
+          transition: all .25s cubic-bezier(.22,1,.36,1); position:relative; overflow:hidden;
         }
-        .px-btn::before { content:''; position:absolute; top:0; bottom:0; left:-100%; width:50%;
+        .px-btn::before { content:''; position:absolute; top:0; bottom:0; left:-110%; width:50%;
           background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);
           transition:left .45s ease; }
         .px-btn:hover { transform:translateY(-2px); box-shadow:0 0 44px rgba(109,40,217,.65),0 8px 24px rgba(0,0,0,.4); }
         .px-btn:hover::before { left:180%; }
-        .px-btn:active { transform:scale(.97); }
-        .px-btn:disabled { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.3); box-shadow:none; cursor:not-allowed; transform:none !important; animation:none; }
+        .px-btn:disabled { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.09); color:rgba(255,255,255,.3); box-shadow:none; cursor:not-allowed; transform:none!important; animation:none; }
         .px-btn-full { width:100%; }
 
         /* ── Progress bar ── */
-        .px-bar-track { height:6px; border-radius:99px; background:rgba(255,255,255,.06); overflow:hidden; position:relative; }
-        .px-bar-fill {
-          height:100%; border-radius:99px; position:relative; overflow:hidden;
-          animation:px-bar .9s cubic-bezier(.22,1,.36,1) both;
-        }
-        .px-bar-fill::after { content:''; position:absolute; top:0; bottom:0; width:40%;
-          background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);
-          animation:px-shi 2.8s ease-in-out infinite; }
+        .px-bar-bg { height:7px; border-radius:99px; background:rgba(255,255,255,.07); overflow:hidden; }
+        .px-bar    { height:100%; border-radius:99px; animation:px-bar 1s cubic-bezier(.22,1,.36,1) both; position:relative; overflow:hidden; }
+        .px-bar::after { content:''; position:absolute; top:0; bottom:0; width:40%;
+          background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);
+          animation:px-shi 2.6s ease-in-out infinite; }
 
-        /* ── Grid layouts ── */
-        .px-grid { display:grid; gap:16px; }
-        .px-g-hero   { grid-template-columns: 1.1fr 1fr; grid-template-rows: auto; }
-        .px-g-stats  { grid-template-columns: repeat(3,1fr); }
-        .px-g-bottom { grid-template-columns: 1fr 1fr; }
+        /* ── Grids ── */
+        .px-grid  { display:grid; gap:18px; }
+        .px-top   { grid-template-columns: 1fr 1fr 1fr; align-items:start; }
+        .px-bot   { grid-template-columns: 1fr 1fr; align-items:start; }
         @media(max-width:900px) {
-          .px-g-hero   { grid-template-columns:1fr; }
-          .px-g-stats  { grid-template-columns:1fr 1fr; }
-          .px-g-bottom { grid-template-columns:1fr; }
+          .px-top { grid-template-columns:1fr 1fr; }
+          .px-bot { grid-template-columns:1fr; }
         }
-        @media(max-width:540px) {
-          .px-g-stats { grid-template-columns:1fr; }
-        }
+        @media(max-width:540px)  { .px-top { grid-template-columns:1fr; } }
       `}</style>
 
-      {/* ── Mesh background ── */}
+      {/* Mesh bg */}
       <canvas ref={bgRef} style={{ position:'fixed',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:0 }}/>
 
-      <div style={{ position:'relative',zIndex:1 }}>
+      <div style={{ position:'relative', zIndex:1 }}>
 
         {showRewardModal && user && (
           <RewardModal bonusPoints={bonusPoints} userId={user.id} userEmail={user.email}
@@ -559,32 +539,41 @@ export default function DashboardPage() {
             onRedeem={pts=>{ setBonusPoints(pts); setShowRewardModal(false); }}/>
         )}
 
-        {/* ══ HEADER ══════════════════════════════════════════ */}
-        <div style={{ marginBottom:36, animation:'px-in .5s both' }}>
-          <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:14 }}>
-            <div style={{ display:'inline-flex',alignItems:'center',gap:7,padding:'5px 14px',borderRadius:99,background:isSystemOnline?'rgba(167,139,250,.1)':'rgba(245,158,11,.08)',border:`1px solid ${isSystemOnline?'rgba(167,139,250,.25)':'rgba(245,158,11,.2)'}` }}>
-              <span className={isSystemOnline?'px-dot':undefined} style={isSystemOnline?{}:{ width:7,height:7,borderRadius:'50%',background:'#F59E0B',display:'inline-block' }}/>
-              <span style={{ fontSize:10,fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',color:isSystemOnline?'#c4b5fd':'#F59E0B' }}>
-                {isSystemOnline?'System Online':'Maintenance'}
+        {/* ══ HEADER ══ */}
+        <div style={{ marginBottom:40, animation:'px-in .5s both' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'5px 14px', borderRadius:99,
+              background: isSystemOnline ? 'rgba(34,197,94,.08)' : 'rgba(245,158,11,.08)',
+              border: `1px solid ${isSystemOnline ? 'rgba(34,197,94,.25)' : 'rgba(245,158,11,.2)'}` }}>
+              {isSystemOnline
+                ? <span className="px-live-dot" style={{ width:7, height:7 }}/>
+                : <span style={{ width:7,height:7,borderRadius:'50%',background:'#F59E0B',display:'inline-block',flexShrink:0 }}/>}
+              <span style={{ fontSize:10, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase',
+                color: isSystemOnline ? '#4ade80' : '#F59E0B' }}>
+                {isSystemOnline ? 'System Online' : 'Maintenance'}
               </span>
             </div>
-            <div style={{ fontSize:10,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',color:'rgba(255,255,255,.18)' }}>1999X Free Fire Panel</div>
+            <span style={{ fontSize:10, fontWeight:600, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.18)' }}>
+              1999X Free Fire Panel
+            </span>
           </div>
-          <h1 style={{ margin:0,lineHeight:1,marginBottom:0,fontSize:'clamp(36px,6vw,58px)',fontWeight:700,letterSpacing:'-.04em',color:'#fff' }}>
+          <h1 style={{ margin:0, fontSize:'clamp(34px,5.5vw,56px)', fontWeight:700, letterSpacing:'-.04em', lineHeight:1.05, color:'#fff' }}>
             Welcome back,{' '}
-            <span style={{ background:'linear-gradient(125deg,#e0d7ff 0%,#c4b5fd 30%,#a78bfa 60%,#7c3aed 100%)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>
+            <span style={{ background:'linear-gradient(120deg,#e0d7ff 0%,#c4b5fd 35%,#a78bfa 65%,#7c3aed 100%)',
+              WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
               {firstName}
             </span>
           </h1>
         </div>
 
-        {/* ══ ANNOUNCEMENTS ═══════════════════════════════════ */}
+        {/* ══ ANNOUNCEMENTS ══ */}
         {!annLoading && anns.length > 0 && (
-          <div style={{ marginBottom:20,animation:'px-in .4s .06s both' }}>
+          <div style={{ marginBottom:22, animation:'px-in .4s .06s both' }}>
             {isMod && (
-              <div style={{ display:'flex',justifyContent:'flex-end',marginBottom:8 }}>
-                <button onClick={()=>setShowForm(!showForm)} style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:9,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',cursor:'pointer',color:'rgba(255,255,255,.45)',fontSize:11,fontFamily:'inherit',fontWeight:600 }}>
-                  {showForm?<><X size={10}/>Close</>:<><Plus size={10}/>Post</>}
+              <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
+                <button onClick={()=>setShowForm(!showForm)}
+                  style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:9,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',cursor:'pointer',color:'rgba(255,255,255,.45)',fontSize:11,fontFamily:'inherit',fontWeight:600 }}>
+                  {showForm ? <><X size={10}/>Close</> : <><Plus size={10}/>Post</>}
                 </button>
               </div>
             )}
@@ -598,16 +587,16 @@ export default function DashboardPage() {
                 <input value={fTitle} onChange={e=>setFTitle(e.target.value)} placeholder="Title…" style={{ width:'100%',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:9,padding:'9px 12px',color:'#fff',fontSize:12,outline:'none',marginBottom:8,fontFamily:'inherit',boxSizing:'border-box' }}/>
                 <textarea value={fContent} onChange={e=>setFContent(e.target.value)} placeholder="Content…" rows={2} style={{ width:'100%',background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:9,padding:'9px 12px',color:'#fff',fontSize:12,outline:'none',resize:'vertical',fontFamily:'inherit',marginBottom:10,boxSizing:'border-box' }}/>
                 <button onClick={handlePublishAnn} disabled={publishing} style={{ width:'100%',padding:'10px',borderRadius:10,background:'linear-gradient(135deg,#7c3aed,#6d28d9)',border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',gap:6 }}>
-                  {publishing?<><Loader2 size={12} className="animate-spin"/>Sending…</>:<><Send size={12}/>Publish</>}
+                  {publishing ? <><Loader2 size={12} className="animate-spin"/>Sending…</> : <><Send size={12}/>Publish</>}
                 </button>
               </div>
             )}
-            <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {anns.map((ann,i)=>{
                 const cfg=TYPE_CFG[ann.type]??TYPE_CFG.update; const exp=expandedAnn===ann.id;
                 return (
                   <div key={ann.id} onClick={()=>setExpandedAnn(exp?null:ann.id)}
-                    style={{ padding:'14px 16px',borderRadius:16,background:'rgba(255,255,255,.03)',border:`1px solid rgba(255,255,255,.07)`,borderLeft:`3px solid ${cfg.color}`,cursor:'pointer',transition:'all .16s',animationDelay:`${i*.04}s` }}
+                    style={{ padding:'14px 16px',borderRadius:16,background:'rgba(255,255,255,.03)',border:`1px solid rgba(255,255,255,.07)`,borderLeft:`3px solid ${cfg.color}`,cursor:'pointer',transition:'all .16s' }}
                     onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,.055)';}}
                     onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,.03)';}}>
                     <div style={{ display:'flex',alignItems:'center',gap:10 }}>
@@ -626,7 +615,7 @@ export default function DashboardPage() {
           </div>
         )}
         {isMod && anns.length===0 && (
-          <div style={{ marginBottom:20,display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-start' }}>
+          <div style={{ marginBottom:20, display:'flex', gap:10, flexWrap:'wrap', alignItems:'flex-start' }}>
             <button onClick={()=>setShowForm(!showForm)} style={{ display:'flex',alignItems:'center',gap:6,padding:'7px 14px',borderRadius:10,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',cursor:'pointer',color:'rgba(255,255,255,.4)',fontSize:11,fontFamily:'inherit',fontWeight:600 }}>
               <Plus size={11}/> Post Announcement
             </button>
@@ -640,206 +629,203 @@ export default function DashboardPage() {
                 <input value={fTitle} onChange={e=>setFTitle(e.target.value)} placeholder="Title…" style={{ background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:8,padding:'8px 11px',color:'#fff',fontSize:12,outline:'none',fontFamily:'inherit' }}/>
                 <textarea value={fContent} onChange={e=>setFContent(e.target.value)} placeholder="Content…" rows={2} style={{ background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',borderRadius:8,padding:'8px 11px',color:'#fff',fontSize:12,outline:'none',resize:'vertical',fontFamily:'inherit' }}/>
                 <button onClick={handlePublishAnn} disabled={publishing} style={{ padding:'9px',borderRadius:9,background:'linear-gradient(135deg,#7c3aed,#6d28d9)',border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',gap:6 }}>
-                  {publishing?<><Loader2 size={11} className="animate-spin"/>Sending…</>:<><Send size={11}/>Publish</>}
+                  {publishing ? <><Loader2 size={11} className="animate-spin"/>Sending…</> : <><Send size={11}/>Publish</>}
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* ══ ROW 1: HERO LEFT + STATS RIGHT ═══════════════════ */}
-        <div className="px-grid px-g-hero" style={{ marginBottom:16 }}>
+        {/* ══ TOP ROW: Balance · Total Users · Live Playing ══ */}
+        <div className="px-grid px-top" style={{ marginBottom:18 }}>
 
-          {/* ─── BALANCE HERO PANEL ─── */}
+          {/* ── BALANCE CARD ── */}
           <div className="px-panel" style={{ animationDelay:'0ms' }}>
-            {/* Purple radial glow */}
-            <div className="px-panel-glow" style={{ background:'radial-gradient(ellipse at 20% 0%, rgba(124,92,255,.28) 0%, transparent 55%)' }}/>
-            {/* Floating orbs */}
-            <div style={{ position:'absolute',top:-20,right:-20,width:160,height:160,borderRadius:'50%',background:'radial-gradient(circle,rgba(139,92,246,.14) 0%,transparent 70%)',animation:'px-orb 9s ease-in-out infinite',pointerEvents:'none' }}/>
-            <div style={{ position:'absolute',bottom:-30,left:30,width:120,height:120,borderRadius:'50%',background:'radial-gradient(circle,rgba(196,181,253,.08) 0%,transparent 70%)',animation:'px-orb 12s ease-in-out infinite reverse',pointerEvents:'none' }}/>
-
-            <div className="px-label" style={{ marginBottom:14,position:'relative' }}>Available Balance</div>
-
-            {/* Arc gauge + number */}
-            <div style={{ display:'flex',alignItems:'center',gap:28,marginBottom:24,position:'relative' }}>
-              {/* SVG Arc */}
-              <div style={{ position:'relative',flexShrink:0 }}>
-                <svg width="120" height="120" viewBox="0 0 120 120">
-                  {/* Outer ring */}
-                  <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,.05)" strokeWidth="8"/>
-                  {/* Glow track */}
-                  <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(124,92,255,.15)" strokeWidth="10"
-                    strokeDasharray={`${ARC} ${ARC}`} strokeDashoffset={ARC-arcDash+6}
-                    strokeLinecap="round" transform="rotate(-90 60 60)"/>
-                  {/* Main arc */}
-                  <circle cx="60" cy="60" r="50" fill="none"
-                    stroke="url(#arcGrad)" strokeWidth="7"
-                    strokeDasharray={`${ARC} ${ARC}`} strokeDashoffset={ARC-arcDash}
-                    strokeLinecap="round" transform="rotate(-90 60 60)"
-                    style={{ filter:'drop-shadow(0 0 8px rgba(167,139,250,.9))' }}/>
-                  {/* Tip glow */}
-                  {arcDash > 5 && (() => {
-                    const angle = (-Math.PI/2) + (arcDash/ARC)*Math.PI*2;
-                    return <circle cx={60+50*Math.cos(angle)} cy={60+50*Math.sin(angle)} r="5" fill="#c4b5fd" style={{ filter:'drop-shadow(0 0 8px #a78bfa)' }}/>;
-                  })()}
-                  <defs>
-                    <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#c4b5fd"/>
-                      <stop offset="100%" stopColor="#7c3aed"/>
-                    </linearGradient>
-                  </defs>
-                </svg>
-                {/* Inner wallet icon */}
-                <div style={{ position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center' }}>
-                  <Wallet size={22} color="rgba(167,139,250,.6)"/>
+            <div className="px-glow" style={{ opacity:.7, background:'radial-gradient(ellipse at 0% 60%, rgba(124,92,255,.22) 0%, transparent 65%)' }}/>
+            <div style={{ position:'absolute',top:-50,right:-40,width:200,height:200,borderRadius:'50%',background:'radial-gradient(circle,rgba(139,92,246,.1) 0%,transparent 65%)',animation:'px-orb 11s ease-in-out infinite',pointerEvents:'none' }}/>
+            <div style={{ position:'relative' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+                <span className="px-lbl">Available Balance</span>
+                <div style={{ display:'inline-flex',alignItems:'center',gap:5,padding:'3px 10px',borderRadius:99,background:'rgba(167,139,250,.1)',border:'1px solid rgba(167,139,250,.2)' }}>
+                  <span className="px-live-dot" style={{ width:5,height:5, background:'radial-gradient(circle,#a78bfa,#7c3aed)', animationName:'px-live-ring', '--glow1':'rgba(167,139,250,.5)', '--glow2':'rgba(139,92,246,.7)' } as any}/>
+                  <span style={{ fontSize:9,fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:'#c4b5fd' }}>Active</span>
                 </div>
               </div>
-              {/* Amount */}
-              <div>
-                <div style={{ fontSize:'clamp(40px,5vw,56px)',fontWeight:700,color:'#fff',letterSpacing:'-.05em',lineHeight:1,marginBottom:4 }}>
-                  ${balance.toFixed(2)}
-                </div>
-                <div style={{ display:'flex',alignItems:'center',gap:7 }}>
-                  <span className="px-dot" style={{ width:6,height:6 }}/>
-                  <span style={{ fontSize:11,color:'rgba(255,255,255,.4)',fontWeight:600 }}>Active Account</span>
-                </div>
+              <div style={{ fontSize:'clamp(36px,4.5vw,48px)', fontWeight:700, color:'#fff', letterSpacing:'-.05em', lineHeight:1, marginBottom:6 }}>
+                ${balance.toFixed(2)}
               </div>
-            </div>
-
-            {/* Sub-metrics */}
-            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,position:'relative' }}>
-              {[
-                { label:'Active Keys', val:active.length, col:'#c4b5fd', bg:'rgba(196,181,253,.07)', bc:'rgba(196,181,253,.15)' },
-                { label:'Bonus Pts',   val:bonusPoints,   col:'#a78bfa', bg:'rgba(167,139,250,.07)', bc:'rgba(167,139,250,.15)' },
-              ].map(s=>(
-                <div key={s.label} style={{ padding:'14px 16px',borderRadius:16,background:s.bg,border:`1px solid ${s.bc}`,position:'relative',overflow:'hidden' }}>
-                  <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${s.col}40,transparent)` }}/>
-                  <div className="px-label" style={{ marginBottom:6 }}>{s.label}</div>
-                  <div style={{ fontSize:30,fontWeight:700,color:s.col,letterSpacing:'-.04em',lineHeight:1 }}>
-                    <CountUp to={s.val}/>
+              <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', marginBottom:24 }}>Wallet balance</div>
+              <div style={{ height:1, background:'linear-gradient(90deg,rgba(167,139,250,.2),rgba(167,139,250,.05))', marginBottom:20 }}/>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1px 1fr', alignItems:'center' }}>
+                <div>
+                  <div className="px-lbl" style={{ marginBottom:6 }}>Active Keys</div>
+                  <div style={{ fontSize:28, fontWeight:700, color:'#c4b5fd', letterSpacing:'-.04em', lineHeight:1 }}>
+                    <CountUp to={active.length}/>
                   </div>
                 </div>
-              ))}
+                <div style={{ width:1, height:38, background:'rgba(255,255,255,.07)' }}/>
+                <div style={{ paddingLeft:16 }}>
+                  <div className="px-lbl" style={{ marginBottom:6 }}>Bonus Points</div>
+                  <div style={{ fontSize:28, fontWeight:700, color:'#a78bfa', letterSpacing:'-.04em', lineHeight:1 }}>
+                    <CountUp to={bonusPoints}/>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* ─── STAT PANELS (right col) ─── */}
-          <div style={{ display:'flex',flexDirection:'column',gap:16 }}>
-
-            {/* Total Users */}
-            <div className="px-panel" style={{ flex:1,animationDelay:'80ms' }}>
-              <div className="px-panel-glow" style={{ background:'radial-gradient(circle at 90% 10%,rgba(124,92,255,.18) 0%,transparent 60%)' }}/>
-              <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:10 }}>
-                <div className="px-label">Total Users</div>
-                <div style={{ width:36,height:36,borderRadius:11,background:'rgba(124,92,255,.1)',border:'1px solid rgba(124,92,255,.2)',display:'flex',alignItems:'center',justifyContent:'center' }}>
-                  <Users size={16} color="#a78bfa"/>
+          {/* ── TOTAL USERS ── */}
+          <div className="px-panel" style={{ animationDelay:'90ms' }}>
+            <div className="px-glow" style={{ opacity:.6, background:'radial-gradient(ellipse at 100% 0%, rgba(124,92,255,.25) 0%, transparent 60%)' }}/>
+            <div style={{ position:'absolute',bottom:-30,left:-20,width:160,height:160,borderRadius:'50%',background:'radial-gradient(circle,rgba(124,92,255,.07) 0%,transparent 70%)',animation:'px-orb 13s ease-in-out infinite reverse',pointerEvents:'none' }}/>
+            <div style={{ position:'relative' }}>
+              {/* Top bar */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
+                <span className="px-lbl">Total Users</span>
+                <div style={{ width:40,height:40,borderRadius:13,background:'linear-gradient(135deg,rgba(124,92,255,.2),rgba(109,40,217,.06))',border:'1px solid rgba(124,92,255,.22)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 16px rgba(109,40,217,.18)' }}>
+                  <Users size={18} color="#a78bfa"/>
                 </div>
               </div>
-              <div className="px-num px-num-violet" style={{ fontSize:'clamp(36px,4vw,48px)' }}>
-                {statsLoading?'—':<><CountUp to={totalUsers}/><span style={{ fontSize:22,fontWeight:400 }}>+</span></>}
+              {/* Big number */}
+              <div style={{ display:'flex', alignItems:'baseline', gap:4, marginBottom:8 }}>
+                <span style={{ fontSize:'clamp(48px,6vw,64px)', fontWeight:700, letterSpacing:'-.06em', lineHeight:1,
+                  background:'linear-gradient(135deg,#fff 0%,rgba(196,181,253,.9) 100%)',
+                  WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+                  {statsLoading ? '—' : <CountUp to={totalUsers}/>}
+                </span>
+                {!statsLoading && <span style={{ fontSize:22, fontWeight:500, color:'rgba(196,181,253,.6)', letterSpacing:'-.02em' }}>+</span>}
               </div>
-              <div style={{ fontSize:11,color:'rgba(255,255,255,.28)',marginTop:5,fontWeight:500 }}>Registered accounts</div>
+              <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', fontWeight:500 }}>Registered accounts</div>
+              {/* Mini bar decoration */}
+              <div style={{ marginTop:20, height:3, borderRadius:99, background:'rgba(255,255,255,.06)', overflow:'hidden' }}>
+                <div style={{ height:'100%', width:'72%', borderRadius:99, background:'linear-gradient(90deg,#7c3aed,#a78bfa)', boxShadow:'0 0 10px rgba(139,92,246,.5)', animation:'px-bar 1.2s .3s cubic-bezier(.22,1,.36,1) both', '--bw':'72%' } as any}/>
+              </div>
             </div>
+          </div>
 
-            {/* Live Playing */}
-            <div className="px-panel" style={{ flex:1,animationDelay:'160ms' }}>
-              <div className="px-panel-glow" style={{ background:'radial-gradient(circle at 90% 10%,rgba(167,139,250,.16) 0%,transparent 60%)' }}/>
-              <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:10 }}>
-                <div className="px-label">Live Playing</div>
-                <div style={{ display:'flex',alignItems:'center',gap:8 }}>
-                  <span className="px-dot"/>
-                  <div style={{ width:36,height:36,borderRadius:11,background:'rgba(167,139,250,.1)',border:'1px solid rgba(167,139,250,.2)',display:'flex',alignItems:'center',justifyContent:'center' }}>
-                    <Activity size={16} color="#c4b5fd"/>
+          {/* ── LIVE PLAYING ── */}
+          <div className="px-panel" style={{ animationDelay:'180ms', borderColor:'rgba(34,197,94,.15)' }}>
+            <div className="px-glow" style={{ opacity:.7, background:'radial-gradient(ellipse at 100% 0%, rgba(34,197,94,.14) 0%, transparent 60%)' }}/>
+            {/* Top glow line — green */}
+            <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(34,197,94,.4),transparent)',pointerEvents:'none' }}/>
+            <div style={{ position:'relative' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
+                <span className="px-lbl">Live Playing</span>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  {/* Live badge */}
+                  <div style={{ display:'inline-flex',alignItems:'center',gap:5,padding:'3px 9px',borderRadius:99,background:'rgba(34,197,94,.1)',border:'1px solid rgba(34,197,94,.25)' }}>
+                    <span className="px-live-dot"/>
+                    <span style={{ fontSize:9,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#4ade80' }}>Live</span>
+                  </div>
+                  <div style={{ width:40,height:40,borderRadius:13,background:'linear-gradient(135deg,rgba(34,197,94,.15),rgba(22,163,74,.04))',border:'1px solid rgba(34,197,94,.2)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 16px rgba(34,197,94,.14)' }}>
+                    <Activity size={18} color="#4ade80"/>
                   </div>
                 </div>
               </div>
-              <div className="px-num" style={{ fontSize:'clamp(36px,4vw,48px)' }}>
-                {statsLoading?'—':<CountUp to={totalOnline}/>}
+              {/* Number */}
+              <div style={{ display:'flex', alignItems:'baseline', gap:8, marginBottom:8 }}>
+                <span style={{ fontSize:'clamp(48px,6vw,64px)', fontWeight:700, letterSpacing:'-.06em', lineHeight:1,
+                  background:'linear-gradient(135deg,#fff 0%,rgba(134,239,172,.85) 100%)',
+                  WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+                  {statsLoading ? '—' : <CountUp to={totalOnline}/>}
+                </span>
               </div>
-              <div style={{ fontSize:11,color:'rgba(255,255,255,.28)',marginTop:5,fontWeight:500 }}>Active sessions now</div>
-            </div>
-
-            {/* Antiban */}
-            <div className="px-panel" style={{ flex:1,animationDelay:'240ms' }}>
-              <div className="px-panel-glow" style={{ background:'radial-gradient(circle at 90% 10%,rgba(167,139,250,.12) 0%,transparent 60%)' }}/>
-              <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:10 }}>
-                <div className="px-label">Antiban OB52</div>
-                <div style={{ width:36,height:36,borderRadius:11,background:'rgba(167,139,250,.08)',border:'1px solid rgba(167,139,250,.18)',display:'flex',alignItems:'center',justifyContent:'center' }}>
-                  <Shield size={16} color="#a78bfa"/>
-                </div>
+              <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', fontWeight:500 }}>Active sessions now</div>
+              {/* Mini green bar */}
+              <div style={{ marginTop:20, height:3, borderRadius:99, background:'rgba(255,255,255,.06)', overflow:'hidden' }}>
+                <div style={{ height:'100%', width:'58%', borderRadius:99, background:'linear-gradient(90deg,#16a34a,#4ade80)', boxShadow:'0 0 10px rgba(34,197,94,.5)', animation:'px-bar 1.2s .5s cubic-bezier(.22,1,.36,1) both', '--bw':'58%' } as any}/>
               </div>
-              <div style={{ fontSize:28,fontWeight:700,letterSpacing:'-.03em',lineHeight:1,background:'linear-gradient(125deg,#e0d7ff,#a78bfa)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>
-                Protected
-              </div>
-              <div style={{ fontSize:11,color:'rgba(255,255,255,.28)',marginTop:5,fontWeight:500 }}>Fully undetected</div>
             </div>
           </div>
         </div>
 
-        {/* ══ ROW 2: DAILY BONUS + FREE TRIAL ═════════════════ */}
-        <div className="px-grid px-g-bottom">
-
-          {/* ─── DAILY BONUS ─── */}
-          <div className="px-panel" style={{ animationDelay:'320ms' }}>
-            <div className="px-panel-glow" style={{ background:'radial-gradient(ellipse at 10% 0%,rgba(124,92,255,.24) 0%,transparent 55%)' }}/>
-            <div style={{ position:'absolute',top:-30,right:-20,width:140,height:140,borderRadius:'50%',background:'radial-gradient(circle,rgba(139,92,246,.1) 0%,transparent 70%)',animation:'px-orb 8s ease-in-out infinite',pointerEvents:'none' }}/>
-
-            {/* Header */}
-            <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:22,position:'relative' }}>
+        {/* ── ANTIBAN chip — slim banner ── */}
+        <div className="px-panel" style={{ padding:'16px 24px', marginBottom:18, animationDelay:'260ms' as any }}>
+          <div className="px-glow" style={{ opacity:.5, background:'radial-gradient(ellipse at 50% 50%,rgba(245,158,11,.08) 0%,transparent 65%)' }}/>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', position:'relative' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+              <div style={{ width:40,height:40,borderRadius:13,background:'rgba(245,158,11,.1)',border:'1px solid rgba(245,158,11,.2)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+                <Shield size={18} color="#fbbf24"/>
+              </div>
               <div>
-                <div className="px-label" style={{ marginBottom:6 }}>Daily Bonus</div>
-                <div style={{ fontSize:22,fontWeight:700,color:'#fff',letterSpacing:'-.02em',lineHeight:1 }}>Earn &amp; Reward</div>
-                <div style={{ fontSize:11,color:'rgba(255,255,255,.3)',marginTop:4 }}>+10 pts every 24 hours</div>
-              </div>
-              <div style={{ display:'flex',flexDirection:'column',alignItems:'flex-end',gap:8 }}>
-                <div style={{ width:44,height:44,borderRadius:14,background:'linear-gradient(135deg,rgba(124,92,255,.2),rgba(109,40,217,.08))',border:'1px solid rgba(124,92,255,.28)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 18px rgba(109,40,217,.2)' }}>
-                  <Gift size={20} color="#a78bfa"/>
-                </div>
-                {bonusPoints>=100 && (
-                  <button onClick={()=>setShowRewardModal(true)}
-                    style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:10,background:'rgba(167,139,250,.12)',border:'1px solid rgba(167,139,250,.28)',cursor:'pointer',fontFamily:'inherit',fontSize:11,fontWeight:700,color:'#c4b5fd',transition:'all .15s',whiteSpace:'nowrap' }}
-                    onMouseEnter={e=>{e.currentTarget.style.background='rgba(167,139,250,.2)';}}
-                    onMouseLeave={e=>{e.currentTarget.style.background='rgba(167,139,250,.12)';}}>
-                    <Star size={10}/> Redeem
-                  </button>
-                )}
+                <div style={{ fontSize:13,fontWeight:700,color:'#fff',letterSpacing:'-.01em' }}>Antiban OB52 — Protected</div>
+                <div style={{ fontSize:11,color:'rgba(255,255,255,.3)',marginTop:2 }}>Fully undetected · Updated for latest patch</div>
               </div>
             </div>
-
-            {/* Points display */}
-            <div style={{ marginBottom:18,position:'relative' }}>
-              <div style={{ display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:10 }}>
-                <div style={{ display:'flex',alignItems:'baseline',gap:6 }}>
-                  <span style={{ fontSize:56,fontWeight:700,color:'#fff',letterSpacing:'-.06em',lineHeight:1 }}>{bonusPoints}</span>
-                  <span style={{ fontSize:16,color:'rgba(255,255,255,.28)',fontWeight:600 }}>pts</span>
-                </div>
-                <div style={{ textAlign:'right' }}>
-                  <div style={{ fontSize:11,color:'rgba(255,255,255,.22)',fontWeight:600 }}>{progressPct}/100</div>
-                  {bonusPoints>=100 && <div style={{ fontSize:10,color:'#c4b5fd',fontWeight:700,marginTop:2 }}>🎁 Ready!</div>}
-                </div>
-              </div>
-              {/* Bar */}
-              <div className="px-bar-track">
-                <div className="px-bar-fill" style={{
-                  background:'linear-gradient(90deg,#7c3aed,#a78bfa,#c4b5fd)',
-                  boxShadow:'0 0 14px rgba(139,92,246,.55)',
-                  '--bw':`${Math.min(progressPct===0&&bonusPoints>=100?100:progressPct,100)}%`
-                } as any}/>
-              </div>
+            <div style={{ display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:99,background:'rgba(245,158,11,.1)',border:'1px solid rgba(245,158,11,.2)',flexShrink:0 }}>
+              <span style={{ width:6,height:6,borderRadius:'50%',background:'#fbbf24',display:'inline-block',boxShadow:'0 0 8px #f59e0b' }}/>
+              <span style={{ fontSize:10,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#fbbf24' }}>Active</span>
             </div>
+          </div>
+        </div>
 
-            {/* Claim button */}
-            <button onClick={handleClaimBonus} disabled={!canClaimBonus||claimingBonus} className="px-btn px-btn-full">
-              {claimingBonus
-                ? <><Loader2 size={14} className="animate-spin"/>Claiming…</>
-                : canClaimBonus
-                  ? <><Sparkles size={14}/>Claim +10 Points</>
-                  : <><Clock size={13}/>{bonusCooldown}</>}
-            </button>
+        {/* ══ BOTTOM ROW: Daily Bonus · Free Trial ══ */}
+        <div className="px-grid px-bot">
+
+          {/* ── DAILY BONUS ── */}
+          <div className="px-panel" style={{ animationDelay:'340ms' as any }}>
+            <div className="px-glow" style={{ opacity:.7, background:'radial-gradient(ellipse at 10% 0%,rgba(124,92,255,.26) 0%,transparent 55%)' }}/>
+            <div style={{ position:'absolute',top:-40,right:-30,width:180,height:180,borderRadius:'50%',background:'radial-gradient(circle,rgba(139,92,246,.1) 0%,transparent 65%)',animation:'px-orb 9s ease-in-out infinite',pointerEvents:'none' }}/>
+            <div style={{ position:'relative' }}>
+              {/* Header */}
+              <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:24 }}>
+                <div>
+                  <span className="px-lbl" style={{ marginBottom:7, display:'block' }}>Daily Bonus</span>
+                  <div style={{ fontSize:22,fontWeight:700,color:'#fff',letterSpacing:'-.02em',lineHeight:1.1 }}>Earn &amp; Reward</div>
+                  <div style={{ fontSize:12,color:'rgba(255,255,255,.32)',marginTop:5 }}>+10 points every 24 hours</div>
+                </div>
+                <div style={{ display:'flex',flexDirection:'column',alignItems:'flex-end',gap:8 }}>
+                  <div style={{ width:46,height:46,borderRadius:15,background:'linear-gradient(135deg,rgba(124,92,255,.22),rgba(109,40,217,.06))',border:'1px solid rgba(124,92,255,.28)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 20px rgba(109,40,217,.22)' }}>
+                    <Gift size={20} color="#a78bfa"/>
+                  </div>
+                  {bonusPoints>=100 && (
+                    <button onClick={()=>setShowRewardModal(true)}
+                      style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:10,background:'rgba(167,139,250,.12)',border:'1px solid rgba(167,139,250,.28)',cursor:'pointer',fontFamily:'inherit',fontSize:11,fontWeight:700,color:'#c4b5fd',whiteSpace:'nowrap',transition:'all .15s' }}
+                      onMouseEnter={e=>{e.currentTarget.style.background='rgba(167,139,250,.22)';}}
+                      onMouseLeave={e=>{e.currentTarget.style.background='rgba(167,139,250,.12)';}}>
+                      <Star size={10}/> Redeem
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Points */}
+              <div style={{ marginBottom:20 }}>
+                <div style={{ display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:12 }}>
+                  <div style={{ display:'flex',alignItems:'baseline',gap:6 }}>
+                    <span style={{ fontSize:60,fontWeight:700,letterSpacing:'-.06em',lineHeight:1,
+                      background:'linear-gradient(135deg,#fff,rgba(196,181,253,.8))',
+                      WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>
+                      {bonusPoints}
+                    </span>
+                    <span style={{ fontSize:16,color:'rgba(255,255,255,.28)',fontWeight:600 }}>pts</span>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <div style={{ fontSize:12,color:'rgba(255,255,255,.22)',fontWeight:600 }}>{progressPct} / 100</div>
+                    {bonusPoints>=100&&<div style={{ fontSize:10,color:'#c4b5fd',fontWeight:700,marginTop:3 }}>🎁 Ready!</div>}
+                  </div>
+                </div>
+                <div className="px-bar-bg">
+                  <div className="px-bar" style={{
+                    background:'linear-gradient(90deg,#7c3aed,#a78bfa,#c4b5fd)',
+                    boxShadow:'0 0 14px rgba(139,92,246,.55)',
+                    '--bw':`${Math.min(progressPct===0&&bonusPoints>=100?100:progressPct,100)}%`
+                  } as any}/>
+                </div>
+              </div>
+
+              <button onClick={handleClaimBonus} disabled={!canClaimBonus||claimingBonus} className="px-btn px-btn-full">
+                {claimingBonus
+                  ? <><Loader2 size={14} style={{ animation:'px-spin 1s linear infinite' }}/>Claiming…</>
+                  : canClaimBonus
+                    ? <><Sparkles size={14}/>Claim +10 Points</>
+                    : <><Clock size={13}/>{bonusCooldown}</>}
+              </button>
+            </div>
           </div>
 
-          {/* ─── FREE TRIAL ─── */}
-          <FreeKeyCard animDelay={400}/>
+          {/* ── FREE TRIAL ── */}
+          <FreeKeyCard animDelay={420}/>
 
         </div>
       </div>
