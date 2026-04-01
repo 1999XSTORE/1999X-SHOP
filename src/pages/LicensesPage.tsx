@@ -208,7 +208,9 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
               {isExpired ? 'Expired' : 'Active'}
             </span>
           </div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '-.02em' }}>{lic?.productName ?? (isInternal ? 'Internal Panel' : 'Fake Lag Panel')}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '-.02em' }}>
+            {isInternal ? '1999X Internal Panel' : '1999X Fake Lag Panel'}
+          </div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,.35)', marginTop: 3 }}>KeyAuth · Bound to account</div>
         </div>
         <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
@@ -219,25 +221,36 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
         </div>
       </div>
 
-      {/* ── BIG KEY SECTION ── */}
+      {/* ── SLEEK GLOWING KEY SECTION ── */}
       <div style={{ padding: '16px 22px 0', position: 'relative' }}>
-        <div style={{ padding: '20px 22px', borderRadius: 20, background: 'rgba(0,0,0,.45)', border: `1px solid ${accentBg}.2)`, display: 'flex', flexDirection: 'column', gap: 14, boxShadow: 'inset 0 4px 20px rgba(0,0,0,.4)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.16em', textTransform: 'uppercase', color: 'rgba(255,255,255,.4)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Key size={13} color="rgba(255,255,255,.4)" /> License Key
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setKeyVisible(!keyVisible)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 10, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.09)', cursor: 'pointer', color: 'rgba(255,255,255,.5)', fontSize: 11, fontWeight: 700, transition: 'all .15s' }}>
-                {keyVisible ? <><EyeOff size={13} /> Hide</> : <><Eye size={13} /> Show</>}
-              </button>
-              <button onClick={copy} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 10, background: copied ? `${accentBg}.15)` : `${accentBg}.05)`, border: `1px solid ${copied ? accentBg + '.3)' : accentBg + '.15)'}`, cursor: 'pointer', color: copied ? '#fff' : accent, fontSize: 11, fontWeight: 700, transition: 'all .18s', boxShadow: copied ? `0 0 16px ${accentBg}.3)` : 'none' }}>
-                {copied ? <><CheckCircle size={13} /> Copied</> : <><Copy size={13} /> Copy</>}
-              </button>
-            </div>
+        <div style={{ 
+          padding: '12px 14px', borderRadius: 16, 
+          background: `linear-gradient(90deg, ${accentBg}.1), rgba(0,0,0,.4))`, 
+          border: `1px solid ${accentBg}.3)`, 
+          display: 'flex', alignItems: 'center', gap: 12, 
+          boxShadow: `0 0 24px ${accentBg}.15)`,
+          backdropFilter: 'blur(10px)'
+        }}>
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: `${accentBg}.15)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Key size={16} color={accent} />
           </div>
-          <code style={{ fontSize: 22, fontWeight: 800, fontFamily: 'monospace', color: accent, letterSpacing: keyVisible ? '2px' : '0', filter: keyVisible ? 'none' : 'blur(10px)', transition: 'all .35s', wordBreak: 'break-all', lineHeight: 1.3, textShadow: keyVisible ? `0 0 30px ${accentBg}.6)` : 'none', minHeight: '1.3em' }}>
+          
+          <code style={{ 
+            flex: 1, fontSize: 15, fontWeight: 700, fontFamily: 'monospace', 
+            color: '#fff', letterSpacing: keyVisible ? '2px' : '0', 
+            filter: keyVisible ? 'none' : 'blur(5px)', 
+            transition: 'all .35s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            textShadow: keyVisible ? `0 0 16px ${accentBg}.5)` : 'none'
+          }}>
             {displayKey || '(no key)'}
           </code>
+          
+          <button onClick={() => setKeyVisible(!keyVisible)} style={{ padding: '8px 10px', borderRadius: 10, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)', cursor: 'pointer', color: 'rgba(255,255,255,.6)', flexShrink: 0, transition: 'all .15s', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600 }}>
+            {keyVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+          <button onClick={copy} style={{ padding: '8px 10px', borderRadius: 10, background: copied ? `${accentBg}.15)` : 'rgba(255,255,255,.06)', border: `1px solid ${copied ? accentBg + '.3)' : 'rgba(255,255,255,.1)'}`, cursor: 'pointer', color: copied ? accent : 'rgba(255,255,255,.6)', flexShrink: 0, transition: 'all .15s', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600 }}>
+            {copied ? <><CheckCircle size={14} /> Copied</> : <><Copy size={14} /> Copy</>}
+          </button>
         </div>
       </div>
 
