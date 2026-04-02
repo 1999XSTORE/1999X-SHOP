@@ -1371,25 +1371,27 @@ export default function WalletPage() {
     setTxnsLoad(false);
   };
 
+  // Capture ref from URL immediately on mount (before SPA strips query params)
   useEffect(() => {
-    let cancelled = false;
-    const resolveActiveReferral = async () => {
-      const captured = captureReferralFromUrl(user?.email);
-      const rawReferral = normalizeReferralValue(captured || getStoredReferralEmail());
-
-      if (!rawReferral || rawReferral === normalizedUserEmail) {
-        setActiveReferral('');
-        return;
+    const params = new URLSearchParams(window.location.search);
+    const urlRef = params.get('ref');
+    if (urlRef) {
+      const clean = urlRef.trim().toLowerCase().replace(/[^a-z0-9_@.-]/g, '').slice(0, 64);
+      if (clean) {
+        try { localStorage.setItem('1999x-referral-email', clean); } catch {}
+        console.log('[Reseller] Captured ref from URL:', clean);
       }
+    }
+  }, []);
 
-      // Use rawReferral directly — it may be a ref code (e.g. "jackparkdum01") or email.
-      // fetchResellerPaymentMethods handles both via reseller_accounts + direct user_email lookup.
-      if (cancelled) return;
-      setActiveReferral(rawReferral);
-      console.log('[Reseller] activeReferral set to:', rawReferral);
-    };
-    void resolveActiveReferral();
-    return () => { cancelled = true; };
+  useEffect(() => {
+    const rawReferral = normalizeReferralValue(getStoredReferralEmail());
+    if (!rawReferral || rawReferral === normalizedUserEmail) {
+      setActiveReferral('');
+      return;
+    }
+    setActiveReferral(rawReferral);
+    console.log('[Reseller] activeReferral set to:', rawReferral);
   }, [normalizedUserEmail]);
 
   // Fetch reseller methods at page level for products tab paused check + custom pricing
