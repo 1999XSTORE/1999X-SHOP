@@ -1371,27 +1371,26 @@ export default function WalletPage() {
     setTxnsLoad(false);
   };
 
-  // Capture ref from URL immediately on mount (before SPA strips query params)
+  // Only activate reseller mode when ?ref= is present in the URL right now
+  // Never read from localStorage alone — that would affect normal browsing
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlRef = params.get('ref');
-    if (urlRef) {
-      const clean = urlRef.trim().toLowerCase().replace(/[^a-z0-9_@.-]/g, '').slice(0, 64);
-      if (clean) {
-        try { localStorage.setItem('1999x-referral-email', clean); } catch {}
-        console.log('[Reseller] Captured ref from URL:', clean);
-      }
+    if (!urlRef) {
+      // No ref in URL — clear reseller mode entirely
+      setActiveReferral('');
+      setPageResellerMethods(null);
+      return;
     }
-  }, []);
-
-  useEffect(() => {
-    const rawReferral = normalizeReferralValue(getStoredReferralEmail());
-    if (!rawReferral || rawReferral === normalizedUserEmail) {
+    const clean = normalizeReferralValue(urlRef);
+    if (!clean || clean === normalizedUserEmail) {
       setActiveReferral('');
       return;
     }
-    setActiveReferral(rawReferral);
-    console.log('[Reseller] activeReferral set to:', rawReferral);
+    // Save to localStorage for TrueWallet edge function (needs it for auto-approved txns)
+    try { localStorage.setItem('1999x-referral-email', clean); } catch {}
+    setActiveReferral(clean);
+    console.log('[Reseller] activeReferral set to:', clean);
   }, [normalizedUserEmail]);
 
   // Fetch reseller methods at page level for products tab paused check + custom pricing
