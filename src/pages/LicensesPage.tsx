@@ -188,61 +188,62 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
 
   return (
     <div style={{
-      position:'relative', borderRadius:28, overflow:'hidden',
-      background:`linear-gradient(145deg,${gradFrom},rgba(8,6,20,.95))`,
-      border:`1px solid ${accentBg}.2)`,
-      boxShadow:`0 0 0 1px rgba(255,255,255,.04) inset, 0 24px 60px rgba(0,0,0,.55), 0 0 50px ${accentBg}.08)`,
+      position:'relative', borderRadius:22, overflow:'hidden',
+      background:`linear-gradient(145deg,${gradFrom},rgba(8,6,20,.97))`,
+      border:`1px solid ${accentBg}.22)`,
+      boxShadow:`0 0 0 1px rgba(255,255,255,.04) inset, 0 16px 48px rgba(0,0,0,.6), 0 0 40px ${accentBg}.1)`,
       animation:'lc-in .6s cubic-bezier(.22,1,.36,1) both',
     }}>
       {/* Top glow line */}
-      <div style={{ position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${accent},${accentBg}.5) transparent)`,pointerEvents:'none' }}/>
+      <div style={{ position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${accent},transparent)`,pointerEvents:'none' }}/>
       {/* BG orb */}
-      <div style={{ position:'absolute',top:-40,right:-30,width:180,height:180,borderRadius:'50%',background:`radial-gradient(circle,${accentBg}.12) 0%,transparent 65%)`,pointerEvents:'none' }}/>
+      <div style={{ position:'absolute',top:-30,right:-20,width:140,height:140,borderRadius:'50%',background:`radial-gradient(circle,${accentBg}.1) 0%,transparent 65%)`,pointerEvents:'none' }}/>
 
-      {/* ── TOP: name + status ── */}
-      <div style={{ padding:'22px 22px 0', position:'relative', display:'flex', alignItems:'flex-start', justifyContent:'space-between' }}>
-        <div>
-          <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:5 }}>
-            <div style={{ width:8,height:8,borderRadius:'50%',background:isExpired?'#f87171':'#4ade80',boxShadow:`0 0 ${isExpired?'6px #f87171':'10px rgba(74,222,128,.7)'}`,animation:isExpired?'none':'lc-live 2s ease-in-out infinite' }}/>
-            <span style={{ fontSize:10,fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',color:isExpired?'#f87171':'#4ade80' }}>
-              {isExpired ? 'Expired' : 'Active'}
-            </span>
+      {/* ── HEADER: panel name + status + timer inline ── */}
+      <div style={{ padding:'18px 20px 14px', position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid rgba(255,255,255,.06)` }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{ width:40,height:40,borderRadius:13,background:`${accentBg}.12)`,border:`1px solid ${accentBg}.22)`,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:`0 0 16px ${accentBg}.16)`,flexShrink:0 }}>
+            {isInternal ? <Shield size={19} color={accent}/> : <Zap size={19} color={accent}/>}
           </div>
-          <div style={{ fontSize:20,fontWeight:700,color:'#fff',letterSpacing:'-.02em' }}>{lic?.productName ?? (isInternal?'Internal Panel':'Fake Lag Panel')}</div>
-          <div style={{ fontSize:11,color:'rgba(255,255,255,.35)',marginTop:3 }}>KeyAuth · Bound to account</div>
-        </div>
-        <div style={{ width:48,height:48,borderRadius:16,background:`${accentBg}.12)`,border:`1px solid ${accentBg}.22)`,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:`0 0 20px ${accentBg}.14)`,flexShrink:0 }}>
-          {isInternal ? <Shield size={22} color={accent}/> : <Zap size={22} color={accent}/>}
-        </div>
-      </div>
-
-      {/* ── EXPIRY COUNTDOWN — big ── */}
-      <div style={{ padding:'18px 22px 0', position:'relative' }}>
-        <div style={{ padding:'16px 18px',borderRadius:18,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)' }}>
-          <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10 }}>
-            <div style={{ fontSize:9,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(255,255,255,.35)' }}>Time Remaining</div>
-            <div style={{ fontSize:9,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(255,255,255,.25)' }}>{daysLeft}d left</div>
+          <div>
+            <div style={{ fontSize:15,fontWeight:700,color:'#fff',letterSpacing:'-.01em',lineHeight:1.2 }}>
+              {isInternal ? '1999X Internal Panel' : '1999X Fake Lag Panel'}
+            </div>
+            <div style={{ display:'flex',alignItems:'center',gap:6,marginTop:3 }}>
+              <div style={{ width:6,height:6,borderRadius:'50%',background:isExpired?'#f87171':'#4ade80',boxShadow:`0 0 ${isExpired?'6px #f87171':'8px rgba(74,222,128,.7)'}`,animation:isExpired?'none':'lc-live 2s ease-in-out infinite' }}/>
+              <span style={{ fontSize:10,fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:isExpired?'#f87171':'#4ade80' }}>
+                {isExpired ? 'Expired' : 'Active'}
+              </span>
+              <span style={{ fontSize:10,color:'rgba(255,255,255,.25)' }}>·</span>
+              <span style={{ fontSize:10,color:'rgba(255,255,255,.3)',fontWeight:500 }}>KeyAuth</span>
+            </div>
           </div>
-          <div style={{ fontSize:32,fontWeight:700,lineHeight:1,marginBottom:12 }}>
+        </div>
+        {/* Timer — compact, right side */}
+        <div style={{ textAlign:'right',flexShrink:0 }}>
+          <div style={{ fontSize:9,fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:'rgba(255,255,255,.28)',marginBottom:3 }}>Expires In</div>
+          <div style={{ fontSize:15,fontWeight:700,fontFamily:'monospace',letterSpacing:'.04em',lineHeight:1 }}>
             <ExpiryCountdown expiresAt={expiresAt}/>
           </div>
-          {/* Progress bar */}
-          <div style={{ height:4,borderRadius:99,background:'rgba(255,255,255,.07)',overflow:'hidden' }}>
-            <div style={{ height:'100%',width:`${progressPct}%`,borderRadius:99,background:isExpired?'#ef4444':`linear-gradient(90deg,${accentBg}.6),${accent})`,boxShadow:isExpired?'none':`0 0 10px ${accentBg}.5)`,transition:'width .8s cubic-bezier(.22,1,.36,1)' }}/>
+          {/* Mini progress */}
+          <div style={{ width:80,height:3,borderRadius:99,background:'rgba(255,255,255,.07)',overflow:'hidden',marginTop:5,marginLeft:'auto' }}>
+            <div style={{ height:'100%',width:`${progressPct}%`,borderRadius:99,background:isExpired?'#ef4444':accent,boxShadow:isExpired?'none':`0 0 6px ${accentBg}.6)`,transition:'width .8s cubic-bezier(.22,1,.36,1)' }}/>
           </div>
         </div>
       </div>
 
-      {/* ── KEY ── */}
-      <div style={{ padding:'14px 22px 0', position:'relative' }}>
-        <div style={{ padding:'12px 14px',borderRadius:14,background:'rgba(0,0,0,.25)',border:'1px solid rgba(255,255,255,.06)',display:'flex',alignItems:'center',gap:10 }}>
-          <code style={{ flex:1,fontSize:12,fontFamily:'monospace',color:'rgba(255,255,255,.7)',letterSpacing:keyVisible?'2px':'0',filter:keyVisible?'none':'blur(7px)',transition:'all .35s',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+      {/* ── LICENSE KEY — full width prominent ── */}
+      <div style={{ padding:'14px 20px 12px', position:'relative' }}>
+        <div style={{ fontSize:9,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(255,255,255,.3)',marginBottom:8 }}>License Key</div>
+        <div style={{ padding:'14px 16px',borderRadius:14,background:'rgba(0,0,0,.35)',border:`1px solid ${accentBg}.18)`,boxShadow:`0 0 20px ${accentBg}.08) inset`,display:'flex',alignItems:'center',gap:10 }}>
+          <code style={{ flex:1,fontSize:13,fontFamily:'monospace',fontWeight:600,color:keyVisible?accent:'rgba(255,255,255,.65)',letterSpacing:keyVisible?'1.5px':'.5px',filter:keyVisible?'none':'blur(6px)',transition:'all .3s',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textShadow:keyVisible?`0 0 12px ${accentBg}.6)`:'none' }}>
             {displayKey || '(no key)'}
           </code>
-          <button onClick={()=>setKeyVisible(!keyVisible)} style={{ padding:'6px 8px',borderRadius:8,background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.09)',cursor:'pointer',color:'rgba(255,255,255,.4)',flexShrink:0,transition:'all .15s' }}>
+          <button onClick={()=>setKeyVisible(!keyVisible)} style={{ padding:'7px 9px',borderRadius:9,background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.09)',cursor:'pointer',color:'rgba(255,255,255,.4)',flexShrink:0,transition:'all .15s' }}
+            onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,.1)';}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,.05)';}}>
             {keyVisible?<EyeOff size={13}/>:<Eye size={13}/>}
           </button>
-          <button onClick={copy} style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 11px',borderRadius:8,background:copied?`${accentBg}.12)`:'rgba(255,255,255,.05)',border:`1px solid ${copied?accentBg+'.25)':'rgba(255,255,255,.09)'}`,cursor:'pointer',color:copied?accent:'rgba(255,255,255,.5)',fontSize:11,fontWeight:600,flexShrink:0,transition:'all .18s' }}>
+          <button onClick={copy} style={{ display:'flex',alignItems:'center',gap:5,padding:'7px 13px',borderRadius:9,background:copied?`${accentBg}.15)`:`${accentBg}.06)`,border:`1px solid ${accentBg}${copied?'.3)':'.15)'})`,cursor:'pointer',color:accent,fontSize:11,fontWeight:700,flexShrink:0,transition:'all .18s',boxShadow:copied?`0 0 14px ${accentBg}.3)`:'none' }}>
             {copied?<><CheckCircle size={11}/>Copied</>:<><Copy size={11}/>Copy</>}
           </button>
         </div>
@@ -512,7 +513,7 @@ export default function LicensesPage() {
       {/* ── PAGE HEADER ── */}
       <div style={{ animation:'lc-in .5s both' }}>
         <div style={{ fontSize:'clamp(26px,4vw,36px)',fontWeight:700,color:'#fff',letterSpacing:'-.03em',marginBottom:4 }}>
-          Your Licenses
+          Activate Your License Key
         </div>
         <div style={{ fontSize:13,color:'rgba(255,255,255,.35)' }}>
           {hasActive
@@ -521,23 +522,7 @@ export default function LicensesPage() {
         </div>
       </div>
 
-      {/* ── STAT BAR ── */}
-      <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,animation:'lc-in .5s .06s both' }}>
-        {[
-          { label:'Active Keys', val:lagActive.length+intActive.length, color:'#4ade80', bg:'rgba(34,197,94,.07)', bc:'rgba(34,197,94,.15)', dot:true },
-          { label:'Expired', val:lagExpired.length+intExpired.length,  color:'#f87171', bg:'rgba(239,68,68,.07)', bc:'rgba(239,68,68,.14)' },
-          { label:'Total', val:licenses.length,                        color:'#a78bfa', bg:'rgba(167,139,250,.07)', bc:'rgba(167,139,250,.16)' },
-        ].map(s=>(
-          <div key={s.label} style={{ padding:'16px 18px',borderRadius:20,background:s.bg,border:`1px solid ${s.bc}`,position:'relative',overflow:'hidden' }}>
-            <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${s.color}40,transparent)` }}/>
-            <div style={{ display:'flex',alignItems:'center',gap:7,marginBottom:6 }}>
-              {s.dot && <div style={{ width:6,height:6,borderRadius:'50%',background:s.color,boxShadow:`0 0 8px ${s.color}`,animation:'lc-live 2s ease-in-out infinite' }}/>}
-              <span style={{ fontSize:9,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(255,255,255,.38)' }}>{s.label}</span>
-            </div>
-            <div style={{ fontSize:32,fontWeight:700,color:s.color,letterSpacing:'-.04em',lineHeight:1 }}>{s.val}</div>
-          </div>
-        ))}
-      </div>
+
 
       {/* ── ACTIVATE BOX ── */}
       <div style={{ borderRadius:24,background:'rgba(255,255,255,.028)',border:'1px solid rgba(255,255,255,.08)',padding:'24px',animation:'lc-in .5s .12s both',backdropFilter:'blur(20px)',position:'relative',overflow:'hidden' }}>
