@@ -190,7 +190,7 @@ export default function Index() {
       window.clearInterval(interval);
       window.removeEventListener('focus', onFocus);
     };
-  }, [isAuthenticated, user?.email, user?.role, setUserRole]);
+  }, [isAuthenticated, user?.email]);
 
   const handleLogout = async () => {
     intentionalLogout.current = true;

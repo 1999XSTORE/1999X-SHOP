@@ -1076,233 +1076,135 @@ Pay 1% of your weekly sales revenue each week to keep your reseller subscription
               <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
                 <div>
                   <div style={{ fontSize:18, fontWeight:700, color:'#fff', letterSpacing:'-.02em' }}>Payment Settings</div>
-                  <div style={{ fontSize:12, color:'rgba(255,255,255,.35)', marginTop:3 }}>Configure your payment methods — customers using your ref link will see these instead of the owner's</div>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,.35)', marginTop:3 }}>Configure payment methods and custom prices for customers using your ref link</div>
                 </div>
 
                 {/* Shop name */}
                 <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(255,255,255,.028)', border:'1px solid rgba(255,255,255,.08)' }}>
                   <div style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,.5)', textTransform:'uppercase', letterSpacing:'.12em', marginBottom:10 }}>Shop Name (optional)</div>
-                  <input
-                    value={payMethods.shop_name || ''}
-                    onChange={e => setPayMethods(p => ({ ...p, shop_name: e.target.value }))}
-                    placeholder="e.g. ZuboShop · 1999X Reseller"
-                    style={{ width:'100%', background:'rgba(0,0,0,.25)', border:'1px solid rgba(255,255,255,.1)', borderRadius:12, padding:'12px 14px', color:'#fff', fontSize:13, fontFamily:'inherit', outline:'none', boxSizing:'border-box', transition:'border-color .2s' }}
-                    onFocus={e=>{e.currentTarget.style.borderColor='rgba(167,139,250,.35)';}}
-                    onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}
-                  />
-                  <div style={{ fontSize:11, color:'rgba(255,255,255,.28)', marginTop:6 }}>Shown as a banner to customers visiting via your ref link</div>
+                  <input value={payMethods.shop_name || ''} onChange={e => setPayMethods(p => ({ ...p, shop_name: e.target.value }))} placeholder="e.g. ZuboShop · 1999X Reseller"
+                    style={{ width:'100%',background:'rgba(0,0,0,.25)',border:'1px solid rgba(255,255,255,.1)',borderRadius:12,padding:'12px 14px',color:'#fff',fontSize:13,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}
+                    onFocus={e=>{e.currentTarget.style.borderColor='rgba(167,139,250,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
                 </div>
 
                 {/* Binance Pay */}
-                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(240,185,11,.04)', border:`1px solid ${payMethods.binance_enabled ? 'rgba(240,185,11,.28)' : 'rgba(255,255,255,.07)'}`, transition:'border-color .2s' }}>
+                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(240,185,11,.04)', border:`1px solid ${payMethods.binance_enabled ? 'rgba(240,185,11,.28)' : 'rgba(255,255,255,.07)'}` }}>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:payMethods.binance_enabled ? 16 : 0 }}>
                     <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                      <div style={{ width:36, height:36, borderRadius:11, background:'rgba(240,185,11,.12)', border:'1px solid rgba(240,185,11,.22)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>₿</div>
-                      <div>
-                        <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>Binance Pay</div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>Customers pay your Binance Pay ID</div>
-                      </div>
+                      <div style={{ width:36,height:36,borderRadius:11,background:'rgba(240,185,11,.12)',border:'1px solid rgba(240,185,11,.22)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18 }}>₿</div>
+                      <div><div style={{ fontSize:13,fontWeight:700,color:'#fff' }}>Binance Pay</div><div style={{ fontSize:11,color:'rgba(255,255,255,.35)' }}>Customers pay your Binance Pay ID</div></div>
                     </div>
-                    <button onClick={() => setPayMethods(p => ({ ...p, binance_enabled: !p.binance_enabled }))}
-                      style={{ width:44, height:24, borderRadius:99, background:payMethods.binance_enabled?'#7c3aed':'rgba(255,255,255,.1)', border:`1px solid ${payMethods.binance_enabled?'rgba(124,92,255,.4)':'rgba(255,255,255,.15)'}`, cursor:'pointer', position:'relative', transition:'all .2s', flexShrink:0 }}>
-                      <div style={{ position:'absolute', top:3, left:payMethods.binance_enabled?22:3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,.3)' }}/>
+                    <button onClick={() => setPayMethods(p => ({ ...p, binance_enabled: !p.binance_enabled }))} style={{ width:44,height:24,borderRadius:99,background:payMethods.binance_enabled?'#7c3aed':'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.15)',cursor:'pointer',position:'relative',flexShrink:0 }}>
+                      <div style={{ position:'absolute',top:3,left:payMethods.binance_enabled?22:3,width:16,height:16,borderRadius:'50%',background:'#fff',transition:'left .2s' }}/>
                     </button>
                   </div>
-                  {payMethods.binance_enabled && (
-                    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                      <div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>Pay ID *</div>
-                        <input value={payMethods.binance_pay_id || ''} onChange={e=>setPayMethods(p=>({...p,binance_pay_id:e.target.value}))} placeholder="e.g. 1234567890"
-                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:13,fontFamily:'monospace',outline:'none',boxSizing:'border-box' }}
-                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(240,185,11,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
-                      </div>
-                      <div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>QR Code URL (optional)</div>
-                        <input value={payMethods.binance_qr_url || ''} onChange={e=>setPayMethods(p=>({...p,binance_qr_url:e.target.value}))} placeholder="https://... (direct image link)"
-                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}
-                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(240,185,11,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
-                      </div>
+                  {payMethods.binance_enabled && (<div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+                    <div><div style={{ fontSize:11,color:'rgba(255,255,255,.4)',marginBottom:5 }}>Pay ID *</div>
+                      <input value={payMethods.binance_pay_id||''} onChange={e=>setPayMethods(p=>({...p,binance_pay_id:e.target.value}))} placeholder="e.g. 1234567890"
+                        style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:13,fontFamily:'monospace',outline:'none',boxSizing:'border-box' }}/>
                     </div>
-                  )}
+                    <div><div style={{ fontSize:11,color:'rgba(255,255,255,.4)',marginBottom:5 }}>QR Code URL (optional)</div>
+                      <input value={payMethods.binance_qr_url||''} onChange={e=>setPayMethods(p=>({...p,binance_qr_url:e.target.value}))} placeholder="https://..."
+                        style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}/>
+                    </div>
+                  </div>)}
                 </div>
 
                 {/* bKash */}
-                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(226,19,110,.04)', border:`1px solid ${payMethods.bkash_enabled ? 'rgba(226,19,110,.28)' : 'rgba(255,255,255,.07)'}`, transition:'border-color .2s' }}>
+                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(226,19,110,.04)', border:`1px solid ${payMethods.bkash_enabled ? 'rgba(226,19,110,.28)' : 'rgba(255,255,255,.07)'}` }}>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:payMethods.bkash_enabled ? 16 : 0 }}>
                     <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                      <div style={{ width:36, height:36, borderRadius:11, background:'rgba(226,19,110,.12)', border:'1px solid rgba(226,19,110,.22)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>💳</div>
-                      <div>
-                        <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>bKash</div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>Mobile banking — Bangladesh</div>
-                      </div>
+                      <div style={{ width:36,height:36,borderRadius:11,background:'rgba(226,19,110,.12)',border:'1px solid rgba(226,19,110,.22)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16 }}>💳</div>
+                      <div><div style={{ fontSize:13,fontWeight:700,color:'#fff' }}>bKash</div><div style={{ fontSize:11,color:'rgba(255,255,255,.35)' }}>Mobile banking — Bangladesh</div></div>
                     </div>
-                    <button onClick={() => setPayMethods(p => ({ ...p, bkash_enabled: !p.bkash_enabled }))}
-                      style={{ width:44, height:24, borderRadius:99, background:payMethods.bkash_enabled?'#7c3aed':'rgba(255,255,255,.1)', border:`1px solid ${payMethods.bkash_enabled?'rgba(124,92,255,.4)':'rgba(255,255,255,.15)'}`, cursor:'pointer', position:'relative', transition:'all .2s', flexShrink:0 }}>
-                      <div style={{ position:'absolute', top:3, left:payMethods.bkash_enabled?22:3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,.3)' }}/>
+                    <button onClick={() => setPayMethods(p => ({ ...p, bkash_enabled: !p.bkash_enabled }))} style={{ width:44,height:24,borderRadius:99,background:payMethods.bkash_enabled?'#7c3aed':'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.15)',cursor:'pointer',position:'relative',flexShrink:0 }}>
+                      <div style={{ position:'absolute',top:3,left:payMethods.bkash_enabled?22:3,width:16,height:16,borderRadius:'50%',background:'#fff',transition:'left .2s' }}/>
                     </button>
                   </div>
-                  {payMethods.bkash_enabled && (
-                    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                      <div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>bKash Number *</div>
-                        <input value={payMethods.bkash_number || ''} onChange={e=>setPayMethods(p=>({...p,bkash_number:e.target.value}))} placeholder="e.g. 01XXXXXXXXX"
-                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:13,fontFamily:'monospace',outline:'none',boxSizing:'border-box' }}
-                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(226,19,110,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
-                      </div>
-                      <div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>QR Code URL (optional)</div>
-                        <input value={payMethods.bkash_qr_url || ''} onChange={e=>setPayMethods(p=>({...p,bkash_qr_url:e.target.value}))} placeholder="https://..."
-                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}
-                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(226,19,110,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
-                      </div>
+                  {payMethods.bkash_enabled && (<div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+                    <div><div style={{ fontSize:11,color:'rgba(255,255,255,.4)',marginBottom:5 }}>bKash Number *</div>
+                      <input value={payMethods.bkash_number||''} onChange={e=>setPayMethods(p=>({...p,bkash_number:e.target.value}))} placeholder="e.g. 01XXXXXXXXX"
+                        style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:13,fontFamily:'monospace',outline:'none',boxSizing:'border-box' }}/>
                     </div>
-                  )}
+                    <div><div style={{ fontSize:11,color:'rgba(255,255,255,.4)',marginBottom:5 }}>QR Code URL (optional)</div>
+                      <input value={payMethods.bkash_qr_url||''} onChange={e=>setPayMethods(p=>({...p,bkash_qr_url:e.target.value}))} placeholder="https://..."
+                        style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}/>
+                    </div>
+                  </div>)}
                 </div>
 
                 {/* USDT TRC20 */}
-                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(38,161,123,.04)', border:`1px solid ${payMethods.usdt_trc20_enabled ? 'rgba(38,161,123,.28)' : 'rgba(255,255,255,.07)'}`, transition:'border-color .2s' }}>
+                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(38,161,123,.04)', border:`1px solid ${payMethods.usdt_trc20_enabled ? 'rgba(38,161,123,.28)' : 'rgba(255,255,255,.07)'}` }}>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:payMethods.usdt_trc20_enabled ? 16 : 0 }}>
                     <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                      <div style={{ width:36, height:36, borderRadius:11, background:'rgba(38,161,123,.12)', border:'1px solid rgba(38,161,123,.22)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>💚</div>
-                      <div>
-                        <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>USDT TRC20</div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>Tron network stablecoin</div>
-                      </div>
+                      <div style={{ width:36,height:36,borderRadius:11,background:'rgba(38,161,123,.12)',border:'1px solid rgba(38,161,123,.22)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16 }}>💚</div>
+                      <div><div style={{ fontSize:13,fontWeight:700,color:'#fff' }}>USDT TRC20</div><div style={{ fontSize:11,color:'rgba(255,255,255,.35)' }}>Tron network stablecoin</div></div>
                     </div>
-                    <button onClick={() => setPayMethods(p => ({ ...p, usdt_trc20_enabled: !p.usdt_trc20_enabled }))}
-                      style={{ width:44, height:24, borderRadius:99, background:payMethods.usdt_trc20_enabled?'#7c3aed':'rgba(255,255,255,.1)', border:`1px solid ${payMethods.usdt_trc20_enabled?'rgba(124,92,255,.4)':'rgba(255,255,255,.15)'}`, cursor:'pointer', position:'relative', transition:'all .2s', flexShrink:0 }}>
-                      <div style={{ position:'absolute', top:3, left:payMethods.usdt_trc20_enabled?22:3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,.3)' }}/>
+                    <button onClick={() => setPayMethods(p => ({ ...p, usdt_trc20_enabled: !p.usdt_trc20_enabled }))} style={{ width:44,height:24,borderRadius:99,background:payMethods.usdt_trc20_enabled?'#7c3aed':'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.15)',cursor:'pointer',position:'relative',flexShrink:0 }}>
+                      <div style={{ position:'absolute',top:3,left:payMethods.usdt_trc20_enabled?22:3,width:16,height:16,borderRadius:'50%',background:'#fff',transition:'left .2s' }}/>
                     </button>
                   </div>
-                  {payMethods.usdt_trc20_enabled && (
-                    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                      <div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>TRC20 Wallet Address *</div>
-                        <input value={payMethods.usdt_trc20_address || ''} onChange={e=>setPayMethods(p=>({...p,usdt_trc20_address:e.target.value}))} placeholder="T..."
-                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'monospace',outline:'none',boxSizing:'border-box' }}
-                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(38,161,123,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
-                      </div>
-                      <div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>QR Code URL (optional)</div>
-                        <input value={payMethods.usdt_trc20_qr_url || ''} onChange={e=>setPayMethods(p=>({...p,usdt_trc20_qr_url:e.target.value}))} placeholder="https://..."
-                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}
-                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(38,161,123,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
-                      </div>
+                  {payMethods.usdt_trc20_enabled && (<div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+                    <div><div style={{ fontSize:11,color:'rgba(255,255,255,.4)',marginBottom:5 }}>TRC20 Address *</div>
+                      <input value={payMethods.usdt_trc20_address||''} onChange={e=>setPayMethods(p=>({...p,usdt_trc20_address:e.target.value}))} placeholder="T..."
+                        style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'monospace',outline:'none',boxSizing:'border-box' }}/>
                     </div>
-                  )}
+                    <div><div style={{ fontSize:11,color:'rgba(255,255,255,.4)',marginBottom:5 }}>QR Code URL (optional)</div>
+                      <input value={payMethods.usdt_trc20_qr_url||''} onChange={e=>setPayMethods(p=>({...p,usdt_trc20_qr_url:e.target.value}))} placeholder="https://..."
+                        style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}/>
+                    </div>
+                  </div>)}
                 </div>
 
                 {/* USDT BEP20 */}
-                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(240,185,11,.03)', border:`1px solid ${payMethods.usdt_bep20_enabled ? 'rgba(240,185,11,.22)' : 'rgba(255,255,255,.07)'}`, transition:'border-color .2s' }}>
+                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(240,185,11,.03)', border:`1px solid ${payMethods.usdt_bep20_enabled ? 'rgba(240,185,11,.22)' : 'rgba(255,255,255,.07)'}` }}>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:payMethods.usdt_bep20_enabled ? 16 : 0 }}>
                     <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                      <div style={{ width:36, height:36, borderRadius:11, background:'rgba(240,185,11,.1)', border:'1px solid rgba(240,185,11,.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>🟡</div>
-                      <div>
-                        <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>USDT BEP20</div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>BNB Smart Chain stablecoin</div>
-                      </div>
+                      <div style={{ width:36,height:36,borderRadius:11,background:'rgba(240,185,11,.1)',border:'1px solid rgba(240,185,11,.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16 }}>🟡</div>
+                      <div><div style={{ fontSize:13,fontWeight:700,color:'#fff' }}>USDT BEP20</div><div style={{ fontSize:11,color:'rgba(255,255,255,.35)' }}>BNB Smart Chain stablecoin</div></div>
                     </div>
-                    <button onClick={() => setPayMethods(p => ({ ...p, usdt_bep20_enabled: !p.usdt_bep20_enabled }))}
-                      style={{ width:44, height:24, borderRadius:99, background:payMethods.usdt_bep20_enabled?'#7c3aed':'rgba(255,255,255,.1)', border:`1px solid ${payMethods.usdt_bep20_enabled?'rgba(124,92,255,.4)':'rgba(255,255,255,.15)'}`, cursor:'pointer', position:'relative', transition:'all .2s', flexShrink:0 }}>
-                      <div style={{ position:'absolute', top:3, left:payMethods.usdt_bep20_enabled?22:3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,.3)' }}/>
+                    <button onClick={() => setPayMethods(p => ({ ...p, usdt_bep20_enabled: !p.usdt_bep20_enabled }))} style={{ width:44,height:24,borderRadius:99,background:payMethods.usdt_bep20_enabled?'#7c3aed':'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.15)',cursor:'pointer',position:'relative',flexShrink:0 }}>
+                      <div style={{ position:'absolute',top:3,left:payMethods.usdt_bep20_enabled?22:3,width:16,height:16,borderRadius:'50%',background:'#fff',transition:'left .2s' }}/>
                     </button>
                   </div>
-                  {payMethods.usdt_bep20_enabled && (
-                    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                      <div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>BEP20 Wallet Address *</div>
-                        <input value={payMethods.usdt_bep20_address || ''} onChange={e=>setPayMethods(p=>({...p,usdt_bep20_address:e.target.value}))} placeholder="0x..."
-                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'monospace',outline:'none',boxSizing:'border-box' }}
-                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(240,185,11,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
-                      </div>
-                      <div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>QR Code URL (optional)</div>
-                        <input value={payMethods.usdt_bep20_qr_url || ''} onChange={e=>setPayMethods(p=>({...p,usdt_bep20_qr_url:e.target.value}))} placeholder="https://..."
-                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}
-                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(240,185,11,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
-                      </div>
+                  {payMethods.usdt_bep20_enabled && (<div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+                    <div><div style={{ fontSize:11,color:'rgba(255,255,255,.4)',marginBottom:5 }}>BEP20 Address *</div>
+                      <input value={payMethods.usdt_bep20_address||''} onChange={e=>setPayMethods(p=>({...p,usdt_bep20_address:e.target.value}))} placeholder="0x..."
+                        style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'monospace',outline:'none',boxSizing:'border-box' }}/>
                     </div>
-                  )}
+                    <div><div style={{ fontSize:11,color:'rgba(255,255,255,.4)',marginBottom:5 }}>QR Code URL (optional)</div>
+                      <input value={payMethods.usdt_bep20_qr_url||''} onChange={e=>setPayMethods(p=>({...p,usdt_bep20_qr_url:e.target.value}))} placeholder="https://..."
+                        style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}/>
+                    </div>
+                  </div>)}
                 </div>
 
                 {/* TrueWallet */}
-                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(249,115,22,.04)', border:`1px solid ${payMethods.truewallet_enabled ? 'rgba(249,115,22,.28)' : 'rgba(255,255,255,.07)'}`, transition:'border-color .2s' }}>
+                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(249,115,22,.04)', border:`1px solid ${payMethods.truewallet_enabled ? 'rgba(249,115,22,.28)' : 'rgba(255,255,255,.07)'}` }}>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:payMethods.truewallet_enabled ? 16 : 0 }}>
                     <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                      <div style={{ width:36, height:36, borderRadius:11, background:'rgba(249,115,22,.12)', border:'1px solid rgba(249,115,22,.22)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>🧧</div>
-                      <div>
-                        <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>TrueWallet AngPao</div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>Voucher redeems into your TrueWallet number</div>
-                      </div>
+                      <div style={{ width:36,height:36,borderRadius:11,background:'rgba(249,115,22,.12)',border:'1px solid rgba(249,115,22,.22)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16 }}>🧧</div>
+                      <div><div style={{ fontSize:13,fontWeight:700,color:'#fff' }}>TrueWallet AngPao</div><div style={{ fontSize:11,color:'rgba(255,255,255,.35)' }}>Voucher redeems into your TrueWallet number</div></div>
                     </div>
-                    <button onClick={() => setPayMethods(p => ({ ...p, truewallet_enabled: !p.truewallet_enabled }))}
-                      style={{ width:44, height:24, borderRadius:99, background:payMethods.truewallet_enabled?'#7c3aed':'rgba(255,255,255,.1)', border:`1px solid ${payMethods.truewallet_enabled?'rgba(124,92,255,.4)':'rgba(255,255,255,.15)'}`, cursor:'pointer', position:'relative', transition:'all .2s', flexShrink:0 }}>
-                      <div style={{ position:'absolute', top:3, left:payMethods.truewallet_enabled?22:3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,.3)' }}/>
+                    <button onClick={() => setPayMethods(p => ({ ...p, truewallet_enabled: !p.truewallet_enabled }))} style={{ width:44,height:24,borderRadius:99,background:payMethods.truewallet_enabled?'#7c3aed':'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.15)',cursor:'pointer',position:'relative',flexShrink:0 }}>
+                      <div style={{ position:'absolute',top:3,left:payMethods.truewallet_enabled?22:3,width:16,height:16,borderRadius:'50%',background:'#fff',transition:'left .2s' }}/>
                     </button>
                   </div>
                   {payMethods.truewallet_enabled && (
-                    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                      <div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>TrueWallet Phone Number *</div>
-                        <input value={(payMethods as any).truewallet_number || ''} onChange={e=>setPayMethods(p=>({...p, truewallet_number:e.target.value}))} placeholder="e.g. 0990160204"
-                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:14,fontFamily:'monospace',letterSpacing:'2px',outline:'none',boxSizing:'border-box' }}
-                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(249,115,22,.4)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
-                        <div style={{ fontSize:10, color:'rgba(255,255,255,.28)', marginTop:5, lineHeight:1.5 }}>
-                          ✅ When a customer uses your ref link and redeems a TrueWallet voucher, the money goes directly to this number — not the owner's.
-                        </div>
-                      </div>
+                    <div>
+                      <div style={{ fontSize:11,color:'rgba(255,255,255,.4)',marginBottom:5 }}>TrueWallet Phone Number *</div>
+                      <input value={(payMethods as any).truewallet_number||''} onChange={e=>setPayMethods(p=>({...p,truewallet_number:e.target.value}))} placeholder="e.g. 0990160204"
+                        style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:14,fontFamily:'monospace',letterSpacing:'2px',outline:'none',boxSizing:'border-box' }}/>
+                      <div style={{ fontSize:10,color:'rgba(255,255,255,.28)',marginTop:5 }}>Vouchers via your ref link redeem into this number.</div>
                     </div>
                   )}
                 </div>
 
-                {/* ── Custom Panel Pricing ── */}
+                {/* Custom Panel Pricing */}
                 <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(251,191,36,.03)', border:'1px solid rgba(255,255,255,.07)' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
                     <div style={{ width:36,height:36,borderRadius:11,background:'rgba(251,191,36,.1)',border:'1px solid rgba(251,191,36,.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16 }}>💰</div>
-                    <div>
-                      <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>Custom Panel Prices</div>
-                      <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>Override default prices for customers using your link</div>
-                    </div>
-                  </div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                    {[
-                      { key:'price_internal_3d',  label:'Internal 3 Days',  default:3  },
-                      { key:'price_internal_7d',  label:'Internal 7 Days',  default:7  },
-                      { key:'price_internal_30d', label:'Internal 30 Days', default:15 },
-                      { key:'price_combo_7d',     label:'Combo 7 Days',     default:10 },
-                      { key:'price_combo_30d',    label:'Combo 30 Days',    default:20 },
-                      { key:'price_lag_7d',       label:'Fake Lag 7 Days',  default:5  },
-                      { key:'price_lag_30d',      label:'Fake Lag 30 Days', default:10 },
-                    ].map(({ key, label, default: def }) => (
-                      <div key={key}>
-                        <div style={{ fontSize:10, color:'rgba(255,255,255,.38)', marginBottom:5, fontWeight:600 }}>{label} <span style={{ color:'rgba(255,255,255,.2)' }}>(default ${def})</span></div>
-                        <div style={{ position:'relative' }}>
-                          <span style={{ position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,.4)',fontSize:13,fontWeight:700,pointerEvents:'none' }}>$</span>
-                          <input
-                            type="number" min="0.01" step="0.01"
-                            value={(payMethods as any)[key] || ''}
-                            onChange={e => setPayMethods(p => ({ ...p, [key]: e.target.value ? parseFloat(e.target.value) : undefined }))}
-                            placeholder={String(def)}
-                            style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'9px 10px 9px 24px',color:'#fff',fontSize:13,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}
-                            onFocus={e=>{e.currentTarget.style.borderColor='rgba(251,191,36,.35)';}}
-                            onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ fontSize:10, color:'rgba(255,255,255,.25)', marginTop:10, lineHeight:1.5 }}>Leave blank to use the default price. Customers using your ref link will see your custom prices.</div>
-                </div>
-
-
-                {/* ── Custom Panel Pricing ── */}
-                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(251,191,36,.03)', border:'1px solid rgba(255,255,255,.07)' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
-                    <div style={{ width:36,height:36,borderRadius:11,background:'rgba(251,191,36,.1)',border:'1px solid rgba(251,191,36,.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16 }}>💰</div>
-                    <div>
-                      <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>Custom Panel Prices</div>
-                      <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>Override default prices for customers using your link</div>
-                    </div>
+                    <div><div style={{ fontSize:13,fontWeight:700,color:'#fff' }}>Custom Panel Prices</div><div style={{ fontSize:11,color:'rgba(255,255,255,.35)' }}>Override default prices for customers using your link</div></div>
                   </div>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                     {([
@@ -1315,36 +1217,30 @@ Pay 1% of your weekly sales revenue each week to keep your reseller subscription
                       { key:'price_lag_30d',      label:'Fake Lag 30 Days', def:10 },
                     ] as const).map(({ key, label, def }) => (
                       <div key={key}>
-                        <div style={{ fontSize:10, color:'rgba(255,255,255,.38)', marginBottom:5, fontWeight:600 }}>{label} <span style={{ color:'rgba(255,255,255,.2)' }}>(default ${def})</span></div>
+                        <div style={{ fontSize:10,color:'rgba(255,255,255,.38)',marginBottom:5,fontWeight:600 }}>{label} <span style={{ color:'rgba(255,255,255,.2)' }}>(default ${def})</span></div>
                         <div style={{ position:'relative' }}>
                           <span style={{ position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,.4)',fontSize:13,fontWeight:700,pointerEvents:'none' }}>$</span>
                           <input type="number" min="0.01" step="0.01"
-                            value={(payMethods as any)[key] || ''}
-                            onChange={e => setPayMethods((p:any) => ({ ...p, [key]: e.target.value ? parseFloat(e.target.value) : undefined }))}
+                            value={(payMethods as any)[key] ?? ''}
+                            onChange={e => setPayMethods((p:any) => ({ ...p, [key]: e.target.value ? parseFloat(e.target.value) : null }))}
                             placeholder={String(def)}
-                            style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'9px 10px 9px 24px',color:'#fff',fontSize:13,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}
-                            onFocus={e=>{e.currentTarget.style.borderColor='rgba(251,191,36,.35)';}}
-                            onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}
-                          />
+                            style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'9px 10px 9px 24px',color:'#fff',fontSize:13,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}/>
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div style={{ fontSize:10, color:'rgba(255,255,255,.25)', marginTop:10, lineHeight:1.5 }}>Leave blank to use default price. Customers via your ref link see your custom prices.</div>
+                  <div style={{ fontSize:10,color:'rgba(255,255,255,.25)',marginTop:10,lineHeight:1.5 }}>Leave blank to use default. Customers via your ref link see these prices.</div>
                 </div>
 
                 {/* Save button */}
                 <button onClick={savePaymentMethods} disabled={savingPayMethods}
-                  style={{ padding:'14px', borderRadius:14, border:'none', cursor:savingPayMethods?'not-allowed':'pointer', fontFamily:'inherit', fontSize:14, fontWeight:700, color:'#fff', background:'linear-gradient(135deg,#7c3aed,#6d28d9)', boxShadow:'0 0 28px rgba(109,40,217,.4)', display:'flex', alignItems:'center', justifyContent:'center', gap:8, transition:'all .22s', opacity:savingPayMethods?.6:1 }}>
+                  style={{ padding:'14px',borderRadius:14,border:'none',cursor:savingPayMethods?'not-allowed':'pointer',fontFamily:'inherit',fontSize:14,fontWeight:700,color:'#fff',background:'linear-gradient(135deg,#7c3aed,#6d28d9)',boxShadow:'0 0 28px rgba(109,40,217,.4)',display:'flex',alignItems:'center',justifyContent:'center',gap:8,opacity:savingPayMethods?.6:1 }}>
                   {savingPayMethods ? <><Loader2 size={15} className="animate-spin"/>Saving…</> : <><Check size={15}/>Save Payment Methods</>}
                 </button>
 
-                {/* Info note */}
-                <div style={{ padding:'12px 16px', borderRadius:14, background:'rgba(139,92,246,.06)', border:'1px solid rgba(139,92,246,.15)', display:'flex', alignItems:'flex-start', gap:10 }}>
-                  <AlertTriangle size={14} color="#a78bfa" style={{ flexShrink:0, marginTop:1 }}/>
-                  <div style={{ fontSize:12, color:'rgba(255,255,255,.45)', lineHeight:1.55 }}>
-                    Only enabled methods with valid details will replace the owner's defaults. Customers visiting via other links (or no link) still see the owner's payment methods.
-                  </div>
+                <div style={{ padding:'12px 16px',borderRadius:14,background:'rgba(139,92,246,.06)',border:'1px solid rgba(139,92,246,.15)',display:'flex',alignItems:'flex-start',gap:10 }}>
+                  <AlertTriangle size={14} color="#a78bfa" style={{ flexShrink:0,marginTop:1 }}/>
+                  <div style={{ fontSize:12,color:'rgba(255,255,255,.45)',lineHeight:1.55 }}>Only enabled methods replace the owner defaults. Customers via other links still see owner payment methods.</div>
                 </div>
               </div>
             )}
