@@ -1230,7 +1230,8 @@ Pay 1% of your weekly sales revenue each week to keep your reseller subscription
                   </div>
                 </div>
               </div>
-            )}            </div>
+            )}
+            </div>
           </div>
         )}
       </div>
