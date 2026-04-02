@@ -1395,7 +1395,11 @@ export default function WalletPage() {
   // Fetch reseller methods at page level for products tab paused check + custom pricing
   useEffect(() => {
     if (!activeReferral) { setPageResellerMethods(null); return; }
-    fetchResellerPaymentMethods(supabase, activeReferral).then(m => setPageResellerMethods(m ?? null));
+    console.log('[Reseller] Page-level fetch for:', activeReferral);
+    fetchResellerPaymentMethods(supabase, activeReferral).then(m => {
+      console.log('[Reseller] Page methods:', m);
+      setPageResellerMethods(m ?? null);
+    });
   }, [activeReferral]);
 
   useEffect(() => {
@@ -1681,12 +1685,14 @@ export default function WalletPage() {
                   {PANEL_GROUPS.map(group => {
                     // Apply reseller custom pricing if set
                     const rm = pageResellerMethods as any;
-                    const effectiveGroup = rm ? {
+                    if (rm && !rm._paused) console.log('[Reseller] Applying prices from:', rm);
+                    const effectiveGroup = rm && !rm._paused ? {
                       ...group,
                       plans: group.plans.map(p => {
-                        const key = `price_${p.id.replace('-','_')}` as string;
-                        const customPrice = rm[key];
-                        return customPrice && customPrice > 0 ? { ...p, price: customPrice } : p;
+                        const key = `price_${p.id.replace(/-/g,'_')}`;
+                        const customPrice = Number(rm[key]);
+                        console.log(`[Reseller] ${p.id} → key=${key} val=${rm[key]} custom=${customPrice}`);
+                        return customPrice > 0 ? { ...p, price: customPrice } : p;
                       })
                     } : group;
                     return (

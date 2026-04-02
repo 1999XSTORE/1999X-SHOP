@@ -95,6 +95,19 @@ export async function fetchResellerPaymentMethods(
   const val = referralEmailOrCode.trim().toLowerCase();
   const isEmail = val.includes('@');
 
+  // Helper: check subscription and return data or paused flag
+  const checkAndReturn = async (data: any): Promise<ResellerPaymentMethods | null> => {
+    const { data: subRow } = await supabase
+      .from('reseller_subscriptions')
+      .select('status')
+      .eq('user_id', data.user_id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (subRow?.status === 'paused') return { _paused: true } as ResellerPaymentMethods;
+    return data;
+  };
+
   // Strategy 1: look up by referral_code directly in reseller_payment_methods
   if (!isEmail) {
     const { data: byCode } = await supabase
@@ -102,19 +115,7 @@ export async function fetchResellerPaymentMethods(
       .select('*')
       .eq('referral_code', val)
       .maybeSingle();
-    if (byCode) {
-      // Check subscription status
-      const { data: subRow } = await supabase
-        .from('reseller_subscriptions')
-        .select('status')
-        .eq('user_id', byCode.user_id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (subRow?.status === 'paused') return { _paused: true } as ResellerPaymentMethods;
-      console.log('[Reseller] Found via referral_code:', val);
-      return byCode;
-    }
+    if (byCode) return checkAndReturn(byCode);
   }
 
   // Strategy 2: look up by user_email directly
@@ -124,42 +125,37 @@ export async function fetchResellerPaymentMethods(
       .select('*')
       .eq('user_email', val)
       .maybeSingle();
-    if (byEmail) {
-      console.log('[Reseller] Found via user_email:', val);
-      return byEmail;
-    }
+    if (byEmail) return checkAndReturn(byEmail);
   }
 
-  // Strategy 3: resolve via reseller_accounts (fallback)
+  // Strategy 3: resolve via reseller_accounts → get user_id → fetch payment methods
+  // This works even if referral_code column hasn't been saved yet
   const { data: accRow } = await supabase
     .from('reseller_accounts')
-    .select('user_id')
+    .select('user_id, email')
     .eq(isEmail ? 'email' : 'referral_code', val)
     .maybeSingle();
 
-  if (!accRow?.user_id) {
-    console.log('[Reseller] Not found for:', val);
-    return null;
+  if (accRow?.user_id) {
+    // Try to find payment methods by user_id
+    const { data: pmByUserId } = await supabase
+      .from('reseller_payment_methods')
+      .select('*')
+      .eq('user_id', accRow.user_id)
+      .maybeSingle();
+    if (pmByUserId) return checkAndReturn(pmByUserId);
+
+    // Payment methods not saved yet — still check if subscription is paused
+    const { data: subRow } = await supabase
+      .from('reseller_subscriptions')
+      .select('status')
+      .eq('user_id', accRow.user_id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (subRow?.status === 'paused') return { _paused: true } as ResellerPaymentMethods;
   }
 
-  // Check subscription status — if paused, block the ref link
-  const { data: subRow } = await supabase
-    .from('reseller_subscriptions')
-    .select('status')
-    .eq('user_id', accRow.user_id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
 
-  if (subRow?.status === 'paused') {
-    return { _paused: true } as ResellerPaymentMethods;
-  }
-
-  const { data } = await supabase
-    .from('reseller_payment_methods')
-    .select('*')
-    .eq('user_id', accRow.user_id)
-    .maybeSingle();
-
-  return data ?? null;
+  return null;
 }
