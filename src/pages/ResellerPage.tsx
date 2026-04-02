@@ -169,106 +169,6 @@ function FeePaymentModal({ dueAmount, userId, userEmail, onClose, onSuccess }: {
   );
 }
 
-// ── Withdraw Modal ────────────────────────────────────────────
-function WithdrawModal({ balance, userId, userEmail, onClose, onSuccess }: {
-  balance: number; userId: string; userEmail: string;
-  onClose: () => void; onSuccess: () => void;
-}) {
-  const [amount, setAmount] = useState('');
-  const [binanceId, setBinanceId] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async () => {
-    const amt = roundMoney(Number(amount));
-    if (!amt || amt < 20) { toast.error('Minimum withdrawal is $20'); return; }
-    if (amt > balance) { toast.error(`Cannot exceed available balance ($${balance.toFixed(2)})`); return; }
-    if (!binanceId.trim()) { toast.error('Enter your Binance Pay ID'); return; }
-
-    setLoading(true);
-    const { error } = await safeQuery(() =>
-      supabase.rpc('request_reseller_withdrawal', {
-        p_user_id: userId,
-        p_email:   userEmail,
-        p_amount:  amt,
-      })
-    );
-    setLoading(false);
-
-    if (error) { toast.error(error.message || 'Withdrawal failed'); return; }
-
-    // Save binance ID in meta
-    await supabase.from('activity_logs').insert({
-      user_id:    userId,
-      user_email: userEmail,
-      user_name:  userEmail,
-      action_type: 'withdrawal_request',
-      meta: { binance_id: binanceId.trim(), amount: amt },
-      status: 'success',
-    }).maybeSingle();
-
-    toast.success(`Withdrawal request of $${amt.toFixed(2)} submitted!`);
-    onSuccess();
-    onClose();
-  };
-
-  return (
-    <div style={{ position:'fixed',inset:0,zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.85)',backdropFilter:'blur(16px)',padding:20 }}
-      onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{ width:'100%',maxWidth:420,borderRadius:24,background:'rgba(8,9,22,.96)',border:'1px solid rgba(255,255,255,.1)',boxShadow:'0 32px 80px rgba(0,0,0,.7)',padding:'32px 28px',backdropFilter:'blur(32px)' }}>
-        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24 }}>
-          <div>
-            <div style={{ fontSize:11,fontWeight:800,letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(255,255,255,.3)',marginBottom:4 }}>Withdrawal</div>
-            <div style={{ fontSize:22,fontWeight:900,color:'#fff',letterSpacing:'-.02em' }}>Request Payout</div>
-          </div>
-          <button onClick={onClose} style={{ width:32,height:32,borderRadius:'50%',background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',cursor:'pointer',color:'rgba(255,255,255,.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontWeight:700 }}>×</button>
-        </div>
-
-        {/* Balance */}
-        <div style={{ padding:'14px 18px',borderRadius:14,background:'rgba(16,232,152,.07)',border:'1px solid rgba(16,232,152,.18)',marginBottom:20 }}>
-          <div style={{ fontSize:9,fontWeight:800,letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(16,232,152,.6)',marginBottom:4 }}>Available Balance</div>
-          <div style={{ fontSize:28,fontWeight:900,color:'#10e898',letterSpacing:'-.04em' }}>${balance.toFixed(2)}</div>
-        </div>
-
-        {/* Binance only notice */}
-        <div style={{ display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:12,background:'rgba(240,185,11,.06)',border:'1px solid rgba(240,185,11,.18)',marginBottom:16 }}>
-          <span style={{ fontSize:14,flexShrink:0 }}>🟡</span>
-          <span style={{ fontSize:12,color:'rgba(255,255,255,.5)' }}>Payouts via <strong style={{ color:'#F0B90B' }}>Binance Pay</strong> only. Minimum $20.</span>
-        </div>
-
-        {/* Binance Pay ID */}
-        <div style={{ marginBottom:12 }}>
-          <div style={{ fontSize:9,fontWeight:800,letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(255,255,255,.3)',marginBottom:8 }}>Binance Pay ID</div>
-          <input type="text" placeholder="Enter your Binance Pay ID…" value={binanceId} onChange={e=>setBinanceId(e.target.value)}
-            style={{ width:'100%',background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.1)',borderRadius:13,padding:'14px 16px',color:'#fff',fontFamily:'inherit',fontSize:14,outline:'none',boxSizing:'border-box' }}
-            onFocus={e=>(e.target.style.borderColor='rgba(240,185,11,.5)')}
-            onBlur={e=>(e.target.style.borderColor='rgba(255,255,255,.1)')}
-          />
-        </div>
-
-        {/* Amount */}
-        <div style={{ marginBottom:20 }}>
-          <div style={{ fontSize:9,fontWeight:800,letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(255,255,255,.3)',marginBottom:8 }}>Amount (USD)</div>
-          <div style={{ position:'relative' }}>
-            <span style={{ position:'absolute',left:16,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,.3)',fontWeight:700,fontSize:16,pointerEvents:'none' }}>$</span>
-            <input type="number" placeholder="0.00" value={amount} onChange={e=>setAmount(e.target.value)}
-              min={20} max={balance}
-              style={{ width:'100%',background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.1)',borderRadius:13,padding:'14px 16px 14px 32px',color:'#fff',fontFamily:'inherit',fontSize:16,fontWeight:700,outline:'none',boxSizing:'border-box' }}
-              onFocus={e=>(e.target.style.borderColor='rgba(139,92,246,.5)')}
-              onBlur={e=>(e.target.style.borderColor='rgba(255,255,255,.1)')}
-            />
-          </div>
-          <div style={{ fontSize:11,color:'rgba(255,255,255,.3)',marginTop:5 }}>Min $20 · Max ${balance.toFixed(2)}</div>
-        </div>
-
-        <button onClick={handleSubmit} disabled={loading} style={{ width:'100%',padding:'16px',borderRadius:14,border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:15,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',gap:9,background:'linear-gradient(135deg,#7c3aed,#6d28d9)',color:'#fff',boxShadow:'0 0 32px rgba(109,40,217,.45)',transition:'all .2s',opacity:loading?0.5:1 }}>
-          {loading ? <><Loader2 size={18} className="animate-spin"/> Processing…</> : <><DollarSign size={17}/> Request Withdrawal</>}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════
 export default function ResellerPage() {
   const { user, balance, deductBalance, refundBalance, setUserRole } = useAppStore();
 
@@ -282,7 +182,6 @@ export default function ResellerPage() {
   // Reseller dashboard state
   const [resellerWallet, setResellerWallet] = useState<any>(null);
   const [resellerTxns, setResellerTxns] = useState<any[]>([]);
-  const [withdrawReqs, setWithdrawReqs] = useState<any[]>([]);
   const [feePayments, setFeePayments] = useState<any[]>([]);
   const [feeDue, setFeeDue] = useState(0);
   const [referralCode, setReferralCode] = useState('');
@@ -293,7 +192,6 @@ export default function ResellerPage() {
   const [customerTxns, setCustomerTxns] = useState<any[]>([]);
   const [customerTxnsLoading, setCustomerTxnsLoading] = useState(false);
   const [savingCode, setSavingCode] = useState(false);
-  const [showWithdraw, setShowWithdraw] = useState(false);
   const [showFeePayment, setShowFeePayment] = useState(false);
   const [dashLoading, setDashLoading] = useState(false);
   const [ownerLoading, setOwnerLoading] = useState(false);
@@ -330,10 +228,9 @@ export default function ResellerPage() {
     if (!user?.id || !user.email) return;
     setDashLoading(true);
 
-    const [{ data: walletData }, { data: txnData }, { data: wdData }, { data: feePaymentData }, { data: feeDueData }] = await Promise.all([
+    const [{ data: walletData }, { data: txnData }, { data: feePaymentData }, { data: feeDueData }] = await Promise.all([
       safeQuery(() => supabase.from('reseller_wallets').select('user_id,email,balance,total_earned,updated_at').eq('user_id', user.id).maybeSingle()),
       safeQuery(() => supabase.from('reseller_transactions').select('id,amount,fee,net_amount,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50)),
-      safeQuery(() => supabase.from('withdrawal_requests').select('id,amount,status,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10)),
       safeQuery(() => supabase.from('reseller_fee_payments').select('id,amount,status,created_at,binance_tx_id').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10)),
       safeQuery(() => supabase.rpc('get_reseller_fee_due', { p_user_id: user.id, p_email: user.email })),
     ]);
@@ -368,7 +265,6 @@ export default function ResellerPage() {
 
     setResellerWallet(walletData ?? null);
     setResellerTxns(txnData ?? []);
-    setWithdrawReqs(wdData ?? []);
     setFeePayments(feePaymentData ?? []);
     setFeeDue(Number(feeDueData ?? 0));
     setReferralCode(code);
@@ -565,8 +461,6 @@ export default function ResellerPage() {
   // ── Stats ────────────────────────────────────────────────────
   const totalEarnings = resellerTxns.reduce((s, t) => s + Number(t.net_amount ?? 0), 0);
   const totalFees     = resellerTxns.reduce((s, t) => s + Number(t.fee ?? 0), 0);
-  const walletBalance = Number(resellerWallet?.balance ?? 0);
-  const allTimeEarned = Number(resellerWallet?.total_earned ?? 0);
   const submittedFeeTotal = feePayments
     .filter(p => p.status === 'verified')
     .reduce((s, p) => s + Number(p.amount ?? 0), 0);
@@ -655,17 +549,6 @@ export default function ResellerPage() {
           transition: all .2s; flex-shrink: 0; white-space: nowrap;
         }
         .rs-copy-btn:hover { background: rgba(139,92,246,.18); box-shadow: 0 0 20px rgba(109,40,217,.3); }
-
-        /* Withdraw button */
-        .rs-withdraw-btn {
-          display: flex; align-items: center; gap:8px; padding: 13px 24px;
-          border-radius: 13px; border: 1px solid rgba(16,232,152,.3);
-          background: rgba(16,232,152,.08); cursor: pointer; font-family: inherit;
-          font-size: 14px; font-weight: 700; color: #10e898;
-          transition: all .2s; white-space: nowrap;
-        }
-        .rs-withdraw-btn:hover { background: rgba(16,232,152,.14); box-shadow: 0 0 24px rgba(16,232,152,.25); }
-        .rs-withdraw-btn:disabled { opacity:.4; cursor:not-allowed; }
 
         .rs-subscribe-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
         .rs-sales-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
@@ -801,7 +684,7 @@ export default function ResellerPage() {
 
               {/* Feature pills */}
               <div style={{ display:'flex', flexWrap:'wrap', gap:8, justifyContent:'center', marginTop:20, position:'relative', zIndex:1 }}>
-                {['Referral Dashboard','Custom Link','Instant Payouts','Binance Withdrawal'].map(f => (
+                {['Referral Dashboard','Custom Link','Payment Methods','Weekly 1% Fee Only'].map(f => (
                   <span key={f} style={{ padding:'5px 12px', borderRadius:20, background:'rgba(139,92,246,.12)', border:'1px solid rgba(139,92,246,.22)', fontSize:11, fontWeight:600, color:'#c4b5fd' }}>{f}</span>
                 ))}
               </div>
@@ -942,8 +825,6 @@ export default function ResellerPage() {
             {/* ── Stats row ── */}
             <div className="rs-stats-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14 }}>
               {[
-                { label:'Reseller Balance', value:`$${walletBalance.toFixed(2)}`, color:'#10e898', bg:'rgba(16,232,152,.08)', border:'rgba(16,232,152,.18)', icon:<DollarSign size={18}/> },
-                { label:'Total Earned', value:`$${allTimeEarned.toFixed(2)}`, color:'#818cf8', bg:'rgba(129,140,248,.08)', border:'rgba(129,140,248,.18)', icon:<TrendingUp size={18}/> },
                 { label:'Total Sales', value:resellerTxns.length, color:'#38bdf8', bg:'rgba(56,189,248,.08)', border:'rgba(56,189,248,.18)', icon:<Users size={18}/> },
                 { label:'Total Fees', value:`$${totalFees.toFixed(2)}`, color:'#fbbf24', bg:'rgba(251,191,36,.08)', border:'rgba(251,191,36,.18)', icon:<BarChart3 size={18}/> },
               ].map(s => (
@@ -964,9 +845,7 @@ export default function ResellerPage() {
                   <div style={{ fontSize:9,fontWeight:800,letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(255,255,255,.3)',marginBottom:4 }}>Your Referral</div>
                   <div style={{ fontSize:17,fontWeight:800,color:'#fff' }}>Share your link and earn</div>
                 </div>
-                <button className="rs-withdraw-btn" onClick={()=>setShowWithdraw(true)} disabled={walletBalance<20 || feeDue>0}>
-                  <DollarSign size={16}/> Withdraw {feeDue > 0 ? '(pay fee first)' : walletBalance < 20 ? '(min $20)' : `$${walletBalance.toFixed(2)}`}
-                </button>
+
               </div>
 
               {/* Referral URL */}
@@ -1004,7 +883,7 @@ export default function ResellerPage() {
               <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16,gap:12,flexWrap:'wrap' }}>
                 <div>
                   <div style={{ fontSize:9,fontWeight:800,letterSpacing:'.18em',textTransform:'uppercase',color:'rgba(255,255,255,.3)',marginBottom:4 }}>Reseller Fee</div>
-                  <div style={{ fontSize:17,fontWeight:800,color:'#fff' }}>Binance fee clearance</div>
+                  <div style={{ fontSize:17,fontWeight:800,color:'#fff' }}>Weekly Platform Fee</div>
                 </div>
                 <button
                   onClick={()=>setShowFeePayment(true)}
@@ -1026,7 +905,7 @@ export default function ResellerPage() {
                 </div>
               </div>
               <p style={{ fontSize:12,color:'rgba(255,255,255,.42)',margin:'12px 0 0' }}>
-                Withdrawals stay locked while fee due is above $0. Submit the Binance transaction ID after paying the owner Binance ID, then wait for admin approval.
+Pay 1% of your weekly sales revenue each week to keep your reseller subscription active. Submit your Binance transaction ID after paying, then wait for admin approval.
               </p>
             </div>
 
@@ -1059,19 +938,7 @@ export default function ResellerPage() {
                 )}
               </div>
 
-              {/* Withdrawals */}
-              <div className="rs-panel" style={{ padding:'22px 20px' }}>
-                <div style={{ fontSize:14,fontWeight:800,color:'#fff',marginBottom:16 }}>Withdrawal History</div>
-                {withdrawReqs.length === 0 ? (
-                  <div style={{ textAlign:'center',padding:'24px 0',color:'rgba(255,255,255,.25)',fontSize:13 }}>No withdrawals yet</div>
-                ) : (
-                  <div style={{ display:'flex',flexDirection:'column',gap:6 }}>
-                    {withdrawReqs.slice(0,6).map(r => (
-                      <div key={r.id} style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderRadius:12,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)' }}>
-                        <div>
-                          <div style={{ fontSize:13,fontWeight:700,color:'#fff' }}>${Number(r.amount).toFixed(2)}</div>
-                          <div style={{ fontSize:10,color:'rgba(255,255,255,.3)' }}>{new Date(r.created_at).toLocaleDateString()}</div>
-                        </div>
+            </div>
                         <span style={{ padding:'4px 10px',borderRadius:99,fontSize:10,fontWeight:800,background:r.status==='approved'?'rgba(16,232,152,.1)':r.status==='rejected'?'rgba(248,113,113,.1)':'rgba(251,191,36,.1)',border:`1px solid ${r.status==='approved'?'rgba(16,232,152,.25)':r.status==='rejected'?'rgba(248,113,113,.25)':'rgba(251,191,36,.25)'}`,color:r.status==='approved'?'#10e898':r.status==='rejected'?'#f87171':'#fbbf24',textTransform:'uppercase',letterSpacing:'.06em' }}>
                           {r.status}
                         </span>
@@ -1378,16 +1245,7 @@ export default function ResellerPage() {
         )}
       </div>
 
-      {/* Withdraw modal */}
-      {showWithdraw && (
-        <WithdrawModal
-          balance={walletBalance}
-          userId={user?.id ?? ''}
-          userEmail={user?.email ?? ''}
-          onClose={()=>setShowWithdraw(false)}
-          onSuccess={loadDashboard}
-        />
-      )}
+
       {showFeePayment && (
         <FeePaymentModal
           dueAmount={feeDue}

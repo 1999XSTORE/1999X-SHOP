@@ -859,6 +859,7 @@ function PanelProductCard({ group, balance, onBuy, onAddBalance }: { group: type
             {t('shop.addBalanceToBuy', 'Add Balance To Buy')} <ArrowRight size={15}/>
           </button>
         )}
+        </div>
 
       </div>
     </div>
