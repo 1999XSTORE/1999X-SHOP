@@ -82,25 +82,29 @@ export async function fetchResellerPaymentMethods(
   referralEmailOrCode: string
 ): Promise<ResellerPaymentMethods | null> {
   if (!referralEmailOrCode) return null;
-  const isEmail = referralEmailOrCode.includes('@');
-  let userId: string | null = null;
+  const val = referralEmailOrCode.trim().toLowerCase();
+  const isEmail = val.includes('@');
 
+  // Strategy 1: look up directly by user_email in reseller_payment_methods
   if (isEmail) {
-    const { data } = await supabase
-      .from('reseller_accounts')
-      .select('user_id')
-      .eq('email', referralEmailOrCode.toLowerCase())
+    const { data: direct } = await supabase
+      .from('reseller_payment_methods')
+      .select('*')
+      .eq('user_email', val)
       .maybeSingle();
-    userId = data?.user_id ?? null;
-  } else {
-    const { data } = await supabase
-      .from('reseller_accounts')
-      .select('user_id')
-      .eq('referral_code', referralEmailOrCode.toLowerCase())
-      .maybeSingle();
-    userId = data?.user_id ?? null;
+    if (direct) return direct;
   }
 
+  // Strategy 2: resolve via reseller_accounts (email or ref code → user_id)
+  const { data: accRow } = await supabase
+    .from('reseller_accounts')
+    .select('user_id')
+    .or(isEmail
+      ? `email.eq.${val}`
+      : `referral_code.eq.${val}`)
+    .maybeSingle();
+
+  const userId = accRow?.user_id ?? null;
   if (!userId) return null;
 
   const { data } = await supabase

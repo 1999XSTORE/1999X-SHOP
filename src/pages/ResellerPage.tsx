@@ -254,10 +254,12 @@ export default function ResellerPage() {
     // Load customer transactions (transactions where referral_email matches their code or email)
     const refEmail = user.email.toLowerCase();
     const refCode  = code.toLowerCase();
+    // Build unique filter values (email and ref code may be same)
+    const refValues = [...new Set([refEmail, refCode].filter(Boolean))];
     const { data: custTxnData } = await safeQuery(() =>
       supabase.from('transactions')
         .select('id,user_id,user_email,user_name,amount,method,transaction_id,status,note,created_at,referral_email')
-        .or(`referral_email.eq.${refEmail},referral_email.eq.${refCode}`)
+        .in('referral_email', refValues)
         .order('created_at', { ascending: false })
         .limit(50)
     );
@@ -400,14 +402,26 @@ export default function ResellerPage() {
   const savePaymentMethods = async () => {
     if (!user?.id) return;
     setSavingPayMethods(true);
+    const payload = {
+      ...payMethods,
+      user_id: user.id,
+      user_email: user.email.toLowerCase(),
+      updated_at: new Date().toISOString(),
+    };
+    // Remove undefined/null keys that might cause issues
+    Object.keys(payload).forEach(k => (payload as any)[k] === undefined && delete (payload as any)[k]);
     const { error } = await safeQuery(() =>
-      supabase.from('reseller_payment_methods').upsert(
-        { ...payMethods, user_id: user.id, user_email: user.email, updated_at: new Date().toISOString() },
-        { onConflict: 'user_id' }
-      )
+      supabase.from('reseller_payment_methods').upsert(payload, { onConflict: 'user_id' })
     );
-    if (error) toast.error('Failed to save: ' + error.message);
-    else toast.success('Payment methods saved!');
+    if (error) {
+      toast.error('Save failed: ' + (error.message || JSON.stringify(error)));
+      console.error('reseller_payment_methods save error:', error);
+    } else {
+      toast.success('Payment methods saved!');
+      // Reload to confirm
+      const { data: verify } = await supabase.from('reseller_payment_methods').select('*').eq('user_id', user.id).maybeSingle();
+      if (!verify) toast.error('Saved but could not verify — check table exists in Supabase');
+    }
     setSavingPayMethods(false);
   };
 

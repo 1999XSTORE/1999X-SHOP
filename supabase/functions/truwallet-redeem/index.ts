@@ -82,15 +82,19 @@ Deno.serve(async (req) => {
 
     // ── If referral is active, check if the reseller has their own TrueWallet number ──
     let resolvedWalletValue = ownerWalletSetting.value;
+    let resolvedReferralEmail = referralEmail; // may be email or ref code
     if (referralEmail) {
-      // Resolve referral email/code → user_id via reseller_accounts
+      // Resolve referral email/code → reseller email + user_id
       const { data: accRow } = await admin
         .from('reseller_accounts')
-        .select('user_id')
+        .select('user_id, email')
         .or(`email.eq.${referralEmail},referral_code.eq.${referralEmail}`)
         .maybeSingle();
 
       if (accRow?.user_id) {
+        // Always store the reseller's actual email so apply_reseller_credit can find them
+        resolvedReferralEmail = accRow.email;
+
         const { data: pmRow } = await admin
           .from('reseller_payment_methods')
           .select('truewallet_enabled, truewallet_number')
@@ -163,7 +167,7 @@ Deno.serve(async (req) => {
         method: 'truewallet',
         transaction_id: transactionId,
         status: 'approved',
-        referral_email: referralEmail,
+        referral_email: resolvedReferralEmail,
         note: `Auto-approved via TrueWallet gift link redeem (${amountThb.toFixed(2)} THB @ ${exchangeRate} THB/USD, 3% fee applied)`,
       })
       .select('id')
