@@ -670,11 +670,13 @@ function PanelProductCard({ group, balance, onBuy, onAddBalance }: { group: type
   const basePerDay = group.plans[0].price / group.plans[0].days;
   const copy = getWalletPanelText(t, group.id);
 
-  const cardImage = group.id === 'internal'
-    ? 'https://www.dropbox.com/scl/fi/vmjmtlagavp3qnxy44vng/Internal.png?rlkey=wu9oxjcrvwh1tw685aqa7z8gm&st=xsnlein0&raw=1'
-    : group.id === 'lag'
-      ? 'https://www.dropbox.com/scl/fi/7gg0c6tvs1vkcyba0ofw4/Fake-Lag.png?rlkey=muslqa9erob4yq8ojoyotsgmp&st=87k0qh8e&raw=1'
-      : 'https://www.dropbox.com/scl/fi/b09vgdpumapu0qrmauzf2/Combo.png?rlkey=nph0m7pxg7klstq9n5voxs0qj&st=cnlqvvws&raw=1';
+  const defaultImages: Record<string,string> = {
+    internal: 'https://www.dropbox.com/scl/fi/vmjmtlagavp3qnxy44vng/Internal.png?rlkey=wu9oxjcrvwh1tw685aqa7z8gm&st=xsnlein0&raw=1',
+    lag:      'https://www.dropbox.com/scl/fi/7gg0c6tvs1vkcyba0ofw4/Fake-Lag.png?rlkey=muslqa9erob4yq8ojoyotsgmp&st=87k0qh8e&raw=1',
+    combo:    'https://www.dropbox.com/scl/fi/b09vgdpumapu0qrmauzf2/Combo.png?rlkey=nph0m7pxg7klstq9n5voxs0qj&st=cnlqvvws&raw=1',
+  };
+  // Allow reseller to override card image via group._customImg
+  const cardImage = (group as any)._customImg || defaultImages[group.id] || defaultImages.combo;
 
   return (
     <div style={{
@@ -1689,10 +1691,10 @@ export default function WalletPage() {
                     if (rm && !rm._paused) console.log('[Reseller] Applying prices from:', rm);
                     const effectiveGroup = rm && !rm._paused ? {
                       ...group,
+                      _customImg: rm[`img_${group.id}`] || undefined,
                       plans: group.plans.map(p => {
                         const key = `price_${p.id.replace(/-/g,'_')}`;
                         const customPrice = Number(rm[key]);
-                        console.log(`[Reseller] ${p.id} → key=${key} val=${rm[key]} custom=${customPrice}`);
                         return customPrice > 0 ? { ...p, price: customPrice } : p;
                       })
                     } : group;

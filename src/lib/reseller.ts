@@ -85,6 +85,9 @@ export interface ResellerPaymentMethods {
   price_combo_30d?: number;
   price_lag_7d?: number;
   price_lag_30d?: number;
+  img_internal?: string;
+  img_combo?: string;
+  img_lag?: string;
 }
 
 export async function fetchResellerPaymentMethods(

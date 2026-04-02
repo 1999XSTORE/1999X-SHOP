@@ -1200,6 +1200,34 @@ Pay 1% of your weekly sales revenue each week to keep your reseller subscription
                   )}
                 </div>
 
+                {/* Custom Product Images */}
+                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(56,189,248,.03)', border:'1px solid rgba(255,255,255,.07)' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+                    <div style={{ width:36,height:36,borderRadius:11,background:'rgba(56,189,248,.1)',border:'1px solid rgba(56,189,248,.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16 }}>🖼️</div>
+                    <div><div style={{ fontSize:13,fontWeight:700,color:'#fff' }}>Custom Card Images</div><div style={{ fontSize:11,color:'rgba(255,255,255,.35)' }}>Replace the product card images for customers using your link</div></div>
+                  </div>
+                  <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
+                    {([
+                      { key:'img_internal', label:'Internal Panel Image' },
+                      { key:'img_combo',    label:'Combo Pack Image'    },
+                      { key:'img_lag',      label:'Fake Lag Image'      },
+                    ] as const).map(({ key, label }) => (
+                      <div key={key}>
+                        <div style={{ fontSize:11,color:'rgba(255,255,255,.4)',marginBottom:5,fontWeight:600 }}>{label}</div>
+                        <div style={{ display:'flex',gap:8,alignItems:'center' }}>
+                          <input value={(payMethods as any)[key] || ''} onChange={e=>setPayMethods((p:any)=>({...p,[key]:e.target.value||null}))} placeholder="https://... (direct image link)"
+                            style={{ flex:1,background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}
+                            onFocus={e=>{e.currentTarget.style.borderColor='rgba(56,189,248,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
+                          {(payMethods as any)[key] && (
+                            <img src={(payMethods as any)[key]} alt="preview" style={{ width:48,height:36,objectFit:'cover',borderRadius:8,border:'1px solid rgba(255,255,255,.1)',flexShrink:0 }} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize:10,color:'rgba(255,255,255,.25)',marginTop:10,lineHeight:1.5 }}>Use a direct image link (Dropbox raw=1, Imgur, etc). Leave blank to use default images.</div>
+                </div>
+
                 {/* Custom Panel Pricing */}
                 <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(251,191,36,.03)', border:'1px solid rgba(255,255,255,.07)' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
