@@ -70,9 +70,9 @@ async function fetchRole(email: string): Promise<AppRole> {
     safeQuery<any>(
       async () => await supabase
         .from('reseller_subscriptions')
-        .select('id')
+        .select('id,status')
         .eq('email', normalizedEmail)
-        .eq('status', 'active')
+        .in('status', ['active'])
         .gt('expires_at', new Date().toISOString())
         .limit(1)
         .maybeSingle(),

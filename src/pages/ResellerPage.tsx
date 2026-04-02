@@ -206,19 +206,21 @@ export default function ResellerPage() {
   const loadSubscription = async () => {
     if (!user?.id) { setSubLoading(false); return; }
     setSubLoading(true);
+    // Fetch any subscription — active OR paused — so we can show correct UI
     const { data } = await safeQuery(() =>
       supabase.from('reseller_subscriptions')
         .select('*')
         .eq('user_id', user.id)
-        .eq('status', 'active')
+        .in('status', ['active', 'paused'])
         .gte('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
     );
     setSub(data as Subscription | null);
+    // Only grant reseller role if subscription is active (not paused)
     if (user?.role === 'user' || user?.role === 'reseller') {
-      setUserRole(data ? 'reseller' : 'user');
+      setUserRole(data?.status === 'active' ? 'reseller' : 'user');
     }
     setSubLoading(false);
   };
@@ -814,6 +816,28 @@ export default function ResellerPage() {
               </div>
             </div>
 
+            {/* ── PAUSED BANNER ── */}
+            {(sub as any)?.status === 'paused' && (
+              <div style={{ padding:'18px 22px', borderRadius:18, background:'rgba(239,68,68,.08)', border:'1px solid rgba(239,68,68,.25)', display:'flex', alignItems:'center', gap:14, backdropFilter:'blur(12px)' }}>
+                <div style={{ width:42,height:42,borderRadius:13,background:'rgba(239,68,68,.12)',border:'1px solid rgba(239,68,68,.25)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:20 }}>🚫</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:14,fontWeight:700,color:'#f87171',marginBottom:3 }}>Subscription Paused</div>
+                  <div style={{ fontSize:12,color:'rgba(248,113,113,.65)',lineHeight:1.5 }}>Your reseller subscription has been paused by the owner. Your referral link is disabled and customers cannot use it. Contact the owner to resume.</div>
+                </div>
+              </div>
+            )}
+
+            {/* ── PAUSED BANNER ── */}
+            {(sub as any)?.status === 'paused' && (
+              <div style={{ padding:'18px 22px', borderRadius:18, background:'rgba(239,68,68,.08)', border:'1px solid rgba(239,68,68,.25)', display:'flex', alignItems:'center', gap:14 }}>
+                <div style={{ width:42,height:42,borderRadius:13,background:'rgba(239,68,68,.12)',border:'1px solid rgba(239,68,68,.25)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:20 }}>🚫</div>
+                <div>
+                  <div style={{ fontSize:14,fontWeight:700,color:'#f87171',marginBottom:3 }}>Subscription Paused</div>
+                  <div style={{ fontSize:12,color:'rgba(248,113,113,.65)',lineHeight:1.5 }}>Your reseller subscription has been paused by the owner. Your referral link is disabled — customers will see an error. Contact the owner to resume.</div>
+                </div>
+              </div>
+            )}
+
             {/* ── Tab navigation ── */}
             <div style={{ display:'flex', gap:4, padding:'4px', background:'rgba(255,255,255,.025)', borderRadius:14, border:'1px solid rgba(255,255,255,.07)', backdropFilter:'blur(12px)' }}>
               {([
@@ -1229,6 +1253,84 @@ Pay 1% of your weekly sales revenue each week to keep your reseller subscription
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* ── Custom Panel Pricing ── */}
+                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(251,191,36,.03)', border:'1px solid rgba(255,255,255,.07)' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+                    <div style={{ width:36,height:36,borderRadius:11,background:'rgba(251,191,36,.1)',border:'1px solid rgba(251,191,36,.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16 }}>💰</div>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>Custom Panel Prices</div>
+                      <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>Override default prices for customers using your link</div>
+                    </div>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                    {[
+                      { key:'price_internal_3d',  label:'Internal 3 Days',  default:3  },
+                      { key:'price_internal_7d',  label:'Internal 7 Days',  default:7  },
+                      { key:'price_internal_30d', label:'Internal 30 Days', default:15 },
+                      { key:'price_combo_7d',     label:'Combo 7 Days',     default:10 },
+                      { key:'price_combo_30d',    label:'Combo 30 Days',    default:20 },
+                      { key:'price_lag_7d',       label:'Fake Lag 7 Days',  default:5  },
+                      { key:'price_lag_30d',      label:'Fake Lag 30 Days', default:10 },
+                    ].map(({ key, label, default: def }) => (
+                      <div key={key}>
+                        <div style={{ fontSize:10, color:'rgba(255,255,255,.38)', marginBottom:5, fontWeight:600 }}>{label} <span style={{ color:'rgba(255,255,255,.2)' }}>(default ${def})</span></div>
+                        <div style={{ position:'relative' }}>
+                          <span style={{ position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,.4)',fontSize:13,fontWeight:700,pointerEvents:'none' }}>$</span>
+                          <input
+                            type="number" min="0.01" step="0.01"
+                            value={(payMethods as any)[key] || ''}
+                            onChange={e => setPayMethods(p => ({ ...p, [key]: e.target.value ? parseFloat(e.target.value) : undefined }))}
+                            placeholder={String(def)}
+                            style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'9px 10px 9px 24px',color:'#fff',fontSize:13,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}
+                            onFocus={e=>{e.currentTarget.style.borderColor='rgba(251,191,36,.35)';}}
+                            onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize:10, color:'rgba(255,255,255,.25)', marginTop:10, lineHeight:1.5 }}>Leave blank to use the default price. Customers using your ref link will see your custom prices.</div>
+                </div>
+
+
+                {/* ── Custom Panel Pricing ── */}
+                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(251,191,36,.03)', border:'1px solid rgba(255,255,255,.07)' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+                    <div style={{ width:36,height:36,borderRadius:11,background:'rgba(251,191,36,.1)',border:'1px solid rgba(251,191,36,.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16 }}>💰</div>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>Custom Panel Prices</div>
+                      <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>Override default prices for customers using your link</div>
+                    </div>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                    {([
+                      { key:'price_internal_3d',  label:'Internal 3 Days',  def:3  },
+                      { key:'price_internal_7d',  label:'Internal 7 Days',  def:7  },
+                      { key:'price_internal_30d', label:'Internal 30 Days', def:15 },
+                      { key:'price_combo_7d',     label:'Combo 7 Days',     def:10 },
+                      { key:'price_combo_30d',    label:'Combo 30 Days',    def:20 },
+                      { key:'price_lag_7d',       label:'Fake Lag 7 Days',  def:5  },
+                      { key:'price_lag_30d',      label:'Fake Lag 30 Days', def:10 },
+                    ] as const).map(({ key, label, def }) => (
+                      <div key={key}>
+                        <div style={{ fontSize:10, color:'rgba(255,255,255,.38)', marginBottom:5, fontWeight:600 }}>{label} <span style={{ color:'rgba(255,255,255,.2)' }}>(default ${def})</span></div>
+                        <div style={{ position:'relative' }}>
+                          <span style={{ position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,.4)',fontSize:13,fontWeight:700,pointerEvents:'none' }}>$</span>
+                          <input type="number" min="0.01" step="0.01"
+                            value={(payMethods as any)[key] || ''}
+                            onChange={e => setPayMethods((p:any) => ({ ...p, [key]: e.target.value ? parseFloat(e.target.value) : undefined }))}
+                            placeholder={String(def)}
+                            style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'9px 10px 9px 24px',color:'#fff',fontSize:13,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}
+                            onFocus={e=>{e.currentTarget.style.borderColor='rgba(251,191,36,.35)';}}
+                            onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize:10, color:'rgba(255,255,255,.25)', marginTop:10, lineHeight:1.5 }}>Leave blank to use default price. Customers via your ref link see your custom prices.</div>
                 </div>
 
                 {/* Save button */}

@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
         {
           success: false,
           message: 'MY_WALLET must be a valid phone number for the topup API',
-          currentValuePreview: walletSetting.value.slice(0, 24),
+          currentValuePreview: resolvedWalletValue.slice(0, 24),
         },
         500,
       );

@@ -882,6 +882,7 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
   const [submitting, setSubmitting] = useState(false);
   const [qrZoom, setQrZoom] = useState(false);
   const [resellerMethods, setResellerMethods] = useState<ResellerPaymentMethods | null>(null);
+  const resellerPaused = !!(resellerMethods as any)?._paused;
 
   // Fetch reseller's custom payment details when ref is active
   useEffect(() => {
@@ -893,9 +894,11 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
     });
   }, [referralEmail]);
 
+  const resellerPaused = !!(resellerMethods as any)?._paused;
+
   // Build effective payment methods — override with reseller's details when available
   const effectivePaymentMethods = PAYMENT_METHODS.map(m => {
-    if (!resellerMethods) return m;
+    if (!resellerMethods || resellerPaused) return m;
     if (m.id === 'binance' && resellerMethods.binance_enabled && resellerMethods.binance_pay_id) {
       return { ...m, fields:[{label:'Pay ID', value:resellerMethods.binance_pay_id, note:'Binance Pay ID'}], qr:resellerMethods.binance_qr_url||m.qr };
     }
@@ -938,8 +941,19 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
 
   return (
     <>
+      {/* Reseller paused banner */}
+      {resellerPaused && (
+        <div style={{ padding:'16px', borderRadius:14, background:'rgba(239,68,68,.08)', border:'1px solid rgba(239,68,68,.25)', marginBottom:14, display:'flex', alignItems:'center', gap:12 }}>
+          <span style={{ fontSize:22, flexShrink:0 }}>🚫</span>
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:'#f87171', marginBottom:3 }}>Reseller Subscription Paused</div>
+            <div style={{ fontSize:11, color:'rgba(248,113,113,.6)', lineHeight:1.5 }}>This reseller's subscription has been paused. Please contact them or purchase directly from the main shop.</div>
+          </div>
+        </div>
+      )}
+
       {/* Reseller shop banner */}
-      {resellerMethods?.shop_name && (
+      {!resellerPaused && resellerMethods?.shop_name && (
         <div style={{ padding:'10px 16px', borderRadius:13, background:'rgba(139,92,246,.08)', border:'1px solid rgba(139,92,246,.18)', marginBottom:14, display:'flex', alignItems:'center', gap:10 }}>
           <span style={{ fontSize:16 }}>🏪</span>
           <div>
@@ -1331,6 +1345,8 @@ export default function WalletPage() {
   const [myTxns, setMyTxns] = useState<any[]>([]);
   const [activeReferral, setActiveReferral] = useState('');
   const [txnsLoad, setTxnsLoad] = useState(false);
+  const [pageResellerMethods, setPageResellerMethods] = useState<ResellerPaymentMethods | null>(null);
+  const [pageResellerMethods, setPageResellerMethods] = useState<ResellerPaymentMethods | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState<{ product: any; keys: Array<{ key: string; panelId: string; panelName: string; expiresAt: string }> } | null>(null);
   const [confirmPending, setConfirmPending] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<'products'|'deposit'|'history'>('products');
@@ -1377,6 +1393,12 @@ export default function WalletPage() {
     void resolveActiveReferral();
     return () => { cancelled = true; };
   }, [normalizedUserEmail]);
+
+  // Fetch reseller methods at page level for products tab paused check + custom pricing
+  useEffect(() => {
+    if (!activeReferral) { setPageResellerMethods(null); return; }
+    fetchResellerPaymentMethods(supabase, activeReferral).then(m => setPageResellerMethods(m ?? null));
+  }, [activeReferral]);
 
   useEffect(() => {
     if (!user || canApprove || isSupport) return;
@@ -1648,11 +1670,33 @@ export default function WalletPage() {
                 </div>
               </div>
             </div>
-                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:18, alignItems:'stretch' }}>
-              {PANEL_GROUPS.map(group=>(
-                <PanelProductCard key={group.id} group={group} balance={balance} onBuy={(p)=>setConfirmPending(p)} onAddBalance={() => setActiveTab('deposit')}/>
-              ))}
-            </div>
+                    {/* Paused reseller link error */}
+              {(pageResellerMethods as any)?._paused && (
+                <div style={{ padding:'28px 24px', borderRadius:20, background:'rgba(239,68,68,.07)', border:'1px solid rgba(239,68,68,.22)', textAlign:'center', margin:'8px 0' }}>
+                  <div style={{ fontSize:36, marginBottom:12 }}>🚫</div>
+                  <div style={{ fontSize:16, fontWeight:700, color:'#f87171', marginBottom:6 }}>Reseller Subscription Paused</div>
+                  <div style={{ fontSize:13, color:'rgba(248,113,113,.6)', lineHeight:1.6 }}>This reseller's subscription has been paused or ended.<br/>Please contact them or visit the shop directly.</div>
+                </div>
+              )}
+              {!(pageResellerMethods as any)?._paused && (
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:18, alignItems:'stretch' }}>
+                  {PANEL_GROUPS.map(group => {
+                    // Apply reseller custom pricing if set
+                    const rm = pageResellerMethods as any;
+                    const effectiveGroup = rm ? {
+                      ...group,
+                      plans: group.plans.map(p => {
+                        const key = `price_${p.id.replace('-','_')}` as string;
+                        const customPrice = rm[key];
+                        return customPrice && customPrice > 0 ? { ...p, price: customPrice } : p;
+                      })
+                    } : group;
+                    return (
+                      <PanelProductCard key={group.id} group={effectiveGroup as any} balance={balance} onBuy={(p)=>setConfirmPending(p)} onAddBalance={() => setActiveTab('deposit')}/>
+                    );
+                  })}
+                </div>
+              )}
             <div style={{ marginTop:20, display:'flex', alignItems:'center', justifyContent:'center', gap:20, flexWrap:'wrap', padding:'14px 0', borderTop:'1px solid rgba(255,255,255,.05)' }}>
               {['🔑 Key delivered instantly','🔒 Secured by KeyAuth','🔄 HWID resets included','💬 24/7 support'].map(item=>(
                 <span key={item} style={{ fontSize:11, color:'rgba(255,255,255,.28)', fontWeight:500 }}>{item}</span>

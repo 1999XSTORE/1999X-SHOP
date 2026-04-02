@@ -76,6 +76,15 @@ export interface ResellerPaymentMethods {
   truewallet_enabled?: boolean;
   truewallet_number?: string;
   referral_code?: string;
+  _paused?: boolean;
+  // Custom panel pricing
+  price_internal_3d?: number;
+  price_internal_7d?: number;
+  price_internal_30d?: number;
+  price_combo_7d?: number;
+  price_combo_30d?: number;
+  price_lag_7d?: number;
+  price_lag_30d?: number;
 }
 
 export async function fetchResellerPaymentMethods(
@@ -94,6 +103,15 @@ export async function fetchResellerPaymentMethods(
       .eq('referral_code', val)
       .maybeSingle();
     if (byCode) {
+      // Check subscription status
+      const { data: subRow } = await supabase
+        .from('reseller_subscriptions')
+        .select('status')
+        .eq('user_id', byCode.user_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (subRow?.status === 'paused') return { _paused: true } as ResellerPaymentMethods;
       console.log('[Reseller] Found via referral_code:', val);
       return byCode;
     }
@@ -122,6 +140,19 @@ export async function fetchResellerPaymentMethods(
   if (!accRow?.user_id) {
     console.log('[Reseller] Not found for:', val);
     return null;
+  }
+
+  // Check subscription status — if paused, block the ref link
+  const { data: subRow } = await supabase
+    .from('reseller_subscriptions')
+    .select('status')
+    .eq('user_id', accRow.user_id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (subRow?.status === 'paused') {
+    return { _paused: true } as ResellerPaymentMethods;
   }
 
   const { data } = await supabase
