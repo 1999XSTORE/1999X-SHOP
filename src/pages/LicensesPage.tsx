@@ -206,8 +206,8 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
             {isInternal ? <Shield size={19} color={accent}/> : <Zap size={19} color={accent}/>}
           </div>
           <div>
-            <div style={{ fontSize:15,fontWeight:700,color:'#fff',letterSpacing:'-.01em',lineHeight:1.2 }}>
-              {isInternal ? '1999X Internal Panel' : '1999X Fake Lag Panel'}
+            <div style={{ fontSize:12,fontWeight:800,color:'#fff',letterSpacing:'.06em',lineHeight:1.2,textTransform:'uppercase' }}>
+              {isInternal ? '1999X — INTERNAL PANEL' : '1999X — FAKE LAG PANEL'}
             </div>
             <div style={{ display:'flex',alignItems:'center',gap:6,marginTop:3 }}>
               <div style={{ width:6,height:6,borderRadius:'50%',background:isExpired?'#f87171':'#4ade80',boxShadow:`0 0 ${isExpired?'6px #f87171':'8px rgba(74,222,128,.7)'}`,animation:isExpired?'none':'lc-live 2s ease-in-out infinite' }}/>

@@ -255,157 +255,115 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
   const isActive = !!row && new Date(row.expires_at).getTime()>Date.now();
 
   return (
-    <div className="px-panel" style={{ animationDelay:`${animDelay}ms` }}>
-      <div className="px-glow" style={{ opacity:.8, background:`radial-gradient(ellipse at 85% 0%, ${panelEnabled?'rgba(124,92,255,.28)':'rgba(239,68,68,.18)'} 0%, transparent 55%)` }}/>
-      <div style={{ position:'absolute',top:-50,left:-30,width:200,height:200,borderRadius:'50%',background:`radial-gradient(circle,${panelEnabled?'rgba(124,92,255,.1)':'rgba(239,68,68,.06)'} 0%,transparent 65%)`,animation:'px-orb 11s ease-in-out infinite reverse',pointerEvents:'none' }}/>
-
+    <div className="px-panel" style={{ animationDelay:`${animDelay}ms`, padding:'22px 22px' }}>
+      <div className="px-glow" style={{ opacity:.6, background:`radial-gradient(ellipse at 80% 0%,${panelEnabled?'rgba(124,92,255,.22)':'rgba(239,68,68,.14)'} 0%,transparent 60%)` }}/>
       <div style={{ position:'relative' }}>
-        {/* ── Header row ── */}
-        <div style={{ display:'flex',alignItems:'center',gap:13,marginBottom:18 }}>
-          <div style={{ width:48,height:48,borderRadius:15,flexShrink:0,
-            background:`linear-gradient(135deg,${panelEnabled?'rgba(124,92,255,.25),rgba(109,40,217,.08)':'rgba(239,68,68,.2),rgba(185,28,28,.06)'})`,
-            border:`1px solid ${panelEnabled?'rgba(124,92,255,.3)':'rgba(239,68,68,.25)'}`,
-            display:'flex',alignItems:'center',justifyContent:'center',
-            boxShadow:`0 0 22px ${panelEnabled?'rgba(124,92,255,.22)':'rgba(239,68,68,.16)'}` }}>
-            <Zap size={22} color={panelEnabled?'#a78bfa':'#f87171'}/>
+
+        {/* Header */}
+        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18 }}>
+          <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+            <div style={{ width:38,height:38,borderRadius:12,background:panelEnabled?'rgba(124,92,255,.1)':'rgba(239,68,68,.1)',border:`1px solid ${panelEnabled?'rgba(124,92,255,.22)':'rgba(239,68,68,.2)'}`,display:'flex',alignItems:'center',justifyContent:'center' }}>
+              <Zap size={17} color={panelEnabled?'#a78bfa':'#f87171'}/>
+            </div>
+            <div>
+              <div style={{ fontSize:14,fontWeight:700,color:'#fff',letterSpacing:'-.01em' }}>Free Panel Trial</div>
+              <div style={{ fontSize:10,color:'rgba(255,255,255,.3)',marginTop:1 }}>Every 48h · Internal + Fake Lag</div>
+            </div>
           </div>
-          <div style={{ flex:1,minWidth:0 }}>
-            <div style={{ fontSize:16,fontWeight:700,color:'#fff',letterSpacing:'-.01em',lineHeight:1 }}>Free Panel Trial</div>
-            <div style={{ fontSize:11,color:'rgba(255,255,255,.3)',marginTop:3 }}>Every 2 days · Internal + Fake Lag keys</div>
-          </div>
-          {/* Status pill */}
-          <div style={{ display:'inline-flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:99,
-            background:panelEnabled?'rgba(34,197,94,.08)':'rgba(239,68,68,.08)',
-            border:`1px solid ${panelEnabled?'rgba(34,197,94,.22)':'rgba(239,68,68,.22)'}`,flexShrink:0 }}>
-            <span style={{ width:6,height:6,borderRadius:'50%',background:panelEnabled?'#22c55e':'#ef4444',display:'inline-block',
-              boxShadow:`0 0 7px ${panelEnabled?'#22c55e':'#ef4444'}` }}/>
-            <span style={{ fontSize:9,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',
-              color:panelEnabled?'#4ade80':'#f87171' }}>
-              {panelEnabled?'Online':'Off'}
-            </span>
+          <div style={{ display:'flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:99,background:panelEnabled?'rgba(34,197,94,.07)':'rgba(239,68,68,.07)',border:`1px solid ${panelEnabled?'rgba(34,197,94,.2)':'rgba(239,68,68,.2)'}` }}>
+            <span style={{ width:5,height:5,borderRadius:'50%',background:panelEnabled?'#4ade80':'#f87171',boxShadow:`0 0 6px ${panelEnabled?'#4ade80':'#f87171'}`,animation:panelEnabled?'px-live 2s ease-in-out infinite':'none' }}/>
+            <span style={{ fontSize:9,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:panelEnabled?'#4ade80':'#f87171' }}>{panelEnabled?'Online':'Off'}</span>
           </div>
         </div>
 
-        {/* ── What you get strip ── */}
-        <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:16 }}>
-          {[
-            { icon:'⚡', label:'Fake Lag Key', sub:'Anti-lag panel', col:'rgba(167,139,250,.12)', bc:'rgba(167,139,250,.18)', tc:'#c4b5fd' },
-            { icon:'🔒', label:'Internal Key', sub:'Internal panel',  col:'rgba(124,92,255,.1)',  bc:'rgba(124,92,255,.2)',  tc:'#a78bfa' },
-          ].map(f=>(
-            <div key={f.label} style={{ padding:'10px 12px',borderRadius:12,background:f.col,border:`1px solid ${f.bc}`,display:'flex',alignItems:'center',gap:9 }}>
-              <span style={{ fontSize:16 }}>{f.icon}</span>
-              <div>
-                <div style={{ fontSize:12,fontWeight:700,color:f.tc,lineHeight:1 }}>{f.label}</div>
-                <div style={{ fontSize:10,color:'rgba(255,255,255,.28)',marginTop:2 }}>{f.sub}</div>
-              </div>
+        {/* Key badges */}
+        <div style={{ display:'flex',gap:8,marginBottom:16 }}>
+          {[{e:'⚡',l:'Fake Lag',c:'rgba(167,139,250,.08)',bc:'rgba(167,139,250,.15)',tc:'#c4b5fd'},{e:'🔒',l:'Internal',c:'rgba(124,92,255,.07)',bc:'rgba(124,92,255,.16)',tc:'#a78bfa'}].map(f=>(
+            <div key={f.l} style={{ flex:1,display:'flex',alignItems:'center',gap:7,padding:'9px 11px',borderRadius:11,background:f.c,border:`1px solid ${f.bc}` }}>
+              <span style={{ fontSize:14 }}>{f.e}</span>
+              <div style={{ fontSize:11,fontWeight:700,color:f.tc }}>{f.l}</div>
             </div>
           ))}
         </div>
 
-        {/* ── Owner control ── */}
+        {/* Owner toggle */}
         {userIsOwner && (
-          <div style={{ marginBottom:14,padding:'11px 14px',borderRadius:13,
-            background:panelEnabled?'rgba(34,197,94,.05)':'rgba(239,68,68,.05)',
-            border:`1px solid ${panelEnabled?'rgba(34,197,94,.16)':'rgba(239,68,68,.18)'}`,
-            display:'flex',alignItems:'center',justifyContent:'space-between',gap:10 }}>
-            <div>
-              <div style={{ fontSize:11,fontWeight:700,color:'#fff' }}>{panelEnabled?'Panel Active':'Panel Stopped'}</div>
-              <div style={{ fontSize:10,color:'rgba(255,255,255,.28)',marginTop:1 }}>
-                {panelEnabled?'All users can claim':'Disabled for everyone'}
-              </div>
-            </div>
-            <button onClick={togglePanel} disabled={togglingPanel}
-              style={{ display:'flex',alignItems:'center',gap:6,padding:'7px 14px',borderRadius:10,
-                background:panelEnabled?'rgba(239,68,68,.1)':'rgba(34,197,94,.1)',
-                border:`1px solid ${panelEnabled?'rgba(239,68,68,.25)':'rgba(34,197,94,.25)'}`,
-                cursor:togglingPanel?'not-allowed':'pointer',fontFamily:'inherit',fontSize:11,fontWeight:700,
-                color:panelEnabled?'#f87171':'#4ade80',transition:'all .18s',opacity:togglingPanel?.6:1,
-                flexShrink:0 }}
-              onMouseEnter={e=>{if(!togglingPanel)e.currentTarget.style.filter='brightness(1.2)';}}
-              onMouseLeave={e=>{e.currentTarget.style.filter='none';}}>
-              {togglingPanel?<Loader2 size={12} className="animate-spin"/>
-                :panelEnabled?<><span>⏸</span>Stop</>:<><span>▶</span>Resume</>}
+          <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderRadius:12,background:panelEnabled?'rgba(34,197,94,.04)':'rgba(239,68,68,.04)',border:`1px solid ${panelEnabled?'rgba(34,197,94,.14)':'rgba(239,68,68,.14)'}`,marginBottom:14 }}>
+            <div style={{ fontSize:11,fontWeight:600,color:'rgba(255,255,255,.6)' }}>{panelEnabled?'Panel active for all users':'Panel stopped'}</div>
+            <button onClick={togglePanel} disabled={togglingPanel} style={{ display:'flex',alignItems:'center',gap:5,padding:'5px 11px',borderRadius:8,background:panelEnabled?'rgba(239,68,68,.08)':'rgba(34,197,94,.08)',border:`1px solid ${panelEnabled?'rgba(239,68,68,.2)':'rgba(34,197,94,.2)'}`,cursor:'pointer',fontFamily:'inherit',fontSize:10,fontWeight:700,color:panelEnabled?'#f87171':'#4ade80',opacity:togglingPanel?.6:1 }}>
+              {togglingPanel?<Loader2 size={11} className="animate-spin"/>:panelEnabled?'Stop':'Resume'}
             </button>
           </div>
         )}
 
-        {/* ── Disabled notice (non-owner) ── */}
+        {/* Disabled notice */}
         {!panelEnabled && !userIsOwner && (
-          <div style={{ marginBottom:14,padding:'11px 14px',borderRadius:13,background:'rgba(239,68,68,.05)',border:'1px solid rgba(239,68,68,.16)',display:'flex',alignItems:'center',gap:9 }}>
-            <span style={{ fontSize:18 }}>🚫</span>
-            <div>
-              <div style={{ fontSize:12,fontWeight:700,color:'#f87171' }}>Temporarily Unavailable</div>
-              <div style={{ fontSize:10,color:'rgba(255,255,255,.28)',marginTop:1 }}>The owner has paused the free panel</div>
+          <div style={{ display:'flex',alignItems:'center',gap:8,padding:'10px 12px',borderRadius:12,background:'rgba(239,68,68,.05)',border:'1px solid rgba(239,68,68,.14)',marginBottom:14 }}>
+            <span style={{ fontSize:14 }}>🚫</span>
+            <div style={{ fontSize:11,fontWeight:600,color:'#f87171' }}>Temporarily paused by owner</div>
+          </div>
+        )}
+
+        {/* Active trial countdown */}
+        {isActive && row && (
+          <div style={{ padding:'13px 16px',borderRadius:13,background:'rgba(124,92,255,.07)',border:'1px solid rgba(124,92,255,.16)',marginBottom:12 }}>
+            <div style={{ fontSize:9,color:'rgba(167,139,250,.55)',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',marginBottom:5 }}>Trial Active — Expires In</div>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+              <div style={{ fontSize:26,fontWeight:700,color:'#a78bfa',fontFamily:'monospace',letterSpacing:'.02em' }}>
+                <LiveClock ms={new Date(row.expires_at).getTime()}/>
+              </div>
+              <span className="px-live-dot" style={{ width:7,height:7 }}/>
             </div>
           </div>
         )}
 
-        {/* ── Active trial ── */}
-        {isActive && row ? (
-          <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
-            <div style={{ padding:'16px 18px',borderRadius:16,background:'rgba(124,92,255,.08)',border:'1px solid rgba(124,92,255,.2)',position:'relative',overflow:'hidden' }}>
-              <div style={{ position:'absolute',inset:0,background:'linear-gradient(135deg,rgba(124,92,255,.07) 0%,transparent 55%)',pointerEvents:'none' }}/>
-              <div style={{ fontSize:9,color:'rgba(167,139,250,.65)',fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',marginBottom:6 }}>Trial Active — Expires In</div>
-              <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
-                <div style={{ fontSize:38,fontWeight:700,color:'#a78bfa',fontFamily:'monospace',letterSpacing:'.03em',lineHeight:1 }}>
-                  <LiveClock ms={new Date(row.expires_at).getTime()}/>
-                </div>
-                <div style={{ display:'inline-flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:99,background:'rgba(34,197,94,.1)',border:'1px solid rgba(34,197,94,.22)' }}>
-                  <span className="px-live-dot" style={{ width:6,height:6 }}/>
-                  <span style={{ fontSize:9,fontWeight:700,letterSpacing:'.1em',color:'#4ade80',textTransform:'uppercase' }}>Active</span>
-                </div>
-              </div>
-            </div>
-            <button onClick={()=>setRevealed(!revealed)}
-              style={{ padding:'12px 16px',borderRadius:13,
-                background:revealed?'rgba(124,92,255,.1)':'rgba(255,255,255,.04)',
-                border:`1px solid ${revealed?'rgba(124,92,255,.25)':'rgba(255,255,255,.08)'}`,
-                cursor:'pointer',color:revealed?'#c4b5fd':'rgba(255,255,255,.55)',
-                fontSize:13,fontFamily:'inherit',fontWeight:600,display:'flex',alignItems:'center',
-                gap:7,justifyContent:'center',transition:'all .2s' }}
-              onMouseEnter={e=>{e.currentTarget.style.background='rgba(124,92,255,.12)';e.currentTarget.style.borderColor='rgba(124,92,255,.28)';e.currentTarget.style.color='#c4b5fd';}}
-              onMouseLeave={e=>{e.currentTarget.style.background=revealed?'rgba(124,92,255,.1)':'rgba(255,255,255,.04)';e.currentTarget.style.borderColor=revealed?'rgba(124,92,255,.25)':'rgba(255,255,255,.08)';e.currentTarget.style.color=revealed?'#c4b5fd':'rgba(255,255,255,.55)';}}>
-              {revealed?<EyeOff size={14}/>:<Eye size={14}/>}
-              {revealed?'Hide My Keys':'View My Keys'}
+        {/* View keys toggle */}
+        {isActive && row && (
+          <>
+            <button onClick={()=>setRevealed(!revealed)} style={{ width:'100%',padding:'10px',borderRadius:12,background:revealed?'rgba(124,92,255,.08)':'rgba(255,255,255,.03)',border:`1px solid ${revealed?'rgba(124,92,255,.2)':'rgba(255,255,255,.07)'}`,cursor:'pointer',color:revealed?'#c4b5fd':'rgba(255,255,255,.45)',fontSize:12,fontFamily:'inherit',fontWeight:600,display:'flex',alignItems:'center',gap:6,justifyContent:'center',transition:'all .18s',marginBottom:8 }}
+              onMouseEnter={e=>{e.currentTarget.style.background='rgba(124,92,255,.1)';}} onMouseLeave={e=>{e.currentTarget.style.background=revealed?'rgba(124,92,255,.08)':'rgba(255,255,255,.03)';}}>
+              {revealed?<EyeOff size={13}/>:<Eye size={13}/>} {revealed?'Hide Keys':'View My Keys'}
             </button>
             {revealed && (
-              <div style={{ display:'flex',flexDirection:'column',gap:7 }}>
-                {row.lag_key&&<div style={{ padding:'10px 14px',borderRadius:12,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)' }}>
-                  <div style={{ fontSize:8,color:'rgba(255,255,255,.28)',fontWeight:700,marginBottom:4,letterSpacing:'.12em',textTransform:'uppercase' }}>⚡ Fake Lag Key</div>
-                  <code style={{ fontSize:11,color:'rgba(196,181,253,.8)',fontFamily:'monospace',wordBreak:'break-all' }}>{row.lag_key}</code>
+              <div style={{ display:'flex',flexDirection:'column',gap:6,marginBottom:12 }}>
+                {row.lag_key&&<div style={{ padding:'9px 13px',borderRadius:11,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)' }}>
+                  <div style={{ fontSize:8,color:'rgba(255,255,255,.25)',fontWeight:700,marginBottom:3,letterSpacing:'.1em',textTransform:'uppercase' }}>⚡ Fake Lag</div>
+                  <code style={{ fontSize:11,color:'rgba(196,181,253,.75)',fontFamily:'monospace',wordBreak:'break-all' }}>{row.lag_key}</code>
                 </div>}
-                {row.internal_key&&<div style={{ padding:'10px 14px',borderRadius:12,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)' }}>
-                  <div style={{ fontSize:8,color:'rgba(255,255,255,.28)',fontWeight:700,marginBottom:4,letterSpacing:'.12em',textTransform:'uppercase' }}>🔒 Internal Key</div>
-                  <code style={{ fontSize:11,color:'rgba(167,139,250,.8)',fontFamily:'monospace',wordBreak:'break-all' }}>{row.internal_key}</code>
+                {row.internal_key&&<div style={{ padding:'9px 13px',borderRadius:11,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)' }}>
+                  <div style={{ fontSize:8,color:'rgba(255,255,255,.25)',fontWeight:700,marginBottom:3,letterSpacing:'.1em',textTransform:'uppercase' }}>🔒 Internal</div>
+                  <code style={{ fontSize:11,color:'rgba(167,139,250,.75)',fontFamily:'monospace',wordBreak:'break-all' }}>{row.internal_key}</code>
                 </div>}
               </div>
             )}
-          </div>
-        ) : panelEnabled && canClaim ? (
-          <button onClick={handleClaim} disabled={generating} className="px-btn px-btn-full">
-            {generating?<><Loader2 size={15} className="animate-spin"/>Generating keys…</>:<><Zap size={15}/>Claim Free Trial</>}
-          </button>
-        ) : panelEnabled && !canClaim ? (
-          <div style={{ padding:'16px 18px',borderRadius:16,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)',textAlign:'center' }}>
-            <div style={{ fontSize:9,color:'rgba(255,255,255,.25)',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',marginBottom:8 }}>Next Free Trial In</div>
-            <div style={{ fontSize:34,fontWeight:700,color:'rgba(167,139,250,.5)',fontFamily:'monospace',letterSpacing:'.04em',lineHeight:1 }}>
-              <LiveClock ms={cooldownMs}/>
-            </div>
-            <div style={{ fontSize:10,color:'rgba(255,255,255,.18)',marginTop:6 }}>Come back when the timer hits 00:00:00</div>
-          </div>
-        ) : (
-          <button disabled className="px-btn px-btn-full" style={{ opacity:.35,cursor:'not-allowed',animation:'none' }}>
-            <Zap size={15}/> Free Trial Disabled
+          </>
+        )}
+
+        {/* Claim / cooldown button */}
+        {(!isActive || !row) && (
+          <button onClick={handleClaim} disabled={!canClaim||generating||!panelEnabled} className="px-btn px-btn-full">
+            {generating
+              ? <><Loader2 size={13} style={{ animation:'px-spin 1s linear infinite' }}/>Generating…</>
+              : canClaim && panelEnabled
+                ? <><Zap size={13}/>Get Free Trial</>
+                : !panelEnabled
+                  ? <>🚫 Unavailable</>
+                  : <><Clock size={12}/> Ready in <LiveClock ms={cooldownMs}/></>}
           </button>
         )}
+
+        {isActive && (
+          <button onClick={handleClaim} disabled={!canClaim||generating} className="px-btn px-btn-full" style={{ opacity:.5 }}>
+            <Clock size={12}/> Next in <LiveClock ms={new Date(row!.claimed_at).getTime()+FREE_KEY_COOLDOWN}/>
+          </button>
+        )}
+
       </div>
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════
-   MAIN PAGE
-═══════════════════════════════════════════════════════════ */
+
 export default function DashboardPage() {
   const { t } = useTranslation();
   const { balance, licenses, transactions, user, systemStatus } = useAppStore();
@@ -868,132 +826,71 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── ANTIBAN chip — slim banner ── */}
-        <div className="px-panel" style={{ padding:'16px 24px', marginBottom:18, animationDelay:'260ms' as any }}>
-          <div className="px-glow" style={{ opacity:.5, background:'radial-gradient(ellipse at 50% 50%,rgba(245,158,11,.08) 0%,transparent 65%)' }}/>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', position:'relative' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-              <div style={{ width:40,height:40,borderRadius:13,background:'rgba(245,158,11,.1)',border:'1px solid rgba(245,158,11,.2)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
-                <Shield size={18} color="#fbbf24"/>
-              </div>
-              <div>
-                <div style={{ fontSize:13,fontWeight:700,color:'#fff',letterSpacing:'-.01em' }}>Antiban OB52 — Protected</div>
-                <div style={{ fontSize:11,color:'rgba(255,255,255,.3)',marginTop:2 }}>Fully undetected · Updated for latest patch</div>
-              </div>
-            </div>
-            <div style={{ display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:99,background:'rgba(245,158,11,.1)',border:'1px solid rgba(245,158,11,.2)',flexShrink:0 }}>
-              <span style={{ width:6,height:6,borderRadius:'50%',background:'#fbbf24',display:'inline-block',boxShadow:'0 0 8px #f59e0b' }}/>
-              <span style={{ fontSize:10,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',color:'#fbbf24' }}>Active</span>
-            </div>
-          </div>
-        </div>
+
 
         {/* ══ BOTTOM ROW: Daily Bonus · Free Trial ══ */}
         <div className="px-grid px-bot">
 
           {/* ── DAILY BONUS ── */}
-          <div className="px-panel" style={{ animationDelay:'340ms' as any }}>
-            <div className="px-glow" style={{ opacity:.8, background:'radial-gradient(ellipse at 15% 0%,rgba(124,92,255,.3) 0%,transparent 55%)' }}/>
-            <div style={{ position:'absolute',top:-50,right:-30,width:200,height:200,borderRadius:'50%',background:'radial-gradient(circle,rgba(139,92,246,.12) 0%,transparent 65%)',animation:'px-orb 9s ease-in-out infinite',pointerEvents:'none' }}/>
+          <div className="px-panel" style={{ animationDelay:'340ms' as any, padding:'22px 22px' }}>
+            <div className="px-glow" style={{ opacity:.6, background:'radial-gradient(ellipse at 20% 0%,rgba(124,92,255,.25) 0%,transparent 60%)' }}/>
             <div style={{ position:'relative' }}>
 
-              {/* ── Top: icon + label + redeem ── */}
-              <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20 }}>
-                <div style={{ display:'flex',alignItems:'center',gap:12 }}>
-                  <div style={{ width:46,height:46,borderRadius:15,background:'linear-gradient(135deg,rgba(167,139,250,.22),rgba(109,40,217,.08))',border:'1px solid rgba(167,139,250,.28)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 22px rgba(139,92,246,.22)',flexShrink:0 }}>
-                    <Gift size={20} color="#c4b5fd"/>
+              {/* Header */}
+              <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18 }}>
+                <div style={{ display:'flex',alignItems:'center',gap:10 }}>
+                  <div style={{ width:38,height:38,borderRadius:12,background:'rgba(167,139,250,.1)',border:'1px solid rgba(167,139,250,.2)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                    <Gift size={17} color="#c4b5fd"/>
                   </div>
                   <div>
-                    <div style={{ fontSize:16,fontWeight:700,color:'#fff',letterSpacing:'-.01em',lineHeight:1 }}>Daily Bonus</div>
-                    <div style={{ fontSize:11,color:'rgba(255,255,255,.32)',marginTop:3 }}>+10 pts every 24h · resets daily</div>
+                    <div style={{ fontSize:14,fontWeight:700,color:'#fff',letterSpacing:'-.01em' }}>Daily Bonus</div>
+                    <div style={{ fontSize:10,color:'rgba(255,255,255,.3)',marginTop:1 }}>+10 pts · resets every 24h</div>
                   </div>
                 </div>
-                {bonusPoints>=100 ? (
-                  <button onClick={()=>setShowRewardModal(true)}
-                    style={{ display:'flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:11,
-                      background:'linear-gradient(135deg,rgba(167,139,250,.2),rgba(124,92,255,.1))',
-                      border:'1px solid rgba(167,139,250,.35)',cursor:'pointer',fontFamily:'inherit',
-                      fontSize:12,fontWeight:700,color:'#c4b5fd',whiteSpace:'nowrap',transition:'all .18s',
-                      boxShadow:'0 0 18px rgba(139,92,246,.2)' }}
-                    onMouseEnter={e=>{e.currentTarget.style.background='linear-gradient(135deg,rgba(167,139,250,.32),rgba(124,92,255,.18))';e.currentTarget.style.boxShadow='0 0 28px rgba(139,92,246,.4)';}}
-                    onMouseLeave={e=>{e.currentTarget.style.background='linear-gradient(135deg,rgba(167,139,250,.2),rgba(124,92,255,.1))';e.currentTarget.style.boxShadow='0 0 18px rgba(139,92,246,.2)';}}>
-                    <Star size={12}/> Redeem Now
-                  </button>
-                ) : (
-                  <div style={{ textAlign:'right' }}>
-                    <div style={{ fontSize:10,color:'rgba(255,255,255,.25)',fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase' }}>Next reward</div>
-                    <div style={{ fontSize:13,fontWeight:700,color:'rgba(167,139,250,.6)',marginTop:2 }}>{100-bonusPoints} pts away</div>
-                  </div>
-                )}
+                {bonusPoints>=100
+                  ? <button onClick={()=>setShowRewardModal(true)} style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 13px',borderRadius:99,background:'rgba(167,139,250,.14)',border:'1px solid rgba(167,139,250,.3)',cursor:'pointer',fontFamily:'inherit',fontSize:11,fontWeight:700,color:'#c4b5fd',transition:'all .18s' }}
+                      onMouseEnter={e=>{e.currentTarget.style.background='rgba(167,139,250,.24)';}}
+                      onMouseLeave={e=>{e.currentTarget.style.background='rgba(167,139,250,.14)';}}>
+                      <Star size={10}/> Redeem
+                    </button>
+                  : <span style={{ fontSize:11,fontWeight:600,color:'rgba(167,139,250,.5)' }}>{100-bonusPoints} pts to go</span>
+                }
               </div>
 
-              {/* ── Reward info strip ── */}
-              <div style={{ display:'grid',gridTemplateColumns:'1fr 1px 1fr',alignItems:'center',padding:'12px 16px',borderRadius:14,background:'rgba(167,139,250,.06)',border:'1px solid rgba(167,139,250,.12)',marginBottom:20 }}>
-                <div style={{ textAlign:'center' }}>
-                  <div style={{ fontSize:9,color:'rgba(255,255,255,.3)',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',marginBottom:4 }}>100 Points</div>
-                  <div style={{ fontSize:18,fontWeight:700,color:'#c4b5fd' }}>= $3 Free</div>
-                  <div style={{ fontSize:10,color:'rgba(255,255,255,.25)',marginTop:2 }}>wallet credit</div>
-                </div>
-                <div style={{ width:1,height:36,background:'rgba(167,139,250,.15)' }}/>
-                <div style={{ textAlign:'center' }}>
-                  <div style={{ fontSize:9,color:'rgba(255,255,255,.3)',fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',marginBottom:4 }}>100 Points</div>
-                  <div style={{ fontSize:18,fontWeight:700,color:'#a78bfa' }}>= 3-Day Key</div>
-                  <div style={{ fontSize:10,color:'rgba(255,255,255,.25)',marginTop:2 }}>free license</div>
-                </div>
-              </div>
-
-              {/* ── Points + progress ── */}
-              <div style={{ marginBottom:20 }}>
-                <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10 }}>
-                  <div style={{ display:'flex',alignItems:'baseline',gap:6 }}>
-                    <span style={{ fontSize:52,fontWeight:700,letterSpacing:'-.06em',lineHeight:1,
-                      background:'linear-gradient(135deg,#fff 0%,rgba(196,181,253,.85) 100%)',
-                      WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>
-                      {bonusPoints}
-                    </span>
-                    <span style={{ fontSize:15,color:'rgba(255,255,255,.28)',fontWeight:600 }}>/ 100 pts</span>
+              {/* Points counter + bar */}
+              <div style={{ marginBottom:16 }}>
+                <div style={{ display:'flex',alignItems:'baseline',justifyContent:'space-between',marginBottom:8 }}>
+                  <div style={{ display:'flex',alignItems:'baseline',gap:5 }}>
+                    <span style={{ fontSize:42,fontWeight:700,letterSpacing:'-.05em',lineHeight:1,background:'linear-gradient(135deg,#fff,rgba(196,181,253,.8))',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>{bonusPoints}</span>
+                    <span style={{ fontSize:13,color:'rgba(255,255,255,.25)',fontWeight:600 }}>/ 100</span>
                   </div>
                   {bonusPoints>=100
-                    ? <div style={{ display:'flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:99,background:'rgba(167,139,250,.12)',border:'1px solid rgba(167,139,250,.28)' }}>
-                        <span style={{ fontSize:12 }}>🎁</span>
-                        <span style={{ fontSize:10,fontWeight:700,color:'#c4b5fd',letterSpacing:'.06em',textTransform:'uppercase' }}>Redeemable!</span>
-                      </div>
-                    : <span style={{ fontSize:11,color:'rgba(255,255,255,.22)',fontWeight:600 }}>{progressPct}%</span>
+                    ? <span style={{ fontSize:10,fontWeight:700,color:'#c4b5fd' }}>🎁 Ready!</span>
+                    : <span style={{ fontSize:10,color:'rgba(255,255,255,.2)' }}>{progressPct}%</span>
                   }
                 </div>
-                {/* Segmented progress bar */}
-                <div style={{ position:'relative',height:8,borderRadius:99,background:'rgba(255,255,255,.06)',overflow:'hidden' }}>
-                  <div style={{
-                    height:'100%',borderRadius:99,
-                    background:'linear-gradient(90deg,#7c3aed,#9d6eff,#c4b5fd)',
-                    boxShadow:'0 0 14px rgba(167,139,250,.55)',
-                    width:`${Math.min(progressPct===0&&bonusPoints>=100?100:progressPct,100)}%`,
-                    animation:'px-bar 1s cubic-bezier(.22,1,.36,1) both',
-                    '--bw':`${Math.min(progressPct===0&&bonusPoints>=100?100:progressPct,100)}%`,
-                    position:'relative',overflow:'hidden',
-                    transition:'width .4s cubic-bezier(.22,1,.36,1)'
-                  } as any}>
-                    <div style={{ position:'absolute',top:0,bottom:0,width:'50%',background:'linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent)',animation:'px-shi 2.4s ease-in-out infinite' }}/>
-                  </div>
-                  {/* 10 segment markers */}
-                  {[10,20,30,40,50,60,70,80,90].map(p=>(
-                    <div key={p} style={{ position:'absolute',top:0,bottom:0,left:`${p}%`,width:1,background:'rgba(0,0,0,.3)',pointerEvents:'none' }}/>
-                  ))}
-                </div>
-                <div style={{ display:'flex',justifyContent:'space-between',marginTop:5 }}>
-                  <span style={{ fontSize:9,color:'rgba(255,255,255,.2)',fontWeight:600 }}>0</span>
-                  <span style={{ fontSize:9,color:'rgba(167,139,250,.5)',fontWeight:700 }}>50</span>
-                  <span style={{ fontSize:9,color:'rgba(255,255,255,.35)',fontWeight:700 }}>100 🎁</span>
+                <div style={{ height:5,borderRadius:99,background:'rgba(255,255,255,.06)',overflow:'hidden',position:'relative' }}>
+                  <div style={{ height:'100%',borderRadius:99,background:'linear-gradient(90deg,#7c3aed,#c4b5fd)',width:`${Math.min(progressPct===0&&bonusPoints>=100?100:progressPct,100)}%`,boxShadow:'0 0 10px rgba(167,139,250,.5)',transition:'width .5s cubic-bezier(.22,1,.36,1)' }}/>
                 </div>
               </div>
 
-              {/* ── Claim button ── */}
+              {/* Rewards */}
+              <div style={{ display:'flex',gap:8,marginBottom:16 }}>
+                {[{v:'$3',l:'Wallet Credit'},{v:'3-Day',l:'Free Key'}].map(r=>(
+                  <div key={r.v} style={{ flex:1,padding:'9px 12px',borderRadius:11,background:'rgba(167,139,250,.05)',border:'1px solid rgba(167,139,250,.1)',textAlign:'center' }}>
+                    <div style={{ fontSize:15,fontWeight:700,color:'#c4b5fd',lineHeight:1,marginBottom:2 }}>{r.v}</div>
+                    <div style={{ fontSize:9,color:'rgba(255,255,255,.28)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.08em' }}>{r.l}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Claim button */}
               <button onClick={handleClaimBonus} disabled={!canClaimBonus||claimingBonus} className="px-btn px-btn-full">
                 {claimingBonus
-                  ? <><Loader2 size={14} style={{ animation:'px-spin 1s linear infinite' }}/>Claiming…</>
+                  ? <><Loader2 size={13} style={{ animation:'px-spin 1s linear infinite' }}/>Claiming…</>
                   : canClaimBonus
-                    ? <><Sparkles size={14}/>Claim +10 Points</>
-                    : <><Clock size={13}/> Next claim in {bonusCooldown}</>}
+                    ? <><Sparkles size={13}/>Claim +10 Points</>
+                    : <><Clock size={12}/> {bonusCooldown}</>}
               </button>
             </div>
           </div>
