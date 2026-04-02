@@ -886,7 +886,11 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
   // Fetch reseller's custom payment details when ref is active
   useEffect(() => {
     if (!referralEmail) { setResellerMethods(null); return; }
-    fetchResellerPaymentMethods(supabase, referralEmail).then(m => setResellerMethods(m ?? null));
+    console.log('[Reseller] Fetching payment methods for:', referralEmail);
+    fetchResellerPaymentMethods(supabase, referralEmail).then(m => {
+      console.log('[Reseller] Payment methods result:', m);
+      setResellerMethods(m ?? null);
+    });
   }, [referralEmail]);
 
   // Build effective payment methods — override with reseller's details when available
@@ -1362,8 +1366,29 @@ export default function WalletPage() {
         setActiveReferral('');
         return;
       }
-      const { data } = await safeQuery(() => supabase.rpc('resolve_referral', { p_ref: rawReferral }));
-      const resolvedEmail = normalizeResellerEmail(String(data ?? ''));
+      let resolvedEmail = '';
+
+      // Try RPC first
+      const { data: rpcData } = await safeQuery(() => supabase.rpc('resolve_referral', { p_ref: rawReferral }));
+      resolvedEmail = normalizeResellerEmail(String(rpcData ?? ''));
+
+      // Fallback: if RPC fails or returns empty, look up reseller_accounts directly
+      if (!resolvedEmail) {
+        const isEmail = rawReferral.includes('@');
+        const { data: accData } = await safeQuery(() =>
+          supabase.from('reseller_accounts')
+            .select('email')
+            .eq(isEmail ? 'email' : 'referral_code', rawReferral)
+            .maybeSingle()
+        );
+        resolvedEmail = normalizeResellerEmail(String(accData?.email ?? ''));
+      }
+
+      // Fallback 2: treat the raw value itself as an email if it looks like one
+      if (!resolvedEmail && rawReferral.includes('@')) {
+        resolvedEmail = rawReferral;
+      }
+
       if (cancelled) return;
       if (!resolvedEmail || resolvedEmail === normalizedUserEmail) {
         clearStoredReferralEmail();
