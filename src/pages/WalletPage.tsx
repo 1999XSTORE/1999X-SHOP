@@ -894,7 +894,6 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
     });
   }, [referralEmail]);
 
-  const resellerPaused = !!(resellerMethods as any)?._paused;
 
   // Build effective payment methods — override with reseller's details when available
   const effectivePaymentMethods = PAYMENT_METHODS.map(m => {
@@ -1345,7 +1344,6 @@ export default function WalletPage() {
   const [myTxns, setMyTxns] = useState<any[]>([]);
   const [activeReferral, setActiveReferral] = useState('');
   const [txnsLoad, setTxnsLoad] = useState(false);
-  const [pageResellerMethods, setPageResellerMethods] = useState<ResellerPaymentMethods | null>(null);
   const [pageResellerMethods, setPageResellerMethods] = useState<ResellerPaymentMethods | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState<{ product: any; keys: Array<{ key: string; panelId: string; panelName: string; expiresAt: string }> } | null>(null);
   const [confirmPending, setConfirmPending] = useState<any | null>(null);
