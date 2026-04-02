@@ -54,3 +54,60 @@ export function buildReferralLink(email: string) {
   if (!clean || typeof window === 'undefined') return '';
   return `${window.location.origin}/pay?ref=${encodeURIComponent(clean)}`;
 }
+
+// ── Reseller payment method helpers ─────────────────────────
+export interface ResellerPaymentMethods {
+  id?: string;
+  user_id?: string;
+  user_email?: string;
+  shop_name?: string;
+  binance_enabled?: boolean;
+  binance_pay_id?: string;
+  binance_qr_url?: string;
+  bkash_enabled?: boolean;
+  bkash_number?: string;
+  bkash_qr_url?: string;
+  usdt_trc20_enabled?: boolean;
+  usdt_trc20_address?: string;
+  usdt_trc20_qr_url?: string;
+  usdt_bep20_enabled?: boolean;
+  usdt_bep20_address?: string;
+  usdt_bep20_qr_url?: string;
+  truewallet_enabled?: boolean;
+  truewallet_number?: string;
+}
+
+export async function fetchResellerPaymentMethods(
+  supabase: any,
+  referralEmailOrCode: string
+): Promise<ResellerPaymentMethods | null> {
+  if (!referralEmailOrCode) return null;
+  const isEmail = referralEmailOrCode.includes('@');
+  let userId: string | null = null;
+
+  if (isEmail) {
+    const { data } = await supabase
+      .from('reseller_accounts')
+      .select('user_id')
+      .eq('email', referralEmailOrCode.toLowerCase())
+      .maybeSingle();
+    userId = data?.user_id ?? null;
+  } else {
+    const { data } = await supabase
+      .from('reseller_accounts')
+      .select('user_id')
+      .eq('referral_code', referralEmailOrCode.toLowerCase())
+      .maybeSingle();
+    userId = data?.user_id ?? null;
+  }
+
+  if (!userId) return null;
+
+  const { data } = await supabase
+    .from('reseller_payment_methods')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  return data ?? null;
+}

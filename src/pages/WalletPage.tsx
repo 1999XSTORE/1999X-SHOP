@@ -5,7 +5,8 @@ import { ArrowRight, ArrowLeft, RefreshCw, Users, Check, X, Copy, CheckCircle, L
 import { safeQuery } from '@/lib/safeFetch';
 import { logActivity, notifyUser } from '@/lib/activity';
 import { cn } from '@/lib/utils';
-import { captureReferralFromUrl, getStoredReferralEmail, normalizeReferralValue, normalizeResellerEmail, clearStoredReferralEmail } from '@/lib/reseller';
+import { captureReferralFromUrl, getStoredReferralEmail, normalizeReferralValue, normalizeResellerEmail, clearStoredReferralEmail, fetchResellerPaymentMethods } from '@/lib/reseller';
+import type { ResellerPaymentMethods } from '@/lib/reseller';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { canApprovePayments, isOwner } from '@/lib/roles';
@@ -858,7 +859,7 @@ function PanelProductCard({ group, balance, onBuy, onAddBalance }: { group: type
             {t('shop.addBalanceToBuy', 'Add Balance To Buy')} <ArrowRight size={15}/>
           </button>
         )}
-        </div>
+
       </div>
     </div>
   );
@@ -879,9 +880,34 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
   const [email, setEmail] = useState(user?.email || '');
   const [submitting, setSubmitting] = useState(false);
   const [qrZoom, setQrZoom] = useState(false);
+  const [resellerMethods, setResellerMethods] = useState<ResellerPaymentMethods | null>(null);
+
+  // Fetch reseller's custom payment details when ref is active
+  useEffect(() => {
+    if (!referralEmail) { setResellerMethods(null); return; }
+    fetchResellerPaymentMethods(supabase, referralEmail).then(m => setResellerMethods(m ?? null));
+  }, [referralEmail]);
+
+  // Build effective payment methods — override with reseller's details when available
+  const effectivePaymentMethods = PAYMENT_METHODS.map(m => {
+    if (!resellerMethods) return m;
+    if (m.id === 'binance' && resellerMethods.binance_enabled && resellerMethods.binance_pay_id) {
+      return { ...m, fields:[{label:'Pay ID', value:resellerMethods.binance_pay_id, note:'Binance Pay ID'}], qr:resellerMethods.binance_qr_url||m.qr };
+    }
+    if (m.id === 'bkash' && resellerMethods.bkash_enabled && resellerMethods.bkash_number) {
+      return { ...m, fields:[{label:'Number', value:resellerMethods.bkash_number, note:'Send Money (not Payment)'}], qr:resellerMethods.bkash_qr_url||m.qr };
+    }
+    if (m.id === 'usdt_trc20' && resellerMethods.usdt_trc20_enabled && resellerMethods.usdt_trc20_address) {
+      return { ...m, fields:[{label:'TRC20 Address', value:resellerMethods.usdt_trc20_address, note:'Tron network only'}], qr:resellerMethods.usdt_trc20_qr_url||m.qr };
+    }
+    if (m.id === 'usdt_bep20' && resellerMethods.usdt_bep20_enabled && resellerMethods.usdt_bep20_address) {
+      return { ...m, fields:[{label:'BEP20 Address', value:resellerMethods.usdt_bep20_address, note:'BSC network only'}], qr:resellerMethods.usdt_bep20_qr_url||m.qr };
+    }
+    return m;
+  });
 
   const selAmount = custom ? parseFloat(custom)||0 : amount;
-  const selMethod = PAYMENT_METHODS.find(m=>m.id===methodId) ?? PAYMENT_METHODS[0];
+  const selMethod = effectivePaymentMethods.find(m=>m.id===methodId) ?? effectivePaymentMethods[0];
   const lc = localAmt(selAmount, methodId);
   const lcValue = localAmtValue(selAmount, methodId);
 
@@ -899,32 +925,6 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
     } else {
       toast.success('✅ Submitted! Admin will approve shortly.');
       logActivity({userId:user.id,userEmail:email.trim(),userName:user.name,action:'payment_submit',amount:selAmount,status:'success',meta:{method:methodId,txnId:txnId.trim()||'paypal-auto'}});
-      
-      const webhookUrl = (import.meta as any).env?.VITE_DISCORD_WEBHOOK_URL;
-      if (webhookUrl) {
-        fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content: '@zubohh',
-            embeds: [
-              {
-                author: { name: '1999X eCommerce Platform' },
-                title: 'Balance Add Requested',
-                color: 3066993,
-                fields: [
-                  { name: 'User Name', value: user.name || 'Unknown', inline: false },
-                  { name: 'Amount', value: `$${selAmount.toFixed(2)}`, inline: true },
-                  { name: 'Gateway', value: selMethod.label, inline: true },
-                  { name: 'Transaction ID', value: txnId.trim(), inline: false },
-                  { name: 'User Email', value: email.trim(), inline: false }
-                ]
-              }
-            ]
-          })
-        }).catch(err => console.error('Webhook payload failed:', err));
-      }
-
       setStep(1); setTxnId(''); setCustom('');
       onSuccess();
     }
@@ -933,6 +933,16 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
 
   return (
     <>
+      {/* Reseller shop banner */}
+      {resellerMethods?.shop_name && (
+        <div style={{ padding:'10px 16px', borderRadius:13, background:'rgba(139,92,246,.08)', border:'1px solid rgba(139,92,246,.18)', marginBottom:14, display:'flex', alignItems:'center', gap:10 }}>
+          <span style={{ fontSize:16 }}>🏪</span>
+          <div>
+            <div style={{ fontSize:12, fontWeight:700, color:'#c4b5fd' }}>{resellerMethods.shop_name}</div>
+            <div style={{ fontSize:10, color:'rgba(255,255,255,.35)', marginTop:1 }}>Powered by 1999X · Authorized Reseller</div>
+          </div>
+        </div>
+      )}
       {qrZoom && selMethod.hasQr && selMethod.qr && !selMethod.qr.startsWith('YOUR_') && (
         <QRZoomModal src={selMethod.qr} onClose={()=>setQrZoom(false)}/>
       )}
@@ -1149,7 +1159,7 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
             <div className="ab-border-r" style={{ padding:'22px 20px', borderRight:'1px solid rgba(255,255,255,.05)' }}>
               <div className="ab-section">
                 <div className="ab-section-title" style={{ paddingBottom:14 }}>Payment Method</div>
-                {PAYMENT_METHODS.map(m=>{
+                {effectivePaymentMethods.map(m=>{
                   const active = methodId===m.id;
                   return (
                     <button key={m.id} className={`ab-method${active?' ab-m-on':''}`}

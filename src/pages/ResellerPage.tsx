@@ -4,8 +4,9 @@ import { supabase } from '@/lib/supabase';
 import { safeQuery } from '@/lib/safeFetch';
 import { logActivity } from '@/lib/activity';
 import { buildReferralLink, sanitizeReferralCode, normalizeResellerEmail, captureReferralFromUrl, getStoredReferralEmail, normalizeReferralValue, clearStoredReferralEmail } from '@/lib/reseller';
+import type { ResellerPaymentMethods } from '@/lib/reseller';
 import { isOwner } from '@/lib/roles';
-import { Copy, CheckCircle, Loader2, ArrowRight, TrendingUp, DollarSign, Link2, ChevronDown, Wallet, Users, BarChart3, ExternalLink, RefreshCw } from 'lucide-react';
+import { Copy, CheckCircle, Loader2, ArrowRight, TrendingUp, DollarSign, Link2, ChevronDown, Wallet, Users, BarChart3, ExternalLink, RefreshCw, Settings, CreditCard, ShoppingBag, Check, X, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const SUPABASE_URL  = 'https://awjouzwzdkrevvnlenvn.supabase.co';
@@ -286,6 +287,11 @@ export default function ResellerPage() {
   const [feeDue, setFeeDue] = useState(0);
   const [referralCode, setReferralCode] = useState('');
   const [referralInput, setReferralInput] = useState('');
+  const [resellerTab, setResellerTab] = useState<'overview'|'transactions'|'payments'>('overview');
+  const [payMethods, setPayMethods] = useState<ResellerPaymentMethods>({});
+  const [savingPayMethods, setSavingPayMethods] = useState(false);
+  const [customerTxns, setCustomerTxns] = useState<any[]>([]);
+  const [customerTxnsLoading, setCustomerTxnsLoading] = useState(false);
   const [savingCode, setSavingCode] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showFeePayment, setShowFeePayment] = useState(false);
@@ -341,6 +347,25 @@ export default function ResellerPage() {
     );
 
     const code = accData?.referral_code || sanitizeReferralCode(user.email.split('@')[0] || '');
+
+    // Load reseller's payment methods
+    const { data: pmData } = await safeQuery(() =>
+      supabase.from('reseller_payment_methods').select('*').eq('user_id', user.id).maybeSingle()
+    );
+    if (pmData) setPayMethods(pmData);
+
+    // Load customer transactions (transactions where referral_email matches their code or email)
+    const refEmail = user.email.toLowerCase();
+    const refCode  = code.toLowerCase();
+    const { data: custTxnData } = await safeQuery(() =>
+      supabase.from('transactions')
+        .select('id,user_id,user_email,user_name,amount,method,transaction_id,status,note,created_at,referral_email')
+        .or(`referral_email.eq.${refEmail},referral_email.eq.${refCode}`)
+        .order('created_at', { ascending: false })
+        .limit(50)
+    );
+    setCustomerTxns(custTxnData ?? []);
+
     setResellerWallet(walletData ?? null);
     setResellerTxns(txnData ?? []);
     setWithdrawReqs(wdData ?? []);
@@ -474,6 +499,42 @@ export default function ResellerPage() {
     setReferralCode(next);
     setReferralInput(next);
     toast.success('Referral code updated!');
+  };
+
+  const savePaymentMethods = async () => {
+    if (!user?.id) return;
+    setSavingPayMethods(true);
+    const { error } = await safeQuery(() =>
+      supabase.from('reseller_payment_methods').upsert(
+        { ...payMethods, user_id: user.id, user_email: user.email, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+    );
+    if (error) toast.error('Failed to save: ' + error.message);
+    else toast.success('Payment methods saved!');
+    setSavingPayMethods(false);
+  };
+
+  const approveCustomerTxn = async (tx: any) => {
+    const { error } = await safeQuery(() =>
+      supabase.from('transactions').update({ status:'approved', updated_at: new Date().toISOString() }).eq('id', tx.id)
+    );
+    if (error) { toast.error('Failed: ' + error.message); return; }
+    // Credit the user's balance
+    await safeQuery(() =>
+      supabase.rpc('apply_reseller_credit', { p_transaction_id: tx.id })
+    );
+    setCustomerTxns(p => p.map(t => t.id === tx.id ? { ...t, status:'approved' } : t));
+    toast.success(`✅ Approved $${tx.amount} for ${tx.user_name || tx.user_email}`);
+  };
+
+  const rejectCustomerTxn = async (tx: any) => {
+    const { error } = await safeQuery(() =>
+      supabase.from('transactions').update({ status:'rejected', updated_at: new Date().toISOString() }).eq('id', tx.id)
+    );
+    if (error) { toast.error('Failed: ' + error.message); return; }
+    setCustomerTxns(p => p.map(t => t.id === tx.id ? { ...t, status:'rejected' } : t));
+    toast.success('Transaction rejected');
   };
 
   const referralLink = referralCode ? buildReferralLink(referralCode) : '';
@@ -857,6 +918,27 @@ export default function ResellerPage() {
               </div>
             </div>
 
+            {/* ── Tab navigation ── */}
+            <div style={{ display:'flex', gap:4, padding:'4px', background:'rgba(255,255,255,.025)', borderRadius:14, border:'1px solid rgba(255,255,255,.07)', backdropFilter:'blur(12px)' }}>
+              {([
+                { id:'overview',     label:'Overview',         icon:<BarChart3 size={13}/> },
+                { id:'transactions', label:'Customer Txns',    icon:<ShoppingBag size={13}/> },
+                { id:'payments',     label:'Payment Settings', icon:<CreditCard size={13}/> },
+              ] as const).map(tab => (
+                <button key={tab.id} onClick={() => setResellerTab(tab.id)}
+                  style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:7,
+                    padding:'10px 8px', borderRadius:11, fontFamily:'inherit', fontSize:12, fontWeight:700, cursor:'pointer',
+                    border: resellerTab===tab.id ? '1px solid rgba(139,92,246,.3)' : '1px solid transparent',
+                    background: resellerTab===tab.id ? 'linear-gradient(135deg,rgba(109,40,217,.22),rgba(139,92,246,.08))' : 'transparent',
+                    color: resellerTab===tab.id ? '#c4b5fd' : 'rgba(255,255,255,.4)',
+                    transition:'all .18s' }}>
+                  {tab.icon} {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {resellerTab === 'overview' && (
+              <>
             {/* ── Stats row ── */}
             <div className="rs-stats-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14 }}>
               {[
@@ -998,7 +1080,300 @@ export default function ResellerPage() {
                   </div>
                 )}
               </div>
-            </div>
+
+              </>
+            )}
+
+            {/* ══ TRANSACTIONS TAB ══════════════════════════ */}
+            {resellerTab === 'transactions' && (
+              <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                  <div>
+                    <div style={{ fontSize:18, fontWeight:700, color:'#fff', letterSpacing:'-.02em' }}>Customer Transactions</div>
+                    <div style={{ fontSize:12, color:'rgba(255,255,255,.35)', marginTop:3 }}>Transactions from your referral link — approve or reject</div>
+                  </div>
+                  <button onClick={loadDashboard} disabled={dashLoading}
+                    style={{ display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:11,background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.09)',cursor:'pointer',color:'rgba(255,255,255,.45)',fontFamily:'inherit',fontSize:12,fontWeight:600 }}>
+                    <RefreshCw size={12} className={dashLoading ? 'animate-spin' : ''}/> Refresh
+                  </button>
+                </div>
+
+                {/* Filter stats */}
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
+                  {[
+                    { label:'Pending',  val:customerTxns.filter(t=>t.status==='pending').length,  color:'#fbbf24', bg:'rgba(251,191,36,.07)',  bc:'rgba(251,191,36,.15)' },
+                    { label:'Approved', val:customerTxns.filter(t=>t.status==='approved').length, color:'#4ade80', bg:'rgba(34,197,94,.07)',   bc:'rgba(34,197,94,.14)' },
+                    { label:'Total $',  val:`$${customerTxns.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount),0).toFixed(2)}`, color:'#a78bfa', bg:'rgba(167,139,250,.07)', bc:'rgba(167,139,250,.16)' },
+                  ].map(s => (
+                    <div key={s.label} style={{ padding:'14px 16px', borderRadius:16, background:s.bg, border:`1px solid ${s.bc}`, position:'relative', overflow:'hidden' }}>
+                      <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${s.color}40,transparent)` }}/>
+                      <div style={{ fontSize:9,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(255,255,255,.38)',marginBottom:5 }}>{s.label}</div>
+                      <div style={{ fontSize:26,fontWeight:700,color:s.color,letterSpacing:'-.04em',lineHeight:1 }}>{s.val}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Transaction list */}
+                {customerTxns.length === 0 ? (
+                  <div style={{ padding:'48px 20px', textAlign:'center', borderRadius:20, background:'rgba(255,255,255,.02)', border:'1px dashed rgba(255,255,255,.08)' }}>
+                    <div style={{ fontSize:32, marginBottom:12 }}>📭</div>
+                    <div style={{ fontSize:14, fontWeight:600, color:'rgba(255,255,255,.35)' }}>No transactions yet</div>
+                    <div style={{ fontSize:12, color:'rgba(255,255,255,.2)', marginTop:4 }}>Share your referral link to start receiving customer deposits</div>
+                  </div>
+                ) : (
+                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                    {customerTxns.map(tx => {
+                      const isPending  = tx.status === 'pending';
+                      const isApproved = tx.status === 'approved';
+                      const isRejected = tx.status === 'rejected';
+                      const statusColor = isApproved ? '#4ade80' : isRejected ? '#f87171' : '#fbbf24';
+                      const statusBg    = isApproved ? 'rgba(34,197,94,.08)'  : isRejected ? 'rgba(239,68,68,.08)' : 'rgba(251,191,36,.08)';
+                      const statusBc    = isApproved ? 'rgba(34,197,94,.18)'  : isRejected ? 'rgba(239,68,68,.18)' : 'rgba(251,191,36,.18)';
+                      return (
+                        <div key={tx.id} style={{ padding:'16px 18px', borderRadius:18, background:'rgba(255,255,255,.025)', border:'1px solid rgba(255,255,255,.07)', position:'relative', overflow:'hidden' }}>
+                          <div style={{ position:'absolute',top:0,left:0,width:3,bottom:0,background:statusColor,borderRadius:'3px 0 0 3px' }}/>
+                          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
+                            {/* Left */}
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:5 }}>
+                                <span style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{tx.user_name || tx.user_email}</span>
+                                <span style={{ fontSize:8, fontWeight:700, padding:'2px 8px', borderRadius:99, background:statusBg, border:`1px solid ${statusBc}`, color:statusColor, textTransform:'uppercase', letterSpacing:'.08em' }}>{tx.status}</span>
+                              </div>
+                              <div style={{ display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
+                                <span style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>📧 {tx.user_email}</span>
+                                <span style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>💳 {tx.method}</span>
+                                {tx.transaction_id && <span style={{ fontSize:10, fontFamily:'monospace', color:'rgba(255,255,255,.3)', background:'rgba(255,255,255,.04)', padding:'2px 7px', borderRadius:6, border:'1px solid rgba(255,255,255,.07)' }}>{tx.transaction_id.slice(0,20)}{tx.transaction_id.length>20?'…':''}</span>}
+                                <span style={{ fontSize:10, color:'rgba(255,255,255,.28)' }}>{new Date(tx.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
+                              </div>
+                            </div>
+                            {/* Amount */}
+                            <div style={{ textAlign:'right', flexShrink:0 }}>
+                              <div style={{ fontSize:20, fontWeight:700, color:'#fff', letterSpacing:'-.03em' }}>${Number(tx.amount).toFixed(2)}</div>
+                              {isPending && (
+                                <div style={{ display:'flex', gap:6, marginTop:8, justifyContent:'flex-end' }}>
+                                  <button onClick={() => rejectCustomerTxn(tx)}
+                                    style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:9,background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.22)',cursor:'pointer',fontFamily:'inherit',fontSize:11,fontWeight:700,color:'#f87171',transition:'all .15s' }}
+                                    onMouseEnter={e=>{e.currentTarget.style.background='rgba(239,68,68,.2)';}}
+                                    onMouseLeave={e=>{e.currentTarget.style.background='rgba(239,68,68,.1)';}}>
+                                    <X size={11}/> Reject
+                                  </button>
+                                  <button onClick={() => approveCustomerTxn(tx)}
+                                    style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:9,background:'rgba(34,197,94,.12)',border:'1px solid rgba(34,197,94,.25)',cursor:'pointer',fontFamily:'inherit',fontSize:11,fontWeight:700,color:'#4ade80',transition:'all .15s' }}
+                                    onMouseEnter={e=>{e.currentTarget.style.background='rgba(34,197,94,.22)';}}
+                                    onMouseLeave={e=>{e.currentTarget.style.background='rgba(34,197,94,.12)';}}>
+                                    <Check size={11}/> Approve
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ══ PAYMENT SETTINGS TAB ═══════════════════════ */}
+            {resellerTab === 'payments' && (
+              <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+                <div>
+                  <div style={{ fontSize:18, fontWeight:700, color:'#fff', letterSpacing:'-.02em' }}>Payment Settings</div>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,.35)', marginTop:3 }}>Configure your payment methods — customers using your ref link will see these instead of the owner's</div>
+                </div>
+
+                {/* Shop name */}
+                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(255,255,255,.028)', border:'1px solid rgba(255,255,255,.08)' }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,.5)', textTransform:'uppercase', letterSpacing:'.12em', marginBottom:10 }}>Shop Name (optional)</div>
+                  <input
+                    value={payMethods.shop_name || ''}
+                    onChange={e => setPayMethods(p => ({ ...p, shop_name: e.target.value }))}
+                    placeholder="e.g. ZuboShop · 1999X Reseller"
+                    style={{ width:'100%', background:'rgba(0,0,0,.25)', border:'1px solid rgba(255,255,255,.1)', borderRadius:12, padding:'12px 14px', color:'#fff', fontSize:13, fontFamily:'inherit', outline:'none', boxSizing:'border-box', transition:'border-color .2s' }}
+                    onFocus={e=>{e.currentTarget.style.borderColor='rgba(167,139,250,.35)';}}
+                    onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}
+                  />
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,.28)', marginTop:6 }}>Shown as a banner to customers visiting via your ref link</div>
+                </div>
+
+                {/* Binance Pay */}
+                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(240,185,11,.04)', border:`1px solid ${payMethods.binance_enabled ? 'rgba(240,185,11,.28)' : 'rgba(255,255,255,.07)'}`, transition:'border-color .2s' }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:payMethods.binance_enabled ? 16 : 0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                      <div style={{ width:36, height:36, borderRadius:11, background:'rgba(240,185,11,.12)', border:'1px solid rgba(240,185,11,.22)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>₿</div>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>Binance Pay</div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>Customers pay your Binance Pay ID</div>
+                      </div>
+                    </div>
+                    <button onClick={() => setPayMethods(p => ({ ...p, binance_enabled: !p.binance_enabled }))}
+                      style={{ width:44, height:24, borderRadius:99, background:payMethods.binance_enabled?'#7c3aed':'rgba(255,255,255,.1)', border:`1px solid ${payMethods.binance_enabled?'rgba(124,92,255,.4)':'rgba(255,255,255,.15)'}`, cursor:'pointer', position:'relative', transition:'all .2s', flexShrink:0 }}>
+                      <div style={{ position:'absolute', top:3, left:payMethods.binance_enabled?22:3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,.3)' }}/>
+                    </button>
+                  </div>
+                  {payMethods.binance_enabled && (
+                    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                      <div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>Pay ID *</div>
+                        <input value={payMethods.binance_pay_id || ''} onChange={e=>setPayMethods(p=>({...p,binance_pay_id:e.target.value}))} placeholder="e.g. 1234567890"
+                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:13,fontFamily:'monospace',outline:'none',boxSizing:'border-box' }}
+                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(240,185,11,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
+                      </div>
+                      <div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>QR Code URL (optional)</div>
+                        <input value={payMethods.binance_qr_url || ''} onChange={e=>setPayMethods(p=>({...p,binance_qr_url:e.target.value}))} placeholder="https://... (direct image link)"
+                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}
+                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(240,185,11,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* bKash */}
+                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(226,19,110,.04)', border:`1px solid ${payMethods.bkash_enabled ? 'rgba(226,19,110,.28)' : 'rgba(255,255,255,.07)'}`, transition:'border-color .2s' }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:payMethods.bkash_enabled ? 16 : 0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                      <div style={{ width:36, height:36, borderRadius:11, background:'rgba(226,19,110,.12)', border:'1px solid rgba(226,19,110,.22)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>💳</div>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>bKash</div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>Mobile banking — Bangladesh</div>
+                      </div>
+                    </div>
+                    <button onClick={() => setPayMethods(p => ({ ...p, bkash_enabled: !p.bkash_enabled }))}
+                      style={{ width:44, height:24, borderRadius:99, background:payMethods.bkash_enabled?'#7c3aed':'rgba(255,255,255,.1)', border:`1px solid ${payMethods.bkash_enabled?'rgba(124,92,255,.4)':'rgba(255,255,255,.15)'}`, cursor:'pointer', position:'relative', transition:'all .2s', flexShrink:0 }}>
+                      <div style={{ position:'absolute', top:3, left:payMethods.bkash_enabled?22:3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,.3)' }}/>
+                    </button>
+                  </div>
+                  {payMethods.bkash_enabled && (
+                    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                      <div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>bKash Number *</div>
+                        <input value={payMethods.bkash_number || ''} onChange={e=>setPayMethods(p=>({...p,bkash_number:e.target.value}))} placeholder="e.g. 01XXXXXXXXX"
+                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:13,fontFamily:'monospace',outline:'none',boxSizing:'border-box' }}
+                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(226,19,110,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
+                      </div>
+                      <div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>QR Code URL (optional)</div>
+                        <input value={payMethods.bkash_qr_url || ''} onChange={e=>setPayMethods(p=>({...p,bkash_qr_url:e.target.value}))} placeholder="https://..."
+                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}
+                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(226,19,110,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* USDT TRC20 */}
+                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(38,161,123,.04)', border:`1px solid ${payMethods.usdt_trc20_enabled ? 'rgba(38,161,123,.28)' : 'rgba(255,255,255,.07)'}`, transition:'border-color .2s' }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:payMethods.usdt_trc20_enabled ? 16 : 0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                      <div style={{ width:36, height:36, borderRadius:11, background:'rgba(38,161,123,.12)', border:'1px solid rgba(38,161,123,.22)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>💚</div>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>USDT TRC20</div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>Tron network stablecoin</div>
+                      </div>
+                    </div>
+                    <button onClick={() => setPayMethods(p => ({ ...p, usdt_trc20_enabled: !p.usdt_trc20_enabled }))}
+                      style={{ width:44, height:24, borderRadius:99, background:payMethods.usdt_trc20_enabled?'#7c3aed':'rgba(255,255,255,.1)', border:`1px solid ${payMethods.usdt_trc20_enabled?'rgba(124,92,255,.4)':'rgba(255,255,255,.15)'}`, cursor:'pointer', position:'relative', transition:'all .2s', flexShrink:0 }}>
+                      <div style={{ position:'absolute', top:3, left:payMethods.usdt_trc20_enabled?22:3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,.3)' }}/>
+                    </button>
+                  </div>
+                  {payMethods.usdt_trc20_enabled && (
+                    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                      <div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>TRC20 Wallet Address *</div>
+                        <input value={payMethods.usdt_trc20_address || ''} onChange={e=>setPayMethods(p=>({...p,usdt_trc20_address:e.target.value}))} placeholder="T..."
+                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'monospace',outline:'none',boxSizing:'border-box' }}
+                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(38,161,123,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
+                      </div>
+                      <div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>QR Code URL (optional)</div>
+                        <input value={payMethods.usdt_trc20_qr_url || ''} onChange={e=>setPayMethods(p=>({...p,usdt_trc20_qr_url:e.target.value}))} placeholder="https://..."
+                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}
+                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(38,161,123,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* USDT BEP20 */}
+                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(240,185,11,.03)', border:`1px solid ${payMethods.usdt_bep20_enabled ? 'rgba(240,185,11,.22)' : 'rgba(255,255,255,.07)'}`, transition:'border-color .2s' }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:payMethods.usdt_bep20_enabled ? 16 : 0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                      <div style={{ width:36, height:36, borderRadius:11, background:'rgba(240,185,11,.1)', border:'1px solid rgba(240,185,11,.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>🟡</div>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>USDT BEP20</div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>BNB Smart Chain stablecoin</div>
+                      </div>
+                    </div>
+                    <button onClick={() => setPayMethods(p => ({ ...p, usdt_bep20_enabled: !p.usdt_bep20_enabled }))}
+                      style={{ width:44, height:24, borderRadius:99, background:payMethods.usdt_bep20_enabled?'#7c3aed':'rgba(255,255,255,.1)', border:`1px solid ${payMethods.usdt_bep20_enabled?'rgba(124,92,255,.4)':'rgba(255,255,255,.15)'}`, cursor:'pointer', position:'relative', transition:'all .2s', flexShrink:0 }}>
+                      <div style={{ position:'absolute', top:3, left:payMethods.usdt_bep20_enabled?22:3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,.3)' }}/>
+                    </button>
+                  </div>
+                  {payMethods.usdt_bep20_enabled && (
+                    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                      <div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>BEP20 Wallet Address *</div>
+                        <input value={payMethods.usdt_bep20_address || ''} onChange={e=>setPayMethods(p=>({...p,usdt_bep20_address:e.target.value}))} placeholder="0x..."
+                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'monospace',outline:'none',boxSizing:'border-box' }}
+                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(240,185,11,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
+                      </div>
+                      <div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>QR Code URL (optional)</div>
+                        <input value={payMethods.usdt_bep20_qr_url || ''} onChange={e=>setPayMethods(p=>({...p,usdt_bep20_qr_url:e.target.value}))} placeholder="https://..."
+                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box' }}
+                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(240,185,11,.35)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* TrueWallet */}
+                <div style={{ padding:'20px 22px', borderRadius:20, background:'rgba(249,115,22,.04)', border:`1px solid ${payMethods.truewallet_enabled ? 'rgba(249,115,22,.28)' : 'rgba(255,255,255,.07)'}`, transition:'border-color .2s' }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:payMethods.truewallet_enabled ? 16 : 0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                      <div style={{ width:36, height:36, borderRadius:11, background:'rgba(249,115,22,.12)', border:'1px solid rgba(249,115,22,.22)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>🧧</div>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>TrueWallet AngPao</div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>Voucher redeems into your TrueWallet number</div>
+                      </div>
+                    </div>
+                    <button onClick={() => setPayMethods(p => ({ ...p, truewallet_enabled: !p.truewallet_enabled }))}
+                      style={{ width:44, height:24, borderRadius:99, background:payMethods.truewallet_enabled?'#7c3aed':'rgba(255,255,255,.1)', border:`1px solid ${payMethods.truewallet_enabled?'rgba(124,92,255,.4)':'rgba(255,255,255,.15)'}`, cursor:'pointer', position:'relative', transition:'all .2s', flexShrink:0 }}>
+                      <div style={{ position:'absolute', top:3, left:payMethods.truewallet_enabled?22:3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,.3)' }}/>
+                    </button>
+                  </div>
+                  {payMethods.truewallet_enabled && (
+                    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                      <div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:5 }}>TrueWallet Phone Number *</div>
+                        <input value={(payMethods as any).truewallet_number || ''} onChange={e=>setPayMethods(p=>({...p, truewallet_number:e.target.value}))} placeholder="e.g. 0990160204"
+                          style={{ width:'100%',background:'rgba(0,0,0,.2)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,padding:'10px 12px',color:'#fff',fontSize:14,fontFamily:'monospace',letterSpacing:'2px',outline:'none',boxSizing:'border-box' }}
+                          onFocus={e=>{e.currentTarget.style.borderColor='rgba(249,115,22,.4)';}} onBlur={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,.1)';}}/>
+                        <div style={{ fontSize:10, color:'rgba(255,255,255,.28)', marginTop:5, lineHeight:1.5 }}>
+                          ✅ When a customer uses your ref link and redeems a TrueWallet voucher, the money goes directly to this number — not the owner's.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Save button */}
+                <button onClick={savePaymentMethods} disabled={savingPayMethods}
+                  style={{ padding:'14px', borderRadius:14, border:'none', cursor:savingPayMethods?'not-allowed':'pointer', fontFamily:'inherit', fontSize:14, fontWeight:700, color:'#fff', background:'linear-gradient(135deg,#7c3aed,#6d28d9)', boxShadow:'0 0 28px rgba(109,40,217,.4)', display:'flex', alignItems:'center', justifyContent:'center', gap:8, transition:'all .22s', opacity:savingPayMethods?.6:1 }}>
+                  {savingPayMethods ? <><Loader2 size={15} className="animate-spin"/>Saving…</> : <><Check size={15}/>Save Payment Methods</>}
+                </button>
+
+                {/* Info note */}
+                <div style={{ padding:'12px 16px', borderRadius:14, background:'rgba(139,92,246,.06)', border:'1px solid rgba(139,92,246,.15)', display:'flex', alignItems:'flex-start', gap:10 }}>
+                  <AlertTriangle size={14} color="#a78bfa" style={{ flexShrink:0, marginTop:1 }}/>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,.45)', lineHeight:1.55 }}>
+                    Only enabled methods with valid details will replace the owner's defaults. Customers visiting via other links (or no link) still see the owner's payment methods.
+                  </div>
+                </div>
+              </div>
+            )}            </div>
           </div>
         )}
       </div>

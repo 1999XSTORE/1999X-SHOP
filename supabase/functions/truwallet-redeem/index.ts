@@ -72,15 +72,39 @@ Deno.serve(async (req) => {
 
     if (settingsError || !settingsRows?.length) return json({ success: false, message: 'Payment settings are not configured' }, 500);
 
-    const walletSetting = settingsRows.find((row) => row.key === 'MY_WALLET');
-    if (!walletSetting?.value) return json({ success: false, message: 'MY_WALLET is not configured' }, 500);
+    const ownerWalletSetting = settingsRows.find((row) => row.key === 'MY_WALLET');
+    if (!ownerWalletSetting?.value) return json({ success: false, message: 'MY_WALLET is not configured' }, 500);
 
     const exchangeRate = Number(settingsRows.find((row) => row.key === 'TRUEWALLET_THB_PER_USD')?.value ?? 35);
     if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) {
       return json({ success: false, message: 'TRUEWALLET_THB_PER_USD must be a valid number' }, 500);
     }
 
-    const walletNumber = normalizePhone(walletSetting.value);
+    // ── If referral is active, check if the reseller has their own TrueWallet number ──
+    let resolvedWalletValue = ownerWalletSetting.value;
+    if (referralEmail) {
+      // Resolve referral email/code → user_id via reseller_accounts
+      const { data: accRow } = await admin
+        .from('reseller_accounts')
+        .select('user_id')
+        .or(`email.eq.${referralEmail},referral_code.eq.${referralEmail}`)
+        .maybeSingle();
+
+      if (accRow?.user_id) {
+        const { data: pmRow } = await admin
+          .from('reseller_payment_methods')
+          .select('truewallet_enabled, truewallet_number')
+          .eq('user_id', accRow.user_id)
+          .maybeSingle();
+
+        // Only override if reseller has explicitly enabled TrueWallet and set a number
+        if (pmRow?.truewallet_enabled && pmRow?.truewallet_number?.trim()) {
+          resolvedWalletValue = pmRow.truewallet_number.trim();
+        }
+      }
+    }
+
+    const walletNumber = normalizePhone(resolvedWalletValue);
     if (walletNumber.length < 10 || walletNumber.length > 15) {
       return json(
         {
