@@ -573,9 +573,7 @@ export default function ResellerPage() {
           .rs-plan-option { padding:12px 14px; gap:10px; }
           .rs-buy-btn,
           .rs-copy-btn,
-          .rs-withdraw-btn { width:100%; justify-content:center; }
           .rs-copy-btn,
-          .rs-withdraw-btn { padding:12px 14px; font-size:12px; }
           .rs-link-box,
           .rs-input { padding-top:12px; padding-bottom:12px; font-size:12px; }
           .rs-sales-grid .rs-panel { padding:18px 14px !important; }
@@ -909,7 +907,7 @@ Pay 1% of your weekly sales revenue each week to keep your reseller subscription
               </p>
             </div>
 
-            {/* ── Recent Sales & Withdrawals ── */}
+            {/* ── Recent Sales ── */}
             <div className="rs-sales-grid">
 
               {/* Sales */}
@@ -939,14 +937,6 @@ Pay 1% of your weekly sales revenue each week to keep your reseller subscription
               </div>
 
             </div>
-                        <span style={{ padding:'4px 10px',borderRadius:99,fontSize:10,fontWeight:800,background:r.status==='approved'?'rgba(16,232,152,.1)':r.status==='rejected'?'rgba(248,113,113,.1)':'rgba(251,191,36,.1)',border:`1px solid ${r.status==='approved'?'rgba(16,232,152,.25)':r.status==='rejected'?'rgba(248,113,113,.25)':'rgba(251,191,36,.25)'}`,color:r.status==='approved'?'#10e898':r.status==='rejected'?'#f87171':'#fbbf24',textTransform:'uppercase',letterSpacing:'.06em' }}>
-                          {r.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
               </>
             )}
