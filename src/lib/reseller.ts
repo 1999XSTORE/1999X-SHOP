@@ -75,6 +75,7 @@ export interface ResellerPaymentMethods {
   usdt_bep20_qr_url?: string;
   truewallet_enabled?: boolean;
   truewallet_number?: string;
+  referral_code?: string;
 }
 
 export async function fetchResellerPaymentMethods(
@@ -85,32 +86,48 @@ export async function fetchResellerPaymentMethods(
   const val = referralEmailOrCode.trim().toLowerCase();
   const isEmail = val.includes('@');
 
-  // Strategy 1: look up directly by user_email in reseller_payment_methods
+  // Strategy 1: look up by referral_code directly in reseller_payment_methods
+  if (!isEmail) {
+    const { data: byCode } = await supabase
+      .from('reseller_payment_methods')
+      .select('*')
+      .eq('referral_code', val)
+      .maybeSingle();
+    if (byCode) {
+      console.log('[Reseller] Found via referral_code:', val);
+      return byCode;
+    }
+  }
+
+  // Strategy 2: look up by user_email directly
   if (isEmail) {
-    const { data: direct } = await supabase
+    const { data: byEmail } = await supabase
       .from('reseller_payment_methods')
       .select('*')
       .eq('user_email', val)
       .maybeSingle();
-    if (direct) return direct;
+    if (byEmail) {
+      console.log('[Reseller] Found via user_email:', val);
+      return byEmail;
+    }
   }
 
-  // Strategy 2: resolve via reseller_accounts (email or ref code → user_id)
+  // Strategy 3: resolve via reseller_accounts (fallback)
   const { data: accRow } = await supabase
     .from('reseller_accounts')
     .select('user_id')
-    .or(isEmail
-      ? `email.eq.${val}`
-      : `referral_code.eq.${val}`)
+    .eq(isEmail ? 'email' : 'referral_code', val)
     .maybeSingle();
 
-  const userId = accRow?.user_id ?? null;
-  if (!userId) return null;
+  if (!accRow?.user_id) {
+    console.log('[Reseller] Not found for:', val);
+    return null;
+  }
 
   const { data } = await supabase
     .from('reseller_payment_methods')
     .select('*')
-    .eq('user_id', userId)
+    .eq('user_id', accRow.user_id)
     .maybeSingle();
 
   return data ?? null;

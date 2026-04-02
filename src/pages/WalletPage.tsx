@@ -1359,43 +1359,20 @@ export default function WalletPage() {
 
   useEffect(() => {
     let cancelled = false;
-      const resolveActiveReferral = async () => {
-        const captured = captureReferralFromUrl(user?.email);
-        const rawReferral = normalizeReferralValue(captured || getStoredReferralEmail());
+    const resolveActiveReferral = async () => {
+      const captured = captureReferralFromUrl(user?.email);
+      const rawReferral = normalizeReferralValue(captured || getStoredReferralEmail());
+
       if (!rawReferral || rawReferral === normalizedUserEmail) {
         setActiveReferral('');
         return;
       }
-      let resolvedEmail = '';
 
-      // Try RPC first
-      const { data: rpcData } = await safeQuery(() => supabase.rpc('resolve_referral', { p_ref: rawReferral }));
-      resolvedEmail = normalizeResellerEmail(String(rpcData ?? ''));
-
-      // Fallback: if RPC fails or returns empty, look up reseller_accounts directly
-      if (!resolvedEmail) {
-        const isEmail = rawReferral.includes('@');
-        const { data: accData } = await safeQuery(() =>
-          supabase.from('reseller_accounts')
-            .select('email')
-            .eq(isEmail ? 'email' : 'referral_code', rawReferral)
-            .maybeSingle()
-        );
-        resolvedEmail = normalizeResellerEmail(String(accData?.email ?? ''));
-      }
-
-      // Fallback 2: treat the raw value itself as an email if it looks like one
-      if (!resolvedEmail && rawReferral.includes('@')) {
-        resolvedEmail = rawReferral;
-      }
-
+      // Use rawReferral directly — it may be a ref code (e.g. "jackparkdum01") or email.
+      // fetchResellerPaymentMethods handles both via reseller_accounts + direct user_email lookup.
       if (cancelled) return;
-      if (!resolvedEmail || resolvedEmail === normalizedUserEmail) {
-        clearStoredReferralEmail();
-        setActiveReferral('');
-        return;
-      }
-      setActiveReferral(resolvedEmail);
+      setActiveReferral(rawReferral);
+      console.log('[Reseller] activeReferral set to:', rawReferral);
     };
     void resolveActiveReferral();
     return () => { cancelled = true; };

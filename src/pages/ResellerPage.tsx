@@ -406,6 +406,7 @@ export default function ResellerPage() {
       ...payMethods,
       user_id: user.id,
       user_email: user.email.toLowerCase(),
+      referral_code: referralCode.toLowerCase(),
       updated_at: new Date().toISOString(),
     };
     // Remove undefined/null keys that might cause issues
