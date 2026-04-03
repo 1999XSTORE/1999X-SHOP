@@ -2,14 +2,14 @@ import { logActivity } from '@/lib/activity';
 import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Key, Copy, RefreshCw, Globe, Clock, Shield, CheckCircle, Loader2, AlertCircle, Eye, EyeOff, AlertTriangle, Download, Play, Zap } from 'lucide-react';
+import { MapPin, Key, Copy, RefreshCw, Globe, Clock, Shield, CheckCircle, Loader2, AlertCircle, Eye, EyeOff, AlertTriangle, Download, Play, Zap, Unlink } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEffect, useState, useRef } from 'react';
 import type { License } from '@/lib/store';
 
 const SUPABASE_URL  = 'https://awjouzwzdkrevvnlenvn.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3am91end6ZGtyZXZ2bmxlbnZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTg4MjEsImV4cCI6MjA5MDAzNDgyMX0._I_I-WA_8-YqDfaRzKiVgpEAhkH9faxlEIV6e766A0M';
-const FF_IMAGE      = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1400&q=80';
+const FF_IMAGE      = 'https://www.dropbox.com/scl/fi/0ls7ufwwq1ipwsjvadrzx/How-to-Integrate-Your-Gaming-Achievements-into-Your-Logo.jpg?rlkey=afk3vxk6ijon1htpwhnoy1lnr&st=j5camed9&raw=1';
 const DOWNLOAD_URL  = 'https://www.asuswebstorage.com/navigate/a/#/s/4E1D05A81552402C8D05FCE0E61402A64';
 const TUTORIAL_URL  = 'https://youtu.be/vwUYk589SzU';
 
@@ -125,6 +125,34 @@ function HwidModal({ onConfirm, onCancel }: { onConfirm:()=>void; onCancel:()=>v
   );
 }
 
+/* ── Unlink Modal ── */
+function UnlinkModal({ onConfirm, onCancel }: { onConfirm:()=>void; onCancel:()=>void }) {
+  return (
+    <div style={{ position:'fixed',inset:0,zIndex:60,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.82)',backdropFilter:'blur(20px)',padding:16 }}>
+      <div style={{ width:'100%',maxWidth:360,borderRadius:24,background:'rgba(14,12,28,.98)',border:'1px solid rgba(239,68,68,.22)',boxShadow:'0 0 60px rgba(0,0,0,.8)',padding:'28px 26px' }}>
+        <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:16 }}>
+          <div style={{ width:42,height:42,borderRadius:13,background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.22)',display:'flex',alignItems:'center',justifyContent:'center' }}>
+            <AlertTriangle size={20} color="#ef4444"/>
+          </div>
+          <div>
+            <div style={{ fontSize:15,fontWeight:700,color:'#fff' }}>Unlink License?</div>
+            <div style={{ fontSize:11,color:'rgba(255,255,255,.4)' }}>This removes the key from your account</div>
+          </div>
+        </div>
+        <p style={{ fontSize:12,color:'rgba(255,255,255,.45)',marginBottom:22,lineHeight:1.6 }}>The key will be unbound and can be activated on another account. You will lose access to the panel immediately.</p>
+        <div style={{ display:'flex',gap:10 }}>
+          <button onClick={onCancel} style={{ flex:1,padding:'11px',borderRadius:12,background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',cursor:'pointer',color:'rgba(255,255,255,.55)',fontFamily:'inherit',fontSize:13,fontWeight:600,transition:'all .15s' }}
+            onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,.1)';}}
+            onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,.06)';}}>Cancel</button>
+          <button onClick={onConfirm} style={{ flex:1,padding:'11px',borderRadius:12,background:'rgba(239,68,68,.14)',border:'1px solid rgba(239,68,68,.28)',cursor:'pointer',color:'#f87171',fontFamily:'inherit',fontSize:13,fontWeight:700,transition:'all .15s' }}
+            onMouseEnter={e=>{e.currentTarget.style.background='rgba(239,68,68,.24)';}}
+            onMouseLeave={e=>{e.currentTarget.style.background='rgba(239,68,68,.14)';}}>Unlink Key</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Success Modal ── */
 function SuccessCard({ productName, licKey, onDismiss }: { productName:string; licKey:string; onDismiss:()=>void }) {
   const [revealed, setRevealed] = useState(false);
@@ -165,8 +193,8 @@ function SuccessCard({ productName, licKey, onDismiss }: { productName:string; l
 const handleActivateRef = { current: null as (()=>void)|null };
 
 /* ── BIG LICENSE CARD ── FitSpark bento style ── */
-function LicenseCard({ lic, onCopy, onReset, variant }: {
-  lic: any; onCopy:(k:string)=>void; onReset:(l:any)=>void; variant:'internal'|'lag';
+function LicenseCard({ lic, onCopy, onReset, onUnlink, variant }: {
+  lic: any; onCopy:(k:string)=>void; onReset:(l:any)=>void; onUnlink:(l:any)=>void; variant:'internal'|'lag';
 }) {
   const { t } = useTranslation();
   const [keyVisible, setKeyVisible] = useState(false);
@@ -257,7 +285,13 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
 
       {/* ── LICENSE KEY — full width prominent ── */}
       <div style={{ padding:'14px 20px 12px', position:'relative' }}>
-        <div style={{ fontSize:9,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(255,255,255,.3)',marginBottom:8 }}>License Key</div>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:8 }}>
+          <div style={{ fontSize:9,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(255,255,255,.3)'}}>License Key</div>
+          <button onClick={()=>onUnlink(lic)} style={{ background:'none',border:'none',color:'rgba(239,68,68,.6)',fontSize:8,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',cursor:'pointer',padding:0,display:'flex',alignItems:'center',gap:4,outline:'none',transition:'opacity .15s' }}
+            onMouseEnter={e=>{e.currentTarget.style.opacity='1';}} onMouseLeave={e=>{e.currentTarget.style.opacity='.7';}}>
+            <Unlink size={9}/> Unlink
+          </button>
+        </div>
         <div style={{ padding:'14px 16px',borderRadius:14,background:'rgba(0,0,0,.35)',border:`1px solid ${ab(.18)}`,boxShadow:`0 0 20px ${ab(.08)} inset`,display:'flex',alignItems:'center',gap:10 }}>
           <code style={{ flex:1,fontSize:13,fontFamily:'monospace',fontWeight:600,color:keyVisible?accent:'rgba(255,255,255,.65)',letterSpacing:keyVisible?'1.5px':'.5px',filter:keyVisible?'none':'blur(6px)',transition:'all .3s',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textShadow:keyVisible?`0 0 12px ${ab(.6)}`:'none' }}>
             {displayKey || '(no key)'}
@@ -407,6 +441,7 @@ export default function LicensesPage() {
   const [keyValue,   setKeyValue]   = useState('');
   const [loading,    setLoading]    = useState(false);
   const [hwidTarget, setHwidTarget] = useState<any|null>(null);
+  const [unlinkTarget, setUnlinkTarget] = useState<any|null>(null);
   const [errorMsg,   setErrorMsg]   = useState('');
   const [successKey, setSuccessKey] = useState<{productName:string;key:string}|null>(null);
 
@@ -473,6 +508,27 @@ export default function LicensesPage() {
     setHwidTarget(null);
   };
 
+  const confirmUnlinkKey = async () => {
+    if (!unlinkTarget) return;
+    try {
+      const rawKey = unlinkTarget.key ?? '';
+      const displayKey = rawKey.replace('_INTERNAL', '');
+
+      const { error: dbError } = await supabase.from('user_licenses').delete().eq('id', unlinkTarget.id).eq('user_id', user?.id ?? '');
+      if (dbError) throw new Error('Failed to remove from account');
+
+      await supabase.from('key_bindings').delete().eq('key', displayKey).eq('user_id', user?.id ?? '');
+
+      setLicenses(licenses.filter((l: any) => l.id !== unlinkTarget.id));
+      toast.success('Key unlinked successfully!');
+      if (user) logActivity({userId:user.id,userEmail:user.email,userName:user.name,action:'key_unbound',product:unlinkTarget.productName,status:'success'});
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to unlink key');
+    } finally {
+      setUnlinkTarget(null);
+    }
+  };
+
   const handleActivate = async () => {
     if (!isReady) { toast.error('Enter a license key'); return; }
     if (!user)    { toast.error('Please login first'); return; }
@@ -533,6 +589,7 @@ export default function LicensesPage() {
       `}</style>
 
       {hwidTarget  && <HwidModal   onConfirm={confirmResetHwid} onCancel={()=>setHwidTarget(null)}/>}
+      {unlinkTarget && <UnlinkModal onConfirm={confirmUnlinkKey} onCancel={()=>setUnlinkTarget(null)}/>}
       {successKey  && <SuccessCard productName={successKey.productName} licKey={successKey.key} onDismiss={()=>setSuccessKey(null)}/>}
 
       {/* ── PAGE HEADER ── */}
@@ -591,7 +648,7 @@ export default function LicensesPage() {
         <div style={{ animation:'lc-in .5s .18s both', marginBottom: lagActive.length > 0 ? 16 : 0 }}>
           <div style={{ fontSize:12, fontWeight:400, color:'rgba(255,255,255,.6)', marginBottom:12 }}>1999X INTERNAL PANEL-</div>
           <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-            {intActive.map((l:any)=><LicenseCard key={l?.id||Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} variant="internal"/>)}
+            {intActive.map((l:any)=><LicenseCard key={l?.id||Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} onUnlink={setUnlinkTarget} variant="internal"/>)}
           </div>
         </div>
       )}
@@ -600,7 +657,7 @@ export default function LicensesPage() {
         <div style={{ animation:'lc-in .5s .18s both' }}>
           <div style={{ fontSize:12, fontWeight:400, color:'rgba(255,255,255,.6)', marginBottom:12 }}>1999X FAKE LAG PANEL-</div>
           <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-            {lagActive.map((l:any)=><LicenseCard key={l?.id||Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} variant="lag"/>)}
+            {lagActive.map((l:any)=><LicenseCard key={l?.id||Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} onUnlink={setUnlinkTarget} variant="lag"/>)}
           </div>
         </div>
       )}

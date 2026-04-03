@@ -25,7 +25,8 @@ export type ActionType =
   | 'private_reply'
   | 'account_banned'
   | 'account_unbanned'
-  | 'key_expired';
+  | 'key_expired'
+  | 'key_unbound';
 
 interface LogParams {
   userId:    string;
