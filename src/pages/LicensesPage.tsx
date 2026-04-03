@@ -81,7 +81,7 @@ function toDbLicenseRow(license: License, user: { id: string; email: string }): 
 
 /* ── Countdown ── */
 function ExpiryCountdown({ expiresAt }: { expiresAt: string }) {
-  const { t: tr } = useTranslation();
+  const { t } = useTranslation();
   const [txt, setTxt] = useState('');
   useEffect(() => {
     const up = () => {
@@ -168,6 +168,7 @@ const handleActivateRef = { current: null as (()=>void)|null };
 function LicenseCard({ lic, onCopy, onReset, variant }: {
   lic: any; onCopy:(k:string)=>void; onReset:(l:any)=>void; variant:'internal'|'lag';
 }) {
+  const { t } = useTranslation();
   const [keyVisible, setKeyVisible] = useState(false);
   const [copied, setCopied] = useState(false);
   const rawKey     = lic?.key ?? '';
@@ -284,6 +285,7 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
 
 /* ── DOWNLOAD SECTION ── */
 function DownloadSection() {
+  const { t } = useTranslation();
   return (
     <div style={{ borderRadius:28,overflow:'hidden',position:'relative',border:'1px solid rgba(255,255,255,.07)', animation:'lc-in .6s .2s cubic-bezier(.22,1,.36,1) both' }}>
       <div style={{ position:'relative',height:200,overflow:'hidden' }}>
@@ -319,6 +321,7 @@ function DownloadSection() {
 
 /* ── EXPIRED HISTORY ── */
 function ExpiredHistory({ intExpired, lagExpired }: { intExpired:any[]; lagExpired:any[] }) {
+  const { t } = useTranslation();
   const [show, setShow] = useState(false);
   const all = [...intExpired,...lagExpired].sort((a,b)=>new Date(b?.expiresAt??0).getTime()-new Date(a?.expiresAt??0).getTime());
   return (

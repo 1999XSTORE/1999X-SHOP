@@ -20,7 +20,8 @@ const HERO_IMAGE = 'https://www.dropbox.com/scl/fi/gshxatzs1yojn8ix697v6/image-r
 const PLANS = [
   {
     id: 'monthly',
-    label: t('reseller.monthly','Monthly'),
+    label: 'Monthly',
+    labelKey: 'reseller.monthly',
     price: 50,
     duration: 30,
     tag: 'STARTER',
@@ -31,7 +32,8 @@ const PLANS = [
   },
   {
     id: '3month',
-    label: t('reseller.threeMonth','3 Months'),
+    label: '3 Months',
+    labelKey: 'reseller.threeMonth',
     price: 100,
     duration: 90,
     tag: 'BEST VALUE',
@@ -735,7 +737,7 @@ export default function ResellerPage() {
                       {selectedPlanData.id==='monthly' ? '🚀' : '👑'}
                     </div>
                     <div style={{ textAlign:'left' }}>
-                      <div style={{ fontSize:15, fontWeight:800, color:'#fff' }}>{selectedPlanData.label} — ${selectedPlanData.price}</div>
+                      <div style={{ fontSize:15, fontWeight:800, color:'#fff' }}>{t(selectedPlanData.labelKey, selectedPlanData.label)} — ${selectedPlanData.price}</div>
                       <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>{selectedPlanData.displayFee}</div>
                     </div>
                   </div>
@@ -753,7 +755,7 @@ export default function ResellerPage() {
                           {p.id==='monthly' ? '🚀' : '👑'}
                         </div>
                         <div style={{ flex:1, textAlign:'left' }}>
-                          <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:2 }}>{p.label} <span style={{ color:'rgba(255,255,255,.4)', fontWeight:500 }}>— ${p.price}{getCurrencyForLang(i18n.language).code!=='USD'?` (≈${formatPriceShort(p.price,i18n.language)})`:''}</span></div>
+                          <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:2 }}>{t((p as any).labelKey, p.label)} <span style={{ color:'rgba(255,255,255,.4)', fontWeight:500 }}>— ${p.price}{getCurrencyForLang(i18n.language).code!=='USD'?` (≈${formatPriceShort(p.price,i18n.language)})`:''}</span></div>
                           <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>{p.displayFee} · {p.duration}d access</div>
                         </div>
                         <span style={{ fontSize:9, fontWeight:900, letterSpacing:'.1em', textTransform:'uppercase', padding:'3px 8px', borderRadius:20, background:`rgba(${p.id==='monthly'?'139,92,246':'245,158,11'},.15)`, color:p.id==='monthly'?'#a78bfa':'#fbbf24', border:`1px solid rgba(${p.id==='monthly'?'139,92,246':'245,158,11'},.25)` }}>{p.tag}</span>
