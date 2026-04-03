@@ -26,7 +26,16 @@ const PLANS = [
     duration: 30,
     tag: 'STARTER',
     tagColor: '#8b5cf6',
-    features: ['Internal Panel Access', 'Fake Lag Access', '10% fee per sale', 'Referral dashboard', 'Custom referral link'],
+    features: [
+      'Internal Panel Access', 
+      'Fake Lag Access', 
+      '10% fee per sale', 
+      'Referral dashboard', 
+      'Custom referral link',
+      'Add custom Payment Methods',
+      'Customize Panel Prices',
+      'Custom Product Images'
+    ],
     feeRate: 0.10,
     displayFee: '10% fee per sale',
   },
@@ -38,7 +47,16 @@ const PLANS = [
     duration: 90,
     tag: 'BEST VALUE',
     tagColor: '#f59e0b',
-    features: ['Internal Panel Access', 'Fake Lag Access', 'No fees on sales', 'Priority support', 'Custom referral link'],
+    features: [
+      'Internal Panel Access', 
+      'Fake Lag Access', 
+      'No fees on sales', 
+      'Priority support', 
+      'Custom referral link',
+      'Add custom Payment Methods',
+      'Customize Panel Prices',
+      'Custom Product Images'
+    ],
     feeRate: 0.01, // internal only, never shown
     displayFee: 'No fee on sales',
   },
@@ -714,9 +732,9 @@ export default function ResellerPage() {
               </div>
 
               {/* Feature pills */}
-              <div style={{ display:'flex', flexWrap:'wrap', gap:8, justifyContent:'center', marginTop:20, position:'relative', zIndex:1 }}>
-                {['Referral Dashboard','Custom Link','Payment Methods','Weekly 1% Fee Only'].map(f => (
-                  <span key={f} style={{ padding:'5px 12px', borderRadius:20, background:'rgba(139,92,246,.12)', border:'1px solid rgba(139,92,246,.22)', fontSize:11, fontWeight:600, color:'#c4b5fd' }}>{f}</span>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:6, justifyContent:'center', marginTop:20, position:'relative', zIndex:1, maxWidth: 300, margin: '20px auto 0' }}>
+                {['Custom Payment Methods','Set Your Own Prices','Custom Product Images','Referral Dashboard','Custom Link','Weekly 1% Fee'].map(f => (
+                  <span key={f} style={{ padding:'5px 12px', borderRadius:20, background:'rgba(139,92,246,.12)', border:'1px solid rgba(139,92,246,.22)', fontSize:11, fontWeight:600, color:'#c4b5fd', textAlign:'center' }}>{f}</span>
                 ))}
               </div>
             </div>

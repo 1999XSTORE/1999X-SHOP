@@ -180,13 +180,13 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
     fetch(`https://get.geojs.io/v1/ip/geo.json`)
       .then(r => r.json())
       .then(d => {
-        if (alive && d.country && d.name) {
-          const codePoints = d.country
+        if (alive && d.country && d.country_code) {
+          const codePoints = d.country_code
             .toUpperCase()
             .split('')
             .map((char: any) => 127397 + char.charCodeAt(0));
           const flag = String.fromCodePoint(...codePoints);
-          setGeoCountry(`${flag} ${d.name}`);
+          setGeoCountry(`${flag} ${d.country}`);
           setRealIp(d.ip);
         }
       })
