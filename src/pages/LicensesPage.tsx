@@ -172,11 +172,12 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
   const [keyVisible, setKeyVisible] = useState(false);
   const [copied, setCopied] = useState(false);
   const [geoCountry, setGeoCountry] = useState<string|null>(null);
+  const [realIp, setRealIp] = useState<string|null>(null);
 
   useEffect(() => {
-    if (!lic?.ip || lic.ip === 'Unknown') return;
     let alive = true;
-    fetch(`https://get.geojs.io/v1/ip/country/${lic.ip}.json`)
+    // Fetch the client's real IP and country directly from their browser
+    fetch(`https://get.geojs.io/v1/ip/geo.json`)
       .then(r => r.json())
       .then(d => {
         if (alive && d.country && d.name) {
@@ -186,11 +187,12 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
             .map((char: any) => 127397 + char.charCodeAt(0));
           const flag = String.fromCodePoint(...codePoints);
           setGeoCountry(`${flag} ${d.name}`);
+          setRealIp(d.ip);
         }
       })
       .catch(() => {});
     return () => { alive = false; };
-  }, [lic?.ip]);
+  }, []);
   const rawKey     = lic?.key ?? '';
   const displayKey = rawKey.endsWith('_INTERNAL') ? rawKey.replace('_INTERNAL','') : rawKey;
   const expiresAt  = lic?.expiresAt ?? new Date(Date.now()+30*86400000).toISOString();
@@ -274,7 +276,7 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
       <div style={{ padding:'14px 22px 0', display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, position:'relative' }}>
         {[
           { icon:Shield, label:t('license.hwid','HWID'), val:lic?.hwid || t('common.noData','Not bound') },
-          { icon:Globe,  label:t('license.ip','IP'),   val:lic?.ip   || t('common.noData','Unknown')   },
+          { icon:Globe,  label:t('license.ip','IP'),   val:realIp || lic?.ip || t('common.noData','Unknown')   },
           { icon:Clock,  label:t('license.lastLogin','Last Login'), val:lic?.lastLogin ? new Date(lic.lastLogin).toLocaleDateString() : '—' },
           { icon:MapPin, label:t('license.country','Country'), val:geoCountry || '—' },
         ].map(({ icon:Icon, label, val }, i)=>(
