@@ -255,22 +255,22 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
   if (dbLoading) return null;
   const isActive = !!row && new Date(row.expires_at).getTime()>Date.now();
   const accentColor = panelEnabled ? '#a78bfa' : '#f87171';
-  const accentBg    = panelEnabled ? 'rgba(124,92,255,' : 'rgba(239,68,68,';
+  const ab = (a: number) => panelEnabled ? `rgba(124,92,255,${a})` : `rgba(239,68,68,${a})`;
 
   return (
     <div className="px-panel" style={{ animationDelay:`${animDelay}ms`, padding:'32px 36px', position:'relative', overflow:'hidden' }}>
-      <div className="px-glow" style={{ opacity:.55, background:`radial-gradient(ellipse at 95% 50%,${accentBg}.22) 0%,transparent 55%)` }}/>
-      <div style={{ position:'absolute',top:-40,left:-40,width:220,height:220,borderRadius:'50%',background:`radial-gradient(circle,${accentBg}.06) 0%,transparent 65%)`,pointerEvents:'none' }}/>
+      <div className="px-glow" style={{ opacity:.55, background:`radial-gradient(ellipse at 95% 50%,${ab(.22)} 0%,transparent 55%)` }}/>
+      <div style={{ position:'absolute',top:-40,left:-40,width:220,height:220,borderRadius:'50%',background:`radial-gradient(circle,${ab(.06)} 0%,transparent 65%)`,pointerEvents:'none' }}/>
       <div style={{ position:'relative' }}>
 
         {/* Top: label + status + owner toggle */}
         <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24 }}>
           <div style={{ display:'flex',alignItems:'center',gap:14 }}>
-            <div style={{ width:44,height:44,borderRadius:14,background:`${accentBg}.12)`,border:`1px solid ${accentBg}.22)`,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:`0 0 20px ${accentBg}.15)` }}>
+            <div style={{ width:44,height:44,borderRadius:14,background:ab(.12),border:`1px solid ${ab(.22)}`,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:`0 0 20px ${ab(.15)}` }}>
               <Zap size={20} color={accentColor}/>
             </div>
             <div>
-              <div style={{ fontSize:11,fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',color:`${accentBg}.65)`,marginBottom:2 }}>Free Panel Trial</div>
+              <div style={{ fontSize:11,fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',color:ab(.65),marginBottom:2 }}>Free Panel Trial</div>
               <div style={{ display:'flex',alignItems:'center',gap:7 }}>
                 <span style={{ width:6,height:6,borderRadius:'50%',background:panelEnabled?'#4ade80':'#f87171',boxShadow:`0 0 8px ${panelEnabled?'#4ade80':'#f87171'}`,animation:panelEnabled?'px-live 2s infinite':'none',flexShrink:0 }}/>
                 <span style={{ fontSize:13,fontWeight:700,color:panelEnabled?'#4ade80':'#f87171' }}>{panelEnabled?'Online':'Paused'}</span>
