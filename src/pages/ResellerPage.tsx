@@ -346,10 +346,18 @@ export default function ResellerPage() {
     }
 
     setPurchasing(true);
-    const deducted = deductBalance(plan.price);
-    if (!deducted) { toast.error('Balance deduction failed'); setPurchasing(false); return; }
-
     const expiresAt = new Date(Date.now() + plan.duration * 86400000).toISOString();
+
+    // Server-side atomic balance deduction FIRST — no client-side deductBalance
+    const { data: deductOk, error: deductErr } = await safeQuery(() =>
+      supabase.rpc('deduct_user_balance', { p_user_id: user.id, p_amount: plan.price })
+    );
+
+    if (deductErr || !deductOk) {
+      toast.error(deductErr?.message || 'Insufficient balance or deduction failed.');
+      setPurchasing(false);
+      return;
+    }
 
     const { data: subId, error } = await safeQuery(() =>
       supabase.rpc('subscribe_as_reseller', {
@@ -363,10 +371,19 @@ export default function ResellerPage() {
     );
 
     if (error || !subId) {
-      refundBalance(plan.price);
-      toast.error(error?.message || 'Purchase failed. Balance refunded.');
+      // Refund ONLY if subscribe_as_reseller itself failed (not the balance check)
+      await safeQuery(() => supabase.rpc('refund_user_balance', { p_user_id: user.id, p_amount: plan.price }));
+      toast.error(error?.message || 'Subscription failed. Balance refunded.');
       setPurchasing(false);
       return;
+    }
+
+    // Sync local balance from server
+    const { data: walletRow } = await safeQuery(() =>
+      supabase.from('wallets').select('balance').eq('user_id', user.id).maybeSingle()
+    );
+    if (walletRow?.balance !== undefined) {
+      deductBalance(balance - walletRow.balance);
     }
 
     logActivity({

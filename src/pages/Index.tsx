@@ -50,10 +50,22 @@ function savePath(p: string) {
 function PageLoader() {
   return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'40vh' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'14px 18px', borderRadius:16, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.08)' }}>
-        <div style={{ width:14, height:14, borderRadius:'50%', border:'2px solid rgba(255,255,255,.18)', borderTopColor:'#8b5cf6', animation:'spin 0.9s linear infinite' }} />
-        <span style={{ fontSize:13, color:'rgba(255,255,255,.58)', fontWeight:600 }}>Loading page...</span>
-      </div>
+      <style>{`
+        @keyframes pg-bounce {
+          0%   { transform: scale(1, 0.7); }
+          40%  { transform: scale(0.8, 1.2); }
+          60%  { transform: scale(1, 1); }
+          100% { bottom: 120px; }
+        }
+        @keyframes pg-step {
+          0%   { box-shadow: 0 10px 0 rgba(0,0,0,0), 0 10px 0 rgba(139,92,246,.6), -35px 50px 0 rgba(139,92,246,.6), -70px 90px 0 rgba(139,92,246,.6); }
+          100% { box-shadow: 0 10px 0 rgba(139,92,246,.6), -35px 50px 0 rgba(139,92,246,.6), -70px 90px 0 rgba(139,92,246,.6), -70px 90px 0 rgba(0,0,0,0); }
+        }
+        .pg-loader { position:relative; width:120px; height:90px; margin:0 auto; filter:drop-shadow(0 0 12px rgba(139,92,246,.4)); }
+        .pg-loader:before { content:''; position:absolute; bottom:30px; left:50px; height:30px; width:30px; border-radius:50%; background:#7c3aed; animation:pg-bounce .5s ease-in-out infinite alternate; }
+        .pg-loader:after  { content:''; position:absolute; right:0; top:0; height:7px; width:45px; border-radius:4px; box-shadow:0 5px 0 rgba(167,139,250,.5),-35px 50px 0 rgba(167,139,250,.5),-70px 95px 0 rgba(167,139,250,.5); animation:pg-step 1s ease-in-out infinite; }
+      `}</style>
+      <div className="pg-loader"/>
     </div>
   );
 }
@@ -332,89 +344,53 @@ export default function Index() {
     return (
       <div style={{ minHeight:'100svh', background:'#080809', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
         <style>{`
-          /* Bottom glow matching site bg */
-          .ld-bg-glow {
-            position: absolute;
-            bottom: -100px; left: 50%; transform: translateX(-50%);
-            width: 600px; height: 300px; border-radius: 50%;
-            background: radial-gradient(ellipse, rgba(70,45,200,0.18) 0%, transparent 70%);
-            pointer-events: none; filter: blur(2px);
+          @keyframes auth-bounce {
+            0%   { transform: scale(1, 0.7); }
+            40%  { transform: scale(0.8, 1.2); }
+            60%  { transform: scale(1, 1); }
+            100% { bottom: 140px; }
           }
+          @keyframes auth-step {
+            0%   { box-shadow: 0 10px 0 rgba(0,0,0,0), 0 10px 0 rgba(139,92,246,.7), -35px 50px 0 rgba(139,92,246,.7), -70px 90px 0 rgba(139,92,246,.7); }
+            100% { box-shadow: 0 10px 0 rgba(139,92,246,.7), -35px 50px 0 rgba(139,92,246,.7), -70px 90px 0 rgba(139,92,246,.7), -70px 90px 0 rgba(0,0,0,0); }
+          }
+          @keyframes auth-fade { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+          @keyframes auth-pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
 
-          /* Uiverse petal loader */
-          .ld-loader-wrap {
-            position: relative;
-            width: 100px; height: 100px;
-            filter: drop-shadow(0 0 18px rgba(92,61,153,0.45));
+          .auth-loader {
+            position: relative; width: 120px; height: 90px;
+            filter: drop-shadow(0 0 20px rgba(124,92,255,.5));
           }
-          .ld-petal-one {
-            position: absolute; top: 0; left: 0;
-            animation: flowe-one 1s linear infinite;
+          .auth-loader:before {
+            content: ''; position: absolute;
+            bottom: 30px; left: 50px;
+            height: 30px; width: 30px; border-radius: 50%;
+            background: linear-gradient(135deg, #7c3aed, #a78bfa);
+            animation: auth-bounce .5s ease-in-out infinite alternate;
           }
-          .ld-petal-two {
-            position: absolute; top: 0; left: 0;
-            opacity: 0;
-            transform: scale(0) translateY(-200px) translateX(-100px);
-            animation: flowe-two 1s linear infinite;
-            animation-delay: 0.33s;
+          .auth-loader:after {
+            content: ''; position: absolute;
+            right: 0; top: 0; height: 7px; width: 45px; border-radius: 4px;
+            box-shadow: 0 5px 0 rgba(167,139,250,.55), -35px 50px 0 rgba(167,139,250,.55), -70px 95px 0 rgba(167,139,250,.55);
+            animation: auth-step 1s ease-in-out infinite;
           }
-          .ld-petal-three {
-            position: absolute; top: 0; left: 0;
-            opacity: 0;
-            transform: scale(0) translateY(-200px) translateX(100px);
-            animation: flowe-three 1s linear infinite;
-            animation-delay: 0.66s;
+          .auth-glow {
+            position: absolute; bottom: -80px; left: 50%; transform: translateX(-50%);
+            width: 500px; height: 250px; border-radius: 50%;
+            background: radial-gradient(ellipse, rgba(109,40,217,.15) 0%, transparent 70%);
+            pointer-events: none;
           }
-          @keyframes flowe-one {
-            0%   { transform: scale(0.5) translateY(-200px); opacity: 0; }
-            25%  { transform: scale(0.75) translateY(-100px); opacity: 1; }
-            50%  { transform: scale(1) translateY(0px); opacity: 1; }
-            75%  { transform: scale(0.5) translateY(50px); opacity: 1; }
-            100% { transform: scale(0) translateY(100px); opacity: 0; }
-          }
-          @keyframes flowe-two {
-            0%   { transform: scale(0.5) rotateZ(-10deg) translateY(-200px) translateX(-100px); opacity: 0; }
-            25%  { transform: scale(1) rotateZ(-5deg) translateY(-100px) translateX(-50px); opacity: 1; }
-            50%  { transform: scale(1) rotateZ(0deg) translateY(0px) translateX(-25px); opacity: 1; }
-            75%  { transform: scale(0.5) rotateZ(5deg) translateY(50px) translateX(0px); opacity: 1; }
-            100% { transform: scale(0) rotateZ(10deg) translateY(100px) translateX(25px); opacity: 0; }
-          }
-          @keyframes flowe-three {
-            0%   { transform: scale(0.5) rotateZ(10deg) translateY(-200px) translateX(100px); opacity: 0; }
-            25%  { transform: scale(1) rotateZ(5deg) translateY(-100px) translateX(50px); opacity: 1; }
-            50%  { transform: scale(1) rotateZ(0deg) translateY(0px) translateX(25px); opacity: 1; }
-            75%  { transform: scale(0.5) rotateZ(-5deg) translateY(50px) translateX(0px); opacity: 1; }
-            100% { transform: scale(0) rotateZ(-10deg) translateY(100px) translateX(-25px); opacity: 0; }
-          }
-          @keyframes ld-fade-in {
-            from { opacity: 0; transform: translateY(8px); }
-            to   { opacity: 1; transform: translateY(0); }
+          .auth-text {
+            animation: auth-fade .6s .3s ease both;
+            font-size: 11px; letter-spacing: .22em; text-transform: uppercase;
+            color: rgba(255,255,255,.25); font-weight: 700; margin-top: 52px;
+            animation: auth-pulse 2s ease-in-out infinite;
           }
         `}</style>
 
-        <div className="ld-bg-glow" />
-
-        {/* Petal loader */}
-        <div className="ld-loader-wrap">
-          {/* Petal SVG — three instances */}
-          {[{cls:'ld-petal-one'},{cls:'ld-petal-two'},{cls:'ld-petal-three'}].map(({cls})=>(
-            <div key={cls} className={cls}>
-              <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <g>
-                  <path d="M50 10 C30 10, 10 30, 10 50 C10 70, 30 90, 50 90 C50 90, 50 70, 50 50 C50 30, 50 10, 50 10Z" fill="#7c3aed"/>
-                  <path d="M50 10 C70 10, 90 30, 90 50 C90 70, 70 90, 50 90 C50 90, 50 70, 50 50 C50 30, 50 10, 50 10Z" fill="#a78bfa" opacity="0.6"/>
-                </g>
-              </svg>
-            </div>
-          ))}
-        </div>
-
-        {/* Logo + text */}
-        <div style={{ marginTop:48, textAlign:'center', animation:'ld-fade-in .6s ease both', animationDelay:'.15s', display:'flex', flexDirection:'column', alignItems:'center', gap:14 }}>
-          <div style={{ fontSize:11, letterSpacing:'.25em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', fontWeight:700 }}>
-            Loading your panel…
-          </div>
-        </div>
+        <div className="auth-glow"/>
+        <div className="auth-loader"/>
+        <div className="auth-text">Loading your panel…</div>
       </div>
     );
   }

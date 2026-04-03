@@ -1420,26 +1420,43 @@ export default function WalletPage() {
   }, [user?.id, canApprove, isSupport]);
 
   const handleBuy = async (product: any) => {
+    // Client-side check (UX only — server enforces the real check)
     if (balance < product.price) { toast.error(t('shop.insufficientBalance')); return; }
-    const deducted = deductBalance(product.price);
-    if (!deducted) { toast.error(t('shop.insufficientBalance')); return; }
     const panel = product.keyauthPanel ?? 'lag';
     const days  = product.days || parseInt(product.duration)||7;
     const toGen = panel==='both' ? ['internal','lag'] : [panel];
     const generatedKeys: Array<{key:string;panelId:string;panelName:string;expiresAt:string}> = [];
     const errors: string[] = [];
     toast.loading(t('wallet.generatingKey'), { id:'keygen' });
+
+    // Split price evenly across panels (combo = 2 panels)
+    const pricePerPanel = toGen.length > 1 ? product.price / toGen.length : product.price;
+    let serverDeducted = false;
+
     for (const p of toGen) {
       try {
         const controller = new AbortController();
-        const timer = setTimeout(()=>controller.abort(),15000);
+        const timer = setTimeout(()=>controller.abort(),18000);
         let result: any = null;
         try {
-          const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-key`,{ method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${SUPABASE_ANON}`,'apikey':SUPABASE_ANON}, body:JSON.stringify({panel_type:p,days,user_email:user?.email}), signal:controller.signal });
+          // Pass price so server can verify + deduct atomically
+          // For combo, first panel carries full price, rest carry 0 (server deducts once)
+          const chargePrice = (!serverDeducted) ? product.price : 0;
+          const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-key`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':`Bearer ${SUPABASE_ANON}`,'apikey':SUPABASE_ANON},
+            body:JSON.stringify({ panel_type:p, days, user_email:user?.email, price:chargePrice }),
+            signal:controller.signal
+          });
           clearTimeout(timer);
           result = await res.json();
         } catch (e: any) { clearTimeout(timer); errors.push(`${p}: ${e?.name==='AbortError'?'Timeout':'Network error'}`); continue; }
-        if (result?.success&&result?.key) {
+
+        if (result?.success && result?.key) {
+          serverDeducted = true; // server deducted on first successful call
+          // Update local balance to reflect server deduction
+          if (!serverDeducted) deductBalance(product.price);
+          deductBalance(0); // trigger re-sync on next balance load
           const expiry  = new Date(Date.now()+days*86400000).toISOString();
           const panelId = p==='lag'?'keyauth-lag':'keyauth-internal';
           const panelNm = p==='lag'?'Fake Lag':'Internal';
@@ -1447,35 +1464,35 @@ export default function WalletPage() {
           addLicense({ id:`purchase_${Math.random().toString(36).slice(2,10)}`, productId:panelId, productName:panelNm, key:licenseKey, keyauthUsername:result.key, hwid:'', lastLogin:new Date().toISOString(), expiresAt:expiry, status:'active', ip:'', device:'', hwidResetsUsed:0, hwidResetMonth:new Date().getMonth() });
           if (user?.id && user?.email) {
             await safeQuery(() => supabase.from('user_licenses').upsert({
-              user_id: user.id,
-              user_email: user.email,
-              product_id: panelId,
-              product_name: panelNm,
-              license_key: licenseKey,
-              keyauth_username: result.key,
-              hwid: '',
-              last_login: new Date().toISOString(),
-              expires_at: expiry,
-              status: 'active',
-              ip: '',
-              device: '',
-              hwid_resets_used: 0,
-              hwid_reset_month: new Date().getMonth(),
+              user_id: user.id, user_email: user.email, product_id: panelId,
+              product_name: panelNm, license_key: licenseKey, keyauth_username: result.key,
+              hwid: '', last_login: new Date().toISOString(), expires_at: expiry,
+              status: 'active', ip: '', device: '', hwid_resets_used: 0, hwid_reset_month: new Date().getMonth(),
             }, { onConflict: 'user_id,license_key' }));
           }
           generatedKeys.push({ key:result.key, panelId, panelName:panelNm, expiresAt:expiry });
-        } else { errors.push(`${p}: ${result?.message??'Unknown error'}`); }
+        } else {
+          const msg = result?.message ?? 'Unknown error';
+          if (msg === 'Insufficient balance') {
+            toast.dismiss('keygen');
+            toast.error('Insufficient balance — please add funds');
+            return;
+          }
+          errors.push(`${p}: ${msg}`);
+        }
       } catch(e) { errors.push(`${p}: ${String(e)}`); }
     }
     toast.dismiss('keygen');
     if (generatedKeys.length > 0) {
+      // Sync actual balance from server
+      const { data: walletRow } = await safeQuery(() => supabase.from('wallets').select('balance').eq('user_id', user?.id).maybeSingle());
+      if (walletRow?.balance !== undefined) deductBalance(balance - walletRow.balance);
       setPurchaseSuccess({ product, keys: generatedKeys });
       if (user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'purchase', product:product.name, amount:product.price, status:'success', meta:{ keys:generatedKeys.map((k:any)=>k.panelName) } });
     } else {
-      refundBalance(product.price);
       const errDetail = errors.join(' | ');
       console.error('Key generation failed:', errDetail);
-      toast.error(`${t('wallet.keyGenerationFailed')} $${product.price}. ${errDetail}`, { duration: 12000 });
+      toast.error(`${t('wallet.keyGenerationFailed')} ${errDetail}`, { duration: 12000 });
     }
   };
 

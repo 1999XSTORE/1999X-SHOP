@@ -1,8 +1,9 @@
 // ============================================================
 //  generate-key — KeyAuth Seller API
-//  Supports: days (integer) and hours (0 = use expiry_hours)
-//  For 1-hour keys: pass { days: 0, hours: 1, mask: '...' }
+//  SERVER-SIDE balance check + atomic deduction before key gen
 // ============================================================
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -17,13 +18,51 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   try {
-    const body = await req.json();
-    const pt    = (body.panel_type ?? 'internal') as 'lag' | 'internal';
-    const days  = Number(body.days ?? 7);
-    const hours = Number(body.hours ?? 0);
-    const mask  = (body.mask ?? '1999X*******').trim();
+    const supabaseUrl  = Deno.env.get('SUPABASE_URL') ?? '';
+    const anonKey      = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const serviceRole  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const authHeader   = req.headers.get('Authorization') ?? '';
 
-    // Each panel has its own seller key and app name
+    const body      = await req.json();
+    const pt        = (body.panel_type ?? 'internal') as 'lag' | 'internal';
+    const days      = Number(body.days ?? 7);
+    const hours     = Number(body.hours ?? 0);
+    const mask      = (body.mask ?? '1999X*******').trim();
+    const price     = Number(body.price ?? 0);      // client passes price
+    const isFree    = body.is_free === true;        // free trial — skip balance check
+
+    // ── Authenticate the user ──────────────────────────────
+    const client = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: authData } = await client.auth.getUser();
+    const user = authData?.user;
+    if (!user) return json({ success: false, message: 'Unauthorized' }, 401);
+
+    // ── Server-side balance check + atomic deduction ───────
+    // Only required for paid purchases (price > 0 and not free trial)
+    if (!isFree && price > 0) {
+      const admin = createClient(supabaseUrl, serviceRole);
+
+      // Atomically check and deduct balance using RPC
+      const { data: deductResult, error: deductError } = await admin.rpc(
+        'deduct_user_balance',
+        { p_user_id: user.id, p_amount: price }
+      );
+
+      if (deductError) {
+        console.error('[generate-key] Balance deduct error:', deductError.message);
+        return json({ success: false, message: 'Balance check failed: ' + deductError.message }, 400);
+      }
+
+      if (!deductResult || deductResult === false) {
+        return json({ success: false, message: 'Insufficient balance' }, 402);
+      }
+
+      console.log(`[generate-key] Deducted $${price} from user ${user.id}`);
+    }
+
+    // ── Generate key from KeyAuth ──────────────────────────
     const sellerKey = pt === 'lag'
       ? (Deno.env.get('KA_LAG_SELLER_KEY') ?? Deno.env.get('KA_SELLER_KEY') ?? '')
       : (Deno.env.get('KA_INT_SELLER_KEY') ?? Deno.env.get('KA_SELLER_KEY') ?? '');
@@ -32,19 +71,13 @@ Deno.serve(async (req) => {
       ? (Deno.env.get('KA_LAG_APPNAME') ?? '')
       : (Deno.env.get('KA_INT_APPNAME') ?? '');
 
-    console.log(`[generate-key] panel=${pt} days=${days} hours=${hours} app="${appName}"`);
+    console.log(`[generate-key] user=${user.email} panel=${pt} days=${days} price=${price} free=${isFree}`);
 
     if (!sellerKey) return json({ success: false, message: `Seller key not set for ${pt}` }, 400);
     if (!appName)   return json({ success: false, message: `App name not set for ${pt}` }, 400);
 
-    // KeyAuth expiry: for < 1 day, use expiry in minutes
-    // KeyAuth seller API: expiry param is in DAYS for add, but we can use "expiry" in minutes via type=addtime
-    // We use type=add with expiry in days; for hours we use fractional or pass as minutes via a custom approach.
-    // KeyAuth v1 seller API accepts "expiry" as number of days (float supported).
-    // 1 hour = 1/24 days ≈ 0.041667 — use this for sub-day keys.
     let expiryParam: string;
     if (hours > 0 && days === 0) {
-      // Sub-day key: express as fraction of a day
       expiryParam = (hours / 24).toFixed(6);
     } else {
       expiryParam = String(days);
@@ -64,7 +97,7 @@ Deno.serve(async (req) => {
 
     const resp = await fetch(url);
     const raw  = (await resp.text()).trim();
-    console.log(`[${pt}][${days}d/${hours}h] response: "${raw}"`);
+    console.log(`[${pt}][${days}d/${hours}h] KeyAuth response: "${raw}"`);
 
     const isError = (
       raw.length === 0 ||
@@ -77,6 +110,13 @@ Deno.serve(async (req) => {
 
     if (!isError) {
       return json({ success: true, key: raw, days, hours, panel_type: pt });
+    }
+
+    // Key generation failed — refund the balance if we deducted
+    if (!isFree && price > 0) {
+      const admin = createClient(supabaseUrl, serviceRole);
+      await admin.rpc('refund_user_balance', { p_user_id: user.id, p_amount: price });
+      console.log(`[generate-key] Refunded $${price} to user ${user.id} after keygen failure`);
     }
 
     try {
