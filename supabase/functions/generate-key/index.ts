@@ -39,28 +39,8 @@ Deno.serve(async (req) => {
     const user = authData?.user;
     if (!user) return json({ success: false, message: 'Unauthorized' }, 401);
 
-    // ── Server-side balance check + atomic deduction ───────
-    // Only required for paid purchases (price > 0 and not free trial)
-    if (!isFree && price > 0) {
-      const admin = createClient(supabaseUrl, serviceRole);
+    // ── Pre-generation ──────────────────────────────────────
 
-      // Atomically check and deduct balance using RPC
-      const { data: deductResult, error: deductError } = await admin.rpc(
-        'deduct_user_balance',
-        { p_user_id: user.id, p_amount: price }
-      );
-
-      if (deductError) {
-        console.error('[generate-key] Balance deduct error:', deductError.message);
-        return json({ success: false, message: 'Balance check failed: ' + deductError.message }, 400);
-      }
-
-      if (!deductResult || deductResult === false) {
-        return json({ success: false, message: 'Insufficient balance' }, 402);
-      }
-
-      console.log(`[generate-key] Deducted $${price} from user ${user.id}`);
-    }
 
     // ── Generate key from KeyAuth ──────────────────────────
     const sellerKey = pt === 'lag'
