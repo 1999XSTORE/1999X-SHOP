@@ -171,6 +171,7 @@ function RewardModal({ bonusPoints, userId, userEmail, onClose, onRedeem }: {
 
 /* ─── FREE KEY CARD ─────────────────────────────────────── */
 function FreeKeyCard({ animDelay }: { animDelay: number }) {
+  const { t } = useTranslation();
   const { addLicense, user } = useAppStore();
   const [row, setRow] = useState<FreeRow|null>(null);
   const [dbLoading, setDbLoading] = useState(true);
@@ -253,102 +254,121 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
 
   if (dbLoading) return null;
   const isActive = !!row && new Date(row.expires_at).getTime()>Date.now();
+  const accentColor = panelEnabled ? '#a78bfa' : '#f87171';
+  const accentBg    = panelEnabled ? 'rgba(124,92,255,' : 'rgba(239,68,68,';
 
   return (
-    <div className="px-panel" style={{ animationDelay:`${animDelay}ms`, padding:'24px 28px' }}>
-      <div className="px-glow" style={{ opacity:.5, background:`radial-gradient(ellipse at 90% 50%,${panelEnabled?'rgba(124,92,255,.18)':'rgba(239,68,68,.12)'} 0%,transparent 60%)` }}/>
-      <div style={{ position:'relative', display:'flex', alignItems:'center', gap:24, flexWrap:'wrap' }}>
+    <div className="px-panel" style={{ animationDelay:`${animDelay}ms`, padding:'32px 36px', position:'relative', overflow:'hidden' }}>
+      <div className="px-glow" style={{ opacity:.55, background:`radial-gradient(ellipse at 95% 50%,${accentBg}.22) 0%,transparent 55%)` }}/>
+      <div style={{ position:'absolute',top:-40,left:-40,width:220,height:220,borderRadius:'50%',background:`radial-gradient(circle,${accentBg}.06) 0%,transparent 65%)`,pointerEvents:'none' }}/>
+      <div style={{ position:'relative' }}>
 
-        {/* Left: icon + label */}
-        <div style={{ display:'flex', alignItems:'center', gap:16, flex:'0 0 auto' }}>
-          <div style={{ width:48,height:48,borderRadius:15,background:panelEnabled?'rgba(124,92,255,.1)':'rgba(239,68,68,.1)',border:`1px solid ${panelEnabled?'rgba(124,92,255,.2)':'rgba(239,68,68,.18)'}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
-            <Zap size={20} color={panelEnabled?'#a78bfa':'#f87171'}/>
-          </div>
-          <div>
-            <div style={{ fontSize:13,fontWeight:700,color:'rgba(255,255,255,.5)',letterSpacing:'.1em',textTransform:'uppercase',marginBottom:3 }}>Free Trial</div>
-            <div style={{ display:'flex',alignItems:'center',gap:6 }}>
-              <span style={{ width:5,height:5,borderRadius:'50%',background:panelEnabled?'#4ade80':'#f87171',boxShadow:`0 0 6px ${panelEnabled?'#4ade80':'#f87171'}`,animation:panelEnabled?'px-live 2s infinite':'none',flexShrink:0 }}/>
-              <span style={{ fontSize:11,fontWeight:700,color:panelEnabled?'#4ade80':'#f87171' }}>{panelEnabled?'Online':'Paused'}</span>
+        {/* Top: label + status + owner toggle */}
+        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24 }}>
+          <div style={{ display:'flex',alignItems:'center',gap:14 }}>
+            <div style={{ width:44,height:44,borderRadius:14,background:`${accentBg}.12)`,border:`1px solid ${accentBg}.22)`,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:`0 0 20px ${accentBg}.15)` }}>
+              <Zap size={20} color={accentColor}/>
+            </div>
+            <div>
+              <div style={{ fontSize:11,fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',color:`${accentBg}.65)`,marginBottom:2 }}>Free Panel Trial</div>
+              <div style={{ display:'flex',alignItems:'center',gap:7 }}>
+                <span style={{ width:6,height:6,borderRadius:'50%',background:panelEnabled?'#4ade80':'#f87171',boxShadow:`0 0 8px ${panelEnabled?'#4ade80':'#f87171'}`,animation:panelEnabled?'px-live 2s infinite':'none',flexShrink:0 }}/>
+                <span style={{ fontSize:13,fontWeight:700,color:panelEnabled?'#4ade80':'#f87171' }}>{panelEnabled?'Online':'Paused'}</span>
+                <span style={{ fontSize:12,color:'rgba(255,255,255,.25)' }}>· 48h cooldown</span>
+              </div>
             </div>
           </div>
+          {userIsOwner && (
+            <button onClick={togglePanel} disabled={togglingPanel}
+              style={{ display:'flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:10,background:panelEnabled?'rgba(239,68,68,.08)':'rgba(34,197,94,.08)',border:`1px solid ${panelEnabled?'rgba(239,68,68,.22)':'rgba(34,197,94,.22)'}`,cursor:'pointer',fontFamily:'inherit',fontSize:11,fontWeight:700,color:panelEnabled?'#f87171':'#4ade80',opacity:togglingPanel?.6:1,transition:'all .18s' }}>
+              {togglingPanel?<Loader2 size={12} className="animate-spin"/>:panelEnabled?'⏸ Stop':'▶ Resume'}
+            </button>
+          )}
         </div>
 
-        {/* Center: badges + timer/keys */}
-        <div style={{ flex:1, minWidth:180 }}>
-          <div style={{ display:'flex',gap:8,marginBottom: isActive&&row ? 10 : 0 }}>
-            {[{e:'⚡',l:'Fake Lag',tc:'#c4b5fd'},{e:'🔒',l:'Internal',tc:'#a78bfa'}].map(f=>(
-              <div key={f.l} style={{ display:'flex',alignItems:'center',gap:6,padding:'5px 10px',borderRadius:9,background:'rgba(124,92,255,.06)',border:'1px solid rgba(124,92,255,.14)' }}>
-                <span style={{ fontSize:12 }}>{f.e}</span>
-                <span style={{ fontSize:11,fontWeight:700,color:f.tc }}>{f.l}</span>
+        {/* Main row */}
+        <div style={{ display:'flex',alignItems:'center',gap:32,flexWrap:'wrap' }}>
+          {/* Panel badges */}
+          <div style={{ flex:'0 0 auto', display:'flex', flexDirection:'column', gap:10 }}>
+            {[{e:'⚡',l:'Fake Lag Panel',tc:'#c4b5fd',bc:'rgba(167,139,250,.15)',bg:'rgba(167,139,250,.06)'},{e:'🔒',l:'Internal Panel',tc:'#a78bfa',bc:'rgba(124,92,255,.16)',bg:'rgba(124,92,255,.06)'}].map(f=>(
+              <div key={f.l} style={{ display:'flex',alignItems:'center',gap:10,padding:'11px 18px',borderRadius:13,background:f.bg,border:`1px solid ${f.bc}`,minWidth:190 }}>
+                <span style={{ fontSize:18 }}>{f.e}</span>
+                <span style={{ fontSize:13,fontWeight:700,color:f.tc }}>{f.l}</span>
               </div>
             ))}
           </div>
-          {isActive && row && (
-            <div style={{ display:'flex',alignItems:'center',gap:10 }}>
-              <div style={{ fontSize:11,color:'rgba(167,139,250,.5)',fontWeight:600,letterSpacing:'.08em',textTransform:'uppercase' }}>Expires in</div>
-              <div style={{ fontSize:20,fontWeight:700,color:'#a78bfa',fontFamily:'monospace' }}>
-                <LiveClock ms={new Date(row.expires_at).getTime()}/>
+
+          {/* Timer or info */}
+          <div style={{ flex:1,minWidth:160 }}>
+            {isActive && row ? (
+              <div>
+                <div style={{ fontSize:10,color:'rgba(167,139,250,.5)',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',marginBottom:6 }}>Trial Active — Expires In</div>
+                <div style={{ fontSize:52,fontWeight:700,color:'#a78bfa',fontFamily:'monospace',letterSpacing:'.02em',lineHeight:1 }}>
+                  <LiveClock ms={new Date(row.expires_at).getTime()}/>
+                </div>
               </div>
-              <span className="px-live-dot" style={{ width:6,height:6 }}/>
-            </div>
-          )}
-          {!panelEnabled && !userIsOwner && (
-            <div style={{ fontSize:11,color:'#f87171',fontWeight:600,marginTop:4 }}>🚫 Temporarily paused by owner</div>
-          )}
-          {userIsOwner && (
-            <div style={{ display:'flex',alignItems:'center',gap:10,marginTop:8 }}>
-              <span style={{ fontSize:10,color:'rgba(255,255,255,.4)',fontWeight:600 }}>{panelEnabled?'Active for all users':'Stopped for everyone'}</span>
-              <button onClick={togglePanel} disabled={togglingPanel} style={{ display:'flex',alignItems:'center',gap:4,padding:'4px 10px',borderRadius:7,background:panelEnabled?'rgba(239,68,68,.08)':'rgba(34,197,94,.08)',border:`1px solid ${panelEnabled?'rgba(239,68,68,.2)':'rgba(34,197,94,.2)'}`,cursor:'pointer',fontFamily:'inherit',fontSize:10,fontWeight:700,color:panelEnabled?'#f87171':'#4ade80',opacity:togglingPanel?.6:1 }}>
-                {togglingPanel?<Loader2 size={10} className="animate-spin"/>:panelEnabled?'Stop':'Resume'}
+            ) : !panelEnabled && !userIsOwner ? (
+              <div style={{ padding:'14px 18px',borderRadius:14,background:'rgba(239,68,68,.05)',border:'1px solid rgba(239,68,68,.14)' }}>
+                <div style={{ fontSize:13,fontWeight:700,color:'#f87171',marginBottom:3 }}>🚫 Temporarily Unavailable</div>
+                <div style={{ fontSize:11,color:'rgba(248,113,113,.5)' }}>The owner has paused the free trial</div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ fontSize:10,color:'rgba(255,255,255,.25)',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',marginBottom:6 }}>Free · Every 48 Hours</div>
+                <div style={{ fontSize:14,color:'rgba(255,255,255,.38)',fontWeight:600 }}>Internal + Fake Lag included</div>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div style={{ flex:'0 0 auto', display:'flex', flexDirection:'column', gap:10, alignItems:'center' }}>
+            {isActive && row && (
+              <button onClick={()=>setRevealed(!revealed)}
+                style={{ display:'flex',alignItems:'center',gap:7,padding:'12px 22px',borderRadius:13,background:revealed?'rgba(124,92,255,.12)':'rgba(255,255,255,.04)',border:`1px solid ${revealed?'rgba(124,92,255,.25)':'rgba(255,255,255,.09)'}`,cursor:'pointer',color:revealed?'#c4b5fd':'rgba(255,255,255,.5)',fontSize:13,fontFamily:'inherit',fontWeight:600,whiteSpace:'nowrap',transition:'all .2s' }}
+                onMouseEnter={e=>{e.currentTarget.style.background='rgba(124,92,255,.14)';}} onMouseLeave={e=>{e.currentTarget.style.background=revealed?'rgba(124,92,255,.12)':'rgba(255,255,255,.04)';}}>
+                {revealed?<EyeOff size={14}/>:<Eye size={14}/>} {revealed?'Hide Keys':'View Keys'}
               </button>
-            </div>
-          )}
+            )}
+            {(!isActive || !row) && (
+              <button onClick={handleClaim} disabled={!canClaim||generating||!panelEnabled} className="px-btn"
+                style={{ padding:'14px 28px',fontSize:14,borderRadius:14,whiteSpace:'nowrap' }}>
+                {generating ? <><Loader2 size={14} style={{ animation:'px-spin 1s linear infinite' }}/>Generating…</>
+                  : canClaim && panelEnabled ? <><Zap size={14}/>Get Free Trial</>
+                  : !panelEnabled ? <>🚫 Unavailable</>
+                  : <><Clock size={13}/> <LiveClock ms={cooldownMs}/></>}
+              </button>
+            )}
+            {isActive && (
+              <div style={{ display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:99,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)' }}>
+                <Clock size={11} color="rgba(255,255,255,.3)"/>
+                <span style={{ fontSize:11,color:'rgba(255,255,255,.3)',fontWeight:600 }}>Next in <LiveClock ms={new Date(row!.claimed_at).getTime()+FREE_KEY_COOLDOWN}/></span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Right: action buttons */}
-        <div style={{ flex:'0 0 auto', display:'flex', flexDirection:'column', gap:8 }}>
-          {isActive && row && (
-            <button onClick={()=>setRevealed(!revealed)} style={{ display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:10,background:revealed?'rgba(124,92,255,.1)':'rgba(255,255,255,.04)',border:`1px solid ${revealed?'rgba(124,92,255,.22)':'rgba(255,255,255,.08)'}`,cursor:'pointer',color:revealed?'#c4b5fd':'rgba(255,255,255,.5)',fontSize:12,fontFamily:'inherit',fontWeight:600,whiteSpace:'nowrap',transition:'all .18s' }}>
-              {revealed?<EyeOff size={12}/>:<Eye size={12}/>} {revealed?'Hide':'View Keys'}
-            </button>
-          )}
-          {(!isActive || !row) && (
-            <button onClick={handleClaim} disabled={!canClaim||generating||!panelEnabled} className="px-btn" style={{ whiteSpace:'nowrap', padding:'9px 18px' }}>
-              {generating ? <><Loader2 size={12} style={{ animation:'px-spin 1s linear infinite' }}/>Generating…</>
-                : canClaim && panelEnabled ? <><Zap size={12}/>Get Free Trial</>
-                : !panelEnabled ? <>🚫 Unavailable</>
-                : <><Clock size={11}/><LiveClock ms={cooldownMs}/></>}
-            </button>
-          )}
-          {isActive && (
-            <button disabled className="px-btn" style={{ whiteSpace:'nowrap', padding:'9px 18px', opacity:.35 }}>
-              <Clock size={11}/> <LiveClock ms={new Date(row!.claimed_at).getTime()+FREE_KEY_COOLDOWN}/>
-            </button>
-          )}
-        </div>
-
+        {/* Keys reveal */}
+        {isActive && row && revealed && (
+          <div style={{ marginTop:20,display:'flex',gap:14,flexWrap:'wrap',paddingTop:20,borderTop:'1px solid rgba(255,255,255,.06)' }}>
+            {row.lag_key && <div style={{ flex:1,minWidth:220,padding:'14px 18px',borderRadius:14,background:'rgba(255,255,255,.03)',border:'1px solid rgba(167,139,250,.12)' }}>
+              <div style={{ fontSize:9,color:'rgba(167,139,250,.5)',fontWeight:700,marginBottom:6,letterSpacing:'.12em',textTransform:'uppercase' }}>⚡ Fake Lag Key</div>
+              <code style={{ fontSize:12,color:'rgba(196,181,253,.8)',fontFamily:'monospace',wordBreak:'break-all',lineHeight:1.5 }}>{row.lag_key}</code>
+            </div>}
+            {row.internal_key && <div style={{ flex:1,minWidth:220,padding:'14px 18px',borderRadius:14,background:'rgba(255,255,255,.03)',border:'1px solid rgba(124,92,255,.12)' }}>
+              <div style={{ fontSize:9,color:'rgba(124,92,255,.65)',fontWeight:700,marginBottom:6,letterSpacing:'.12em',textTransform:'uppercase' }}>🔒 Internal Key</div>
+              <code style={{ fontSize:12,color:'rgba(167,139,250,.8)',fontFamily:'monospace',wordBreak:'break-all',lineHeight:1.5 }}>{row.internal_key}</code>
+            </div>}
+          </div>
+        )}
       </div>
-
-      {/* Keys reveal — below the row */}
-      {isActive && row && revealed && (
-        <div style={{ marginTop:16, display:'flex', gap:12, flexWrap:'wrap' }}>
-          {row.lag_key && <div style={{ flex:1,minWidth:200,padding:'10px 14px',borderRadius:12,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)' }}>
-            <div style={{ fontSize:8,color:'rgba(255,255,255,.25)',fontWeight:700,marginBottom:4,letterSpacing:'.1em',textTransform:'uppercase' }}>⚡ Fake Lag Key</div>
-            <code style={{ fontSize:11,color:'rgba(196,181,253,.75)',fontFamily:'monospace',wordBreak:'break-all' }}>{row.lag_key}</code>
-          </div>}
-          {row.internal_key && <div style={{ flex:1,minWidth:200,padding:'10px 14px',borderRadius:12,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.07)' }}>
-            <div style={{ fontSize:8,color:'rgba(255,255,255,.25)',fontWeight:700,marginBottom:4,letterSpacing:'.1em',textTransform:'uppercase' }}>🔒 Internal Key</div>
-            <code style={{ fontSize:11,color:'rgba(167,139,250,.75)',fontFamily:'monospace',wordBreak:'break-all' }}>{row.internal_key}</code>
-          </div>}
-        </div>
-      )}
     </div>
   );
 }
 
 
+
 export default function DashboardPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { balance, licenses, transactions, user, systemStatus } = useAppStore();
   const isSystemOnline = systemStatus==='online';
   const isMod = canManageAnnouncements(user?.role);
@@ -617,7 +637,7 @@ export default function DashboardPage() {
                 : <span style={{ width:7,height:7,borderRadius:'50%',background:'#F59E0B',display:'inline-block',flexShrink:0 }}/>}
               <span style={{ fontSize:10, fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase',
                 color: isSystemOnline ? '#4ade80' : '#F59E0B' }}>
-                {isSystemOnline ? 'System Online' : 'Maintenance'}
+                {isSystemOnline ? t('status.allOps',t('status.allOps','System Online')) : t('status.maintenance',t('status.maintenance','Maintenance'))}
               </span>
             </div>
             <span style={{ fontSize:10, fontWeight:600, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.18)' }}>
@@ -812,53 +832,84 @@ export default function DashboardPage() {
         <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
 
           {/* ── DAILY BONUS ── */}
-          <div className="px-panel" style={{ animationDelay:'340ms' as any, padding:'24px 28px' }}>
-            <div className="px-glow" style={{ opacity:.5, background:'radial-gradient(ellipse at 10% 50%,rgba(124,92,255,.2) 0%,transparent 60%)' }}/>
-            <div style={{ position:'relative', display:'flex', alignItems:'center', gap:28, flexWrap:'wrap' }}>
-
-              {/* Left: icon + label + points */}
-              <div style={{ display:'flex', alignItems:'center', gap:16, flex:'0 0 auto' }}>
-                <div style={{ width:48,height:48,borderRadius:15,background:'rgba(167,139,250,.1)',border:'1px solid rgba(167,139,250,.18)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
-                  <Gift size={20} color="#c4b5fd"/>
-                </div>
-                <div>
-                  <div style={{ fontSize:13,fontWeight:700,color:'rgba(255,255,255,.5)',letterSpacing:'.1em',textTransform:'uppercase',marginBottom:2 }}>Daily Bonus</div>
-                  <div style={{ fontSize:32,fontWeight:700,letterSpacing:'-.05em',lineHeight:1,background:'linear-gradient(135deg,#fff,rgba(196,181,253,.8))',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>
-                    {bonusPoints}<span style={{ fontSize:14,color:'rgba(255,255,255,.25)',WebkitTextFillColor:'rgba(255,255,255,.25)' }}>/100</span>
+          <div className="px-panel" style={{ animationDelay:'340ms' as any, padding:'32px 36px', position:'relative', overflow:'hidden' }}>
+            <div className="px-glow" style={{ opacity:.6, background:'radial-gradient(ellipse at 5% 50%,rgba(124,92,255,.28) 0%,transparent 55%)' }}/>
+            {/* Decorative right orb */}
+            <div style={{ position:'absolute',top:-40,right:-40,width:220,height:220,borderRadius:'50%',background:'radial-gradient(circle,rgba(167,139,250,.07) 0%,transparent 65%)',pointerEvents:'none' }}/>
+            <div style={{ position:'relative' }}>
+              {/* Top row: label + redeem button */}
+              <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24 }}>
+                <div style={{ display:'flex',alignItems:'center',gap:14 }}>
+                  <div style={{ width:44,height:44,borderRadius:14,background:'linear-gradient(135deg,rgba(167,139,250,.18),rgba(109,40,217,.06))',border:'1px solid rgba(167,139,250,.22)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 20px rgba(139,92,246,.15)' }}>
+                    <Gift size={20} color="#c4b5fd"/>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:11,fontWeight:700,letterSpacing:'.16em',textTransform:'uppercase',color:'rgba(167,139,250,.6)',marginBottom:2 }}>Daily Bonus</div>
+                    <div style={{ fontSize:13,fontWeight:600,color:'rgba(255,255,255,.35)' }}>+10 pts · every 24h</div>
                   </div>
                 </div>
-              </div>
-
-              {/* Center: progress */}
-              <div style={{ flex:1, minWidth:120 }}>
-                <div style={{ height:4,borderRadius:99,background:'rgba(255,255,255,.06)',overflow:'hidden',marginBottom:6 }}>
-                  <div style={{ height:'100%',borderRadius:99,background:'linear-gradient(90deg,#7c3aed,#c4b5fd)',width:`${Math.min(progressPct===0&&bonusPoints>=100?100:progressPct,100)}%`,boxShadow:'0 0 10px rgba(167,139,250,.5)',transition:'width .5s cubic-bezier(.22,1,.36,1)' }}/>
-                </div>
-                <div style={{ display:'flex',gap:8 }}>
-                  {[{v:'$3',l:'Credit'},{v:'3-Day Key',l:'Free'}].map(r=>(
-                    <div key={r.v} style={{ padding:'5px 10px',borderRadius:8,background:'rgba(167,139,250,.06)',border:'1px solid rgba(167,139,250,.1)',display:'flex',alignItems:'center',gap:5 }}>
-                      <span style={{ fontSize:12,fontWeight:700,color:'#c4b5fd' }}>{r.v}</span>
-                      <span style={{ fontSize:9,color:'rgba(255,255,255,.25)',textTransform:'uppercase',letterSpacing:'.06em' }}>{r.l}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Right: action */}
-              <div style={{ flex:'0 0 auto', display:'flex', flexDirection:'column', gap:8, alignItems:'flex-end' }}>
                 {bonusPoints>=100 && (
-                  <button onClick={()=>setShowRewardModal(true)} style={{ display:'flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:10,background:'rgba(167,139,250,.14)',border:'1px solid rgba(167,139,250,.28)',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,color:'#c4b5fd',whiteSpace:'nowrap' }}
-                    onMouseEnter={e=>{e.currentTarget.style.background='rgba(167,139,250,.24)';}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(167,139,250,.14)';}}>
-                    <Star size={11}/> Redeem Now
+                  <button onClick={()=>setShowRewardModal(true)}
+                    style={{ display:'flex',alignItems:'center',gap:7,padding:'10px 20px',borderRadius:12,background:'linear-gradient(135deg,rgba(167,139,250,.18),rgba(124,92,255,.08))',border:'1px solid rgba(167,139,250,.32)',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,color:'#c4b5fd',boxShadow:'0 0 20px rgba(139,92,246,.2)',transition:'all .18s' }}
+                    onMouseEnter={e=>{e.currentTarget.style.background='linear-gradient(135deg,rgba(167,139,250,.28),rgba(124,92,255,.16))';e.currentTarget.style.boxShadow='0 0 30px rgba(139,92,246,.35)';}}
+                    onMouseLeave={e=>{e.currentTarget.style.background='linear-gradient(135deg,rgba(167,139,250,.18),rgba(124,92,255,.08))';e.currentTarget.style.boxShadow='0 0 20px rgba(139,92,246,.2)';}}>
+                    <Star size={13}/> Redeem Now
                   </button>
                 )}
-                <button onClick={handleClaimBonus} disabled={!canClaimBonus||claimingBonus} className="px-btn" style={{ whiteSpace:'nowrap', padding:'9px 18px' }}>
-                  {claimingBonus
-                    ? <><Loader2 size={12} style={{ animation:'px-spin 1s linear infinite' }}/>Claiming…</>
-                    : canClaimBonus
-                      ? <><Sparkles size={12}/>Claim +10 pts</>
-                      : <><Clock size={11}/>{bonusCooldown}</>}
-                </button>
+              </div>
+
+              {/* Main content: big number + progress + rewards */}
+              <div style={{ display:'flex',alignItems:'center',gap:32,flexWrap:'wrap' }}>
+                {/* Big points number */}
+                <div style={{ flex:'0 0 auto' }}>
+                  <div style={{ display:'flex',alignItems:'baseline',gap:6,lineHeight:1 }}>
+                    <span style={{ fontSize:72,fontWeight:700,letterSpacing:'-.06em',lineHeight:1,background:'linear-gradient(135deg,#fff 30%,rgba(196,181,253,.7) 100%)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>
+                      {bonusPoints}
+                    </span>
+                    <span style={{ fontSize:22,color:'rgba(255,255,255,.18)',fontWeight:600,letterSpacing:'-.02em' }}>/100</span>
+                  </div>
+                  <div style={{ fontSize:11,color:'rgba(255,255,255,.25)',fontWeight:600,marginTop:4,letterSpacing:'.06em',textTransform:'uppercase' }}>bonus points</div>
+                </div>
+
+                {/* Progress + rewards */}
+                <div style={{ flex:1,minWidth:180 }}>
+                  {/* Progress bar */}
+                  <div style={{ marginBottom:14 }}>
+                    <div style={{ display:'flex',justifyContent:'space-between',marginBottom:8 }}>
+                      <span style={{ fontSize:10,color:'rgba(255,255,255,.28)',fontWeight:600 }}>Progress to reward</span>
+                      <span style={{ fontSize:10,color:bonusPoints>=100?'#c4b5fd':'rgba(255,255,255,.28)',fontWeight:700 }}>
+                        {bonusPoints>=100?'🎁 Ready!':progressPct+'%'}
+                      </span>
+                    </div>
+                    <div style={{ height:6,borderRadius:99,background:'rgba(255,255,255,.06)',overflow:'hidden' }}>
+                      <div style={{ height:'100%',borderRadius:99,background:'linear-gradient(90deg,#6d28d9,#a78bfa,#c4b5fd)',width:`${Math.min(progressPct===0&&bonusPoints>=100?100:progressPct,100)}%`,boxShadow:'0 0 14px rgba(167,139,250,.55)',transition:'width .6s cubic-bezier(.22,1,.36,1)' }}/>
+                    </div>
+                  </div>
+                  {/* Reward chips */}
+                  <div style={{ display:'flex',gap:10 }}>
+                    {[{icon:'💵',v:'$3',l:'Wallet Credit'},{icon:'🔑',v:'3-Day',l:'Free Key'}].map(r=>(
+                      <div key={r.v} style={{ display:'flex',alignItems:'center',gap:8,padding:'9px 14px',borderRadius:12,background:'rgba(167,139,250,.06)',border:'1px solid rgba(167,139,250,.12)',flex:1 }}>
+                        <span style={{ fontSize:16 }}>{r.icon}</span>
+                        <div>
+                          <div style={{ fontSize:13,fontWeight:700,color:'#c4b5fd',lineHeight:1 }}>{r.v}</div>
+                          <div style={{ fontSize:9,color:'rgba(255,255,255,.28)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',marginTop:2 }}>{r.l}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Claim button */}
+                <div style={{ flex:'0 0 auto' }}>
+                  <button onClick={handleClaimBonus} disabled={!canClaimBonus||claimingBonus} className="px-btn"
+                    style={{ padding:'14px 28px',fontSize:14,borderRadius:14,whiteSpace:'nowrap' }}>
+                    {claimingBonus
+                      ? <><Loader2 size={14} style={{ animation:'px-spin 1s linear infinite' }}/>Claiming…</>
+                      : canClaimBonus
+                        ? <><Sparkles size={14}/>Claim +10 Points</>
+                        : <><Clock size={13}/>{bonusCooldown}</>}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

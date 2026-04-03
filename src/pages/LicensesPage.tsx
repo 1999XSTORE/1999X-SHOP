@@ -86,7 +86,7 @@ function ExpiryCountdown({ expiresAt }: { expiresAt: string }) {
   useEffect(() => {
     const up = () => {
       const diff = new Date(expiresAt).getTime() - Date.now();
-      if (diff <= 0) { setTxt('Expired'); return; }
+      if (diff <= 0) { setTxt(t('common.expired','Expired')); return; }
       const d = Math.floor(diff/86400000), h = Math.floor((diff%86400000)/3600000),
             m = Math.floor((diff%3600000)/60000), s = Math.floor((diff%60000)/1000);
       setTxt(d > 0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m ${s}s`);
@@ -207,12 +207,12 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
           </div>
           <div>
             <div style={{ fontSize:12,fontWeight:800,color:'#fff',letterSpacing:'.06em',lineHeight:1.2,textTransform:'uppercase' }}>
-              {isInternal ? '1999X — INTERNAL PANEL' : '1999X — FAKE LAG PANEL'}
+              {isInternal ? t('license.internalPanel','1999X — INTERNAL PANEL') : t('license.fakeLagPanel','1999X — FAKE LAG PANEL')}
             </div>
             <div style={{ display:'flex',alignItems:'center',gap:6,marginTop:3 }}>
               <div style={{ width:6,height:6,borderRadius:'50%',background:isExpired?'#f87171':'#4ade80',boxShadow:`0 0 ${isExpired?'6px #f87171':'8px rgba(74,222,128,.7)'}`,animation:isExpired?'none':'lc-live 2s ease-in-out infinite' }}/>
               <span style={{ fontSize:10,fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:isExpired?'#f87171':'#4ade80' }}>
-                {isExpired ? 'Expired' : 'Active'}
+                {isExpired ? 'Expired' : t('common.active','Active')}
               </span>
               <span style={{ fontSize:10,color:'rgba(255,255,255,.25)' }}>·</span>
               <span style={{ fontSize:10,color:'rgba(255,255,255,.3)',fontWeight:500 }}>KeyAuth</span>
@@ -252,9 +252,9 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
       {/* ── META GRID ── */}
       <div style={{ padding:'14px 22px 0', display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, position:'relative' }}>
         {[
-          { icon:Shield, label:'HWID', val:lic?.hwid || 'Not bound' },
-          { icon:Globe,  label:'IP',   val:lic?.ip   || 'Unknown'   },
-          { icon:Clock,  label:'Last Login', val:lic?.lastLogin ? new Date(lic.lastLogin).toLocaleDateString() : '—' },
+          { icon:Shield, label:t('license.hwid','HWID'), val:lic?.hwid || t('common.noData','Not bound') },
+          { icon:Globe,  label:t('license.ip','IP'),   val:lic?.ip   || t('common.noData','Unknown')   },
+          { icon:Clock,  label:t('license.lastLogin','Last Login'), val:lic?.lastLogin ? new Date(lic.lastLogin).toLocaleDateString() : '—' },
           { icon:Key,    label:'Product',    val:isInternal?'Internal':'Fake Lag' },
         ].map(({ icon:Icon, label, val })=>(
           <div key={label} style={{ padding:'10px 12px',borderRadius:13,background:'rgba(255,255,255,.025)',border:'1px solid rgba(255,255,255,.055)' }}>
@@ -302,8 +302,8 @@ function DownloadSection() {
       </div>
       <div style={{ padding:'18px 20px',background:'rgba(255,255,255,.02)',display:'grid',gridTemplateColumns:'1fr 1fr',gap:12 }}>
         {[
-          { href:DOWNLOAD_URL, icon:<Download size={17}/>, label:'Panel Download', color:'#a78bfa', bg:'rgba(167,139,250,.1)', bc:'rgba(167,139,250,.22)' },
-          { href:TUTORIAL_URL, icon:<Play size={17}/>,     label:'Watch Tutorial', color:'#818cf8', bg:'rgba(129,140,248,.1)', bc:'rgba(129,140,248,.22)' },
+          { href:DOWNLOAD_URL, icon:<Download size={17}/>, label:t('license.download','Panel Download'), color:'#a78bfa', bg:'rgba(167,139,250,.1)', bc:'rgba(167,139,250,.22)' },
+          { href:TUTORIAL_URL, icon:<Play size={17}/>,     label:t('license.tutorial','Watch Tutorial'), color:'#818cf8', bg:'rgba(129,140,248,.1)', bc:'rgba(129,140,248,.22)' },
         ].map(btn=>(
           <a key={btn.label} href={btn.href} target="_blank" rel="noopener noreferrer"
             style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:9,padding:'13px',borderRadius:14,background:btn.bg,border:`1px solid ${btn.bc}`,color:btn.color,fontSize:13,fontWeight:700,textDecoration:'none',transition:'all .2s' }}
@@ -334,7 +334,7 @@ function ExpiredHistory({ intExpired, lagExpired }: { intExpired:any[]; lagExpir
           <div style={{ fontSize:13,fontWeight:700,color:'rgba(255,255,255,.6)' }}>Expired Licenses</div>
           <div style={{ fontSize:11,color:'rgba(255,255,255,.28)',marginTop:1 }}>{all.length} expired key{all.length!==1?'s':''} in history</div>
         </div>
-        <span style={{ fontSize:10,fontWeight:600,padding:'4px 11px',borderRadius:99,background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.09)',color:'rgba(255,255,255,.4)' }}>{show?'Hide':'Show'}</span>
+        <span style={{ fontSize:10,fontWeight:600,padding:'4px 11px',borderRadius:99,background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.09)',color:'rgba(255,255,255,.4)' }}>{show?t('license.hide','Hide'):t('license.show','Show')}</span>
       </button>
       {show && (
         <div style={{ marginTop:10,display:'flex',flexDirection:'column',gap:8 }}>

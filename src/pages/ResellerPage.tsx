@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { formatPrice, formatPriceShort, getCurrencyForLang } from '@/lib/currency';
 import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { safeQuery } from '@/lib/safeFetch';
@@ -18,7 +20,7 @@ const HERO_IMAGE = 'https://www.dropbox.com/scl/fi/gshxatzs1yojn8ix697v6/image-r
 const PLANS = [
   {
     id: 'monthly',
-    label: 'Monthly',
+    label: t('reseller.monthly','Monthly'),
     price: 50,
     duration: 30,
     tag: 'STARTER',
@@ -29,7 +31,7 @@ const PLANS = [
   },
   {
     id: '3month',
-    label: '3 Months',
+    label: t('reseller.threeMonth','3 Months'),
     price: 100,
     duration: 90,
     tag: 'BEST VALUE',
@@ -170,6 +172,7 @@ function FeePaymentModal({ dueAmount, userId, userEmail, onClose, onSuccess }: {
 }
 
 export default function ResellerPage() {
+  const { t, i18n } = useTranslation();
   const { user, balance, deductBalance, refundBalance, setUserRole } = useAppStore();
 
   // Subscription state
@@ -750,7 +753,7 @@ export default function ResellerPage() {
                           {p.id==='monthly' ? '🚀' : '👑'}
                         </div>
                         <div style={{ flex:1, textAlign:'left' }}>
-                          <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:2 }}>{p.label} <span style={{ color:'rgba(255,255,255,.4)', fontWeight:500 }}>— ${p.price}</span></div>
+                          <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:2 }}>{p.label} <span style={{ color:'rgba(255,255,255,.4)', fontWeight:500 }}>— ${p.price}{getCurrencyForLang(i18n.language).code!=='USD'?` (≈${formatPriceShort(p.price,i18n.language)})`:''}</span></div>
                           <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>{p.displayFee} · {p.duration}d access</div>
                         </div>
                         <span style={{ fontSize:9, fontWeight:900, letterSpacing:'.1em', textTransform:'uppercase', padding:'3px 8px', borderRadius:20, background:`rgba(${p.id==='monthly'?'139,92,246':'245,158,11'},.15)`, color:p.id==='monthly'?'#a78bfa':'#fbbf24', border:`1px solid rgba(${p.id==='monthly'?'139,92,246':'245,158,11'},.25)` }}>{p.tag}</span>
@@ -775,7 +778,7 @@ export default function ResellerPage() {
               {/* Balance check */}
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', borderRadius:13, background: balance>=selectedPlanData.price?'rgba(16,232,152,.07)':'rgba(248,113,113,.07)', border:`1px solid ${balance>=selectedPlanData.price?'rgba(16,232,152,.18)':'rgba(248,113,113,.18)'}` }}>
                 <span style={{ fontSize:12, color:'rgba(255,255,255,.45)' }}>Your balance</span>
-                <span style={{ fontSize:16, fontWeight:900, color: balance>=selectedPlanData.price?'#10e898':'#f87171' }}>${balance.toFixed(2)}</span>
+                <span style={{ fontSize:16, fontWeight:900, color: balance>=selectedPlanData.price?'#10e898':'#f87171' }}>${balance.toFixed(2)}{getCurrencyForLang(i18n.language).code!=='USD'&&<span style={{fontSize:11,fontWeight:600,marginLeft:4,opacity:.6}}>≈{formatPriceShort(balance,i18n.language)}</span>}</span>
               </div>
 
               {balance < selectedPlanData.price && (
@@ -788,7 +791,7 @@ export default function ResellerPage() {
               <button className="rs-buy-btn" onClick={handlePurchase} disabled={purchasing || balance < selectedPlanData.price}>
                 {purchasing
                   ? <><Loader2 size={18} className="animate-spin"/> Activating…</>
-                  : <><Wallet size={18}/> Subscribe for ${selectedPlanData.price}</>
+                  : <><Wallet size={18}/> {t('reseller.subscribe','Subscribe')} — ${selectedPlanData.price}{getCurrencyForLang(i18n.language).code!=='USD'&&<span style={{fontSize:11,opacity:.7}}> ≈{formatPriceShort(selectedPlanData.price,i18n.language)}</span>}</>
                 }
               </button>
 
@@ -852,9 +855,9 @@ export default function ResellerPage() {
             {/* ── Tab navigation ── */}
             <div style={{ display:'flex', gap:4, padding:'4px', background:'rgba(255,255,255,.025)', borderRadius:14, border:'1px solid rgba(255,255,255,.07)', backdropFilter:'blur(12px)' }}>
               {([
-                { id:'overview',     label:'Overview',         icon:<BarChart3 size={13}/> },
-                { id:'transactions', label:'Customer Txns',    icon:<ShoppingBag size={13}/> },
-                { id:'payments',     label:'Payment Settings', icon:<CreditCard size={13}/> },
+                { id:'overview',     label:t('reseller.overview','Overview'),         icon:<BarChart3 size={13}/> },
+                { id:'transactions', label:t('reseller.customerTxns','Customer Txns'),    icon:<ShoppingBag size={13}/> },
+                { id:'payments',     label:t('reseller.paymentSettings',t('reseller.paymentSettings','Payment Settings')), icon:<CreditCard size={13}/> },
               ] as const).map(tab => (
                 <button key={tab.id} onClick={() => setResellerTab(tab.id)}
                   style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:7,
@@ -873,8 +876,8 @@ export default function ResellerPage() {
             {/* ── Stats row ── */}
             <div className="rs-stats-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14 }}>
               {[
-                { label:'Total Sales', value:resellerTxns.length, color:'#38bdf8', bg:'rgba(56,189,248,.08)', border:'rgba(56,189,248,.18)', icon:<Users size={18}/> },
-                { label:'Total Fees', value:`$${totalFees.toFixed(2)}`, color:'#fbbf24', bg:'rgba(251,191,36,.08)', border:'rgba(251,191,36,.18)', icon:<BarChart3 size={18}/> },
+                { label:t('reseller.totalSales',t('reseller.totalSales','Total Sales')), value:resellerTxns.length, color:'#38bdf8', bg:'rgba(56,189,248,.08)', border:'rgba(56,189,248,.18)', icon:<Users size={18}/> },
+                { label:t('reseller.totalFees',t('reseller.totalFees','Total Fees')), value:`$${totalFees.toFixed(2)}`, color:'#fbbf24', bg:'rgba(251,191,36,.08)', border:'rgba(251,191,36,.18)', icon:<BarChart3 size={18}/> },
               ].map(s => (
                 <div key={s.label} className="rs-stat" style={{ border:`1px solid ${s.border}`, background:`linear-gradient(160deg,${s.bg},rgba(8,9,22,.6))` }}>
                   <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12 }}>
@@ -1008,9 +1011,9 @@ Pay 1% of your weekly sales revenue each week to keep your reseller subscription
                 {/* Filter stats */}
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
                   {[
-                    { label:'Pending',  val:customerTxns.filter(t=>t.status==='pending').length,  color:'#fbbf24', bg:'rgba(251,191,36,.07)',  bc:'rgba(251,191,36,.15)' },
-                    { label:'Approved', val:customerTxns.filter(t=>t.status==='approved').length, color:'#4ade80', bg:'rgba(34,197,94,.07)',   bc:'rgba(34,197,94,.14)' },
-                    { label:'Total $',  val:`$${customerTxns.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount),0).toFixed(2)}`, color:'#a78bfa', bg:'rgba(167,139,250,.07)', bc:'rgba(167,139,250,.16)' },
+                    { label:t('reseller.pending','Pending'),  val:customerTxns.filter(t=>t.status==='pending').length,  color:'#fbbf24', bg:'rgba(251,191,36,.07)',  bc:'rgba(251,191,36,.15)' },
+                    { label:t('reseller.approved','Approved'), val:customerTxns.filter(t=>t.status==='approved').length, color:'#4ade80', bg:'rgba(34,197,94,.07)',   bc:'rgba(34,197,94,.14)' },
+                    { label:t('shop.total','Total'),  val:`$${customerTxns.filter(t=>t.status==='approved').reduce((s,t)=>s+Number(t.amount),0).toFixed(2)}`, color:'#a78bfa', bg:'rgba(167,139,250,.07)', bc:'rgba(167,139,250,.16)' },
                   ].map(s => (
                     <div key={s.label} style={{ padding:'14px 16px', borderRadius:16, background:s.bg, border:`1px solid ${s.bc}`, position:'relative', overflow:'hidden' }}>
                       <div style={{ position:'absolute',top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${s.color}40,transparent)` }}/>

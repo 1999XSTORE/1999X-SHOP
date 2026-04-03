@@ -5,6 +5,7 @@ import { ArrowRight, ArrowLeft, RefreshCw, Users, Check, X, Copy, CheckCircle, L
 import { safeQuery } from '@/lib/safeFetch';
 import { logActivity, notifyUser } from '@/lib/activity';
 import { cn } from '@/lib/utils';
+import { formatPrice, formatPriceShort, getCurrencyForLang } from '@/lib/currency';
 import { captureReferralFromUrl, getStoredReferralEmail, normalizeReferralValue, normalizeResellerEmail, clearStoredReferralEmail, fetchResellerPaymentMethods } from '@/lib/reseller';
 import type { ResellerPaymentMethods } from '@/lib/reseller';
 import { toast } from 'sonner';
@@ -662,7 +663,7 @@ const PANEL_GROUPS = [
 ];
 
 function PanelProductCard({ group, balance, onBuy, onAddBalance }: { group: typeof PANEL_GROUPS[number]; balance: number; onBuy: (plan: any) => void; onAddBalance: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [sel, setSel] = useState(0);
   const plan = group.plans[sel];
   const can  = balance >= plan.price;
@@ -738,9 +739,14 @@ function PanelProductCard({ group, balance, onBuy, onAddBalance }: { group: type
           display:'flex', alignItems:'baseline', gap:4,
         }}>
           <span style={{
-            fontSize:42, fontWeight:900, color:'#fff', letterSpacing:'-.05em', lineHeight:1,
-            textShadow:`0 0 30px ${group.glow}, 0 2px 8px rgba(0,0,0,.8)`,
-          }}>${plan.price}</span>
+              fontSize:42, fontWeight:900, color:'#fff', letterSpacing:'-.05em', lineHeight:1,
+              textShadow:`0 0 30px ${group.glow}, 0 2px 8px rgba(0,0,0,.8)`,
+            }}>
+            {getCurrencyForLang(i18n.language).code === 'USD'
+              ? `$${plan.price}`
+              : formatPriceShort(plan.price, i18n.language)
+            }
+          </span>
         </div>
       </div>
 
