@@ -565,10 +565,21 @@ export default function LicensesPage() {
       </div>
 
       {/* ── LICENSE CARDS ── */}
-      {(intActive.length>0||lagActive.length>0) && (
-        <div style={{ display:'grid',gridTemplateColumns:intActive.length>0&&lagActive.length>0?'1fr 1fr':'1fr',gap:16,animation:'lc-in .5s .18s both' }}>
-          {intActive.map((l:any)=><LicenseCard key={l?.id||Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} variant="internal"/>)}
-          {lagActive.map((l:any)=><LicenseCard key={l?.id||Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} variant="lag"/>)}
+      {intActive.length > 0 && (
+        <div style={{ animation:'lc-in .5s .18s both', marginBottom: lagActive.length > 0 ? 16 : 0 }}>
+          <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.5)', letterSpacing:'.08em', marginBottom:12, textTransform:'uppercase' }}>1999X INTERNAL PANEL-</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+            {intActive.map((l:any)=><LicenseCard key={l?.id||Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} variant="internal"/>)}
+          </div>
+        </div>
+      )}
+
+      {lagActive.length > 0 && (
+        <div style={{ animation:'lc-in .5s .18s both' }}>
+          <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.5)', letterSpacing:'.08em', marginBottom:12, textTransform:'uppercase' }}>1999X FAKE LAG PANEL-</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+            {lagActive.map((l:any)=><LicenseCard key={l?.id||Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} variant="lag"/>)}
+          </div>
         </div>
       )}
 
