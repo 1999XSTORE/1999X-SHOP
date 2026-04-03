@@ -290,11 +290,9 @@ export default function ResellerPage() {
 
   useEffect(() => {
     if (!user?.id) return;
-    const interval = window.setInterval(() => { void loadSubscription(); }, 30000);
     const onFocus = () => { void loadSubscription(); };
     window.addEventListener('focus', onFocus);
     return () => {
-      window.clearInterval(interval);
       window.removeEventListener('focus', onFocus);
     };
   }, [user?.id]);
@@ -305,11 +303,9 @@ export default function ResellerPage() {
 
   useEffect(() => {
     if (!sub || !user?.id) return;
-    const interval = window.setInterval(() => { void loadDashboard(); }, 15000);
     const onFocus = () => { void loadDashboard(); };
     window.addEventListener('focus', onFocus);
     return () => {
-      window.clearInterval(interval);
       window.removeEventListener('focus', onFocus);
     };
   }, [sub?.id, user?.id]);
@@ -317,11 +313,9 @@ export default function ResellerPage() {
   useEffect(() => {
     if (!ownerMode) return;
     void loadOwnerOverview();
-    const interval = window.setInterval(() => { void loadOwnerOverview(); }, 15000);
     const onFocus = () => { void loadOwnerOverview(); };
     window.addEventListener('focus', onFocus);
     return () => {
-      window.clearInterval(interval);
       window.removeEventListener('focus', onFocus);
     };
   }, [ownerMode]);

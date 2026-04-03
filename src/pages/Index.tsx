@@ -47,28 +47,7 @@ function savePath(p: string) {
   try { sessionStorage.setItem(PATH_KEY, p); } catch {}
 }
 
-function PageLoader() {
-  return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'40vh' }}>
-      <style>{`
-        @keyframes pg-bounce {
-          0%   { transform: scale(1, 0.7); }
-          40%  { transform: scale(0.8, 1.2); }
-          60%  { transform: scale(1, 1); }
-          100% { bottom: 120px; }
-        }
-        @keyframes pg-step {
-          0%   { box-shadow: 0 10px 0 rgba(0,0,0,0), 0 10px 0 rgba(139,92,246,.6), -35px 50px 0 rgba(139,92,246,.6), -70px 90px 0 rgba(139,92,246,.6); }
-          100% { box-shadow: 0 10px 0 rgba(139,92,246,.6), -35px 50px 0 rgba(139,92,246,.6), -70px 90px 0 rgba(139,92,246,.6), -70px 90px 0 rgba(0,0,0,0); }
-        }
-        .pg-loader { position:relative; width:120px; height:90px; margin:0 auto; filter:drop-shadow(0 0 12px rgba(139,92,246,.4)); }
-        .pg-loader:before { content:''; position:absolute; bottom:30px; left:50px; height:30px; width:30px; border-radius:50%; background:#7c3aed; animation:pg-bounce .5s ease-in-out infinite alternate; }
-        .pg-loader:after  { content:''; position:absolute; right:0; top:0; height:7px; width:45px; border-radius:4px; box-shadow:0 5px 0 rgba(167,139,250,.5),-35px 50px 0 rgba(167,139,250,.5),-70px 95px 0 rgba(167,139,250,.5); animation:pg-step 1s ease-in-out infinite; }
-      `}</style>
-      <div className="pg-loader"/>
-    </div>
-  );
-}
+
 
 async function fetchRole(email: string): Promise<AppRole> {
   const normalizedEmail = email.trim().toLowerCase();
@@ -402,7 +381,7 @@ export default function Index() {
   return (
     <AppLayout currentPath={currentPath} onNavigate={navigate} onLogout={handleLogout}>
       <SafePageContent>
-        <Suspense fallback={<PageLoader />}>
+        <Suspense fallback={null}>
           <PageComponent />
         </Suspense>
       </SafePageContent>

@@ -25,9 +25,13 @@ interface Msg {
 }
 
 function canSeeMessage(msg: Msg, currentUserId: string, currentRole: AppRole) {
-  if (currentRole === 'owner') return true;
+  // Owner, admin, support see everything
+  if (currentRole === 'owner' || currentRole === 'admin' || currentRole === 'support') return true;
+  // Own messages always visible
   if (msg.user_id === currentUserId) return true;
+  // Private messages only visible to target
   if (msg.is_private) return msg.private_target_user_id === currentUserId;
+  // Role-targeted messages only visible to that role
   if (msg.target_role) return currentRole === msg.target_role;
   return true;
 }
@@ -265,9 +269,18 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!user?.id) return;
-    supabase.from('chat_messages').select('*').order('created_at',{ascending:true}).limit(100)
-      .then(({data}) => { if(data) setMessages(filterVisibleMessages(data as Msg[])); setLoading(false); });
-  }, [filterVisibleMessages, user?.id]);
+    // Load ascending directly — newest at bottom, no reversal needed
+    supabase.from('chat_messages').select('*').order('created_at',{ascending:true}).limit(150)
+      .then(({data}) => {
+        if (data) {
+          const filtered = (data as Msg[]).filter(m => canSeeMessage(m, user.id, currentRole));
+          setMessages(filtered);
+          // Scroll to bottom after initial load
+          setTimeout(() => { bottomRef.current?.scrollIntoView({behavior:'auto'}); }, 50);
+        }
+        setLoading(false);
+      });
+  }, [user?.id]);  // Only re-fetch when user changes, not on role change
 
   useEffect(() => {
     if (!user) return;
@@ -276,7 +289,12 @@ export default function ChatPage() {
     ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages'},({new:m})=>{
       const next = m as Msg;
       if (!canSeeMessage(next, user.id, currentRole)) return;
-      setMessages(p=>{ if(p.find(x=>x.id===next.id)) return p; return [...p,next]; });
+      setMessages(p=>{
+        if (p.find(x=>x.id===next.id)) return p;
+        const updated = [...p, next];
+        // Keep sorted by created_at so latest is always at bottom
+        return updated.sort((a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      });
     })
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'chat_messages'},({new:m})=>{
       const next = m as Msg;
@@ -355,7 +373,7 @@ export default function ChatPage() {
       // Rollback on failure — reload messages
       toast.error(t('common.error'));
       supabase.from('chat_messages').select('*').order('created_at',{ascending:true}).limit(100)
-        .then(({data}) => { if (data) setMessages(filterVisibleMessages(data as Msg[])); });
+        .then(({data}) => { if (data) setMessages(filterVisibleMessages([...data].reverse() as Msg[])); });
     }
   };
   const handleEditSave=async()=>{
