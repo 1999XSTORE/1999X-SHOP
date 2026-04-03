@@ -9,7 +9,7 @@ import type { License } from '@/lib/store';
 
 const SUPABASE_URL  = 'https://awjouzwzdkrevvnlenvn.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3am91end6ZGtyZXZ2bmxlbnZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTg4MjEsImV4cCI6MjA5MDAzNDgyMX0._I_I-WA_8-YqDfaRzKiVgpEAhkH9faxlEIV6e766A0M';
-const FF_IMAGE      = 'https://www.dropbox.com/scl/fi/0ls7ufwwq1ipwsjvadrzx/How-to-Integrate-Your-Gaming-Achievements-into-Your-Logo.jpg?rlkey=afk3vxk6ijon1htpwhnoy1lnr&st=j5camed9&raw=1';
+const FF_IMAGE      = 'https://www.dropbox.com/scl/fi/b09vgdpumapu0qrmauzf2/Combo.png?rlkey=nph0m7pxg7klstq9n5voxs0qj&st=rzke1bmt&raw=1';
 const DOWNLOAD_URL  = 'https://www.asuswebstorage.com/navigate/a/#/s/4E1D05A81552402C8D05FCE0E61402A64';
 const TUTORIAL_URL  = 'https://youtu.be/vwUYk589SzU';
 
@@ -285,13 +285,7 @@ function LicenseCard({ lic, onCopy, onReset, onUnlink, variant }: {
 
       {/* ── LICENSE KEY — full width prominent ── */}
       <div style={{ padding:'14px 20px 12px', position:'relative' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:8 }}>
-          <div style={{ fontSize:9,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(255,255,255,.3)'}}>License Key</div>
-          <button onClick={()=>onUnlink(lic)} style={{ background:'none',border:'none',color:'rgba(239,68,68,.6)',fontSize:8,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',cursor:'pointer',padding:0,display:'flex',alignItems:'center',gap:4,outline:'none',transition:'opacity .15s' }}
-            onMouseEnter={e=>{e.currentTarget.style.opacity='1';}} onMouseLeave={e=>{e.currentTarget.style.opacity='.7';}}>
-            <Unlink size={9}/> Unlink
-          </button>
-        </div>
+        <div style={{ fontSize:9,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(255,255,255,.3)',marginBottom:8 }}>License Key</div>
         <div style={{ padding:'14px 16px',borderRadius:14,background:'rgba(0,0,0,.35)',border:`1px solid ${ab(.18)}`,boxShadow:`0 0 20px ${ab(.08)} inset`,display:'flex',alignItems:'center',gap:10 }}>
           <code style={{ flex:1,fontSize:13,fontFamily:'monospace',fontWeight:600,color:keyVisible?accent:'rgba(255,255,255,.65)',letterSpacing:keyVisible?'1.5px':'.5px',filter:keyVisible?'none':'blur(6px)',transition:'all .3s',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textShadow:keyVisible?`0 0 12px ${ab(.6)}`:'none' }}>
             {displayKey || '(no key)'}
@@ -324,8 +318,8 @@ function LicenseCard({ lic, onCopy, onReset, onUnlink, variant }: {
         ))}
       </div>
 
-      {/* ── HWID RESET ── */}
-      <div style={{ padding:'14px 22px 22px', position:'relative' }}>
+      {/* ── HWID RESET & UNLINK ── */}
+      <div style={{ padding:'14px 22px 22px', position:'relative', display:'flex', flexDirection:'column', gap:8 }}>
         <button onClick={()=>onReset(lic)}
           style={{ display:'flex',alignItems:'center',gap:8,padding:'10px 14px',borderRadius:13,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:600,color:'rgba(255,255,255,.5)',transition:'all .18s',width:'100%' }}
           onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,.08)';e.currentTarget.style.color='#fff';}}
@@ -333,6 +327,13 @@ function LicenseCard({ lic, onCopy, onReset, onUnlink, variant }: {
           <RefreshCw size={13}/>
           Reset HWID
           <span style={{ marginLeft:'auto',fontSize:10,color:'rgba(255,255,255,.3)',fontWeight:500 }}>{resetsLeft} reset{resetsLeft!==1?'s':''} remaining</span>
+        </button>
+        <button onClick={()=>onUnlink(lic)}
+          style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'10px 14px',borderRadius:13,background:'transparent',border:'1px solid rgba(239,68,68,.15)',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:600,color:'rgba(239,68,68,.7)',transition:'all .18s',width:'100%' }}
+          onMouseEnter={e=>{e.currentTarget.style.background='rgba(239,68,68,.08)';e.currentTarget.style.color='#f87171';}}
+          onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='rgba(239,68,68,.7)';}}>
+          <Unlink size={13}/>
+          Unlink Key from Account
         </button>
       </div>
     </div>
@@ -354,7 +355,7 @@ function DownloadSection() {
           <span style={{ fontSize:9,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:'#4ade80' }}>OB52 Undetected</span>
         </div>
         <div style={{ position:'absolute',bottom:0,left:0,right:0,padding:'20px 22px' }}>
-          <div style={{ fontSize:22,fontWeight:700,color:'#fff',letterSpacing:'-.02em',marginBottom:4 }}>1999X Panel Ready</div>
+          <div style={{ fontSize:22,fontWeight:700,color:'#fff',letterSpacing:'-.02em',marginBottom:4 }}>Download Panel and Watch Tutorial</div>
           <div style={{ fontSize:12,color:'rgba(255,255,255,.45)' }}>Your license is active — download and watch the setup guide.</div>
         </div>
       </div>
