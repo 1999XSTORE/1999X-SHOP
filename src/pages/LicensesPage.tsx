@@ -2,7 +2,7 @@ import { logActivity } from '@/lib/activity';
 import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { useTranslation } from 'react-i18next';
-import { Key, Copy, RefreshCw, Globe, Clock, Shield, CheckCircle, Loader2, AlertCircle, Eye, EyeOff, AlertTriangle, Download, Play, Zap } from 'lucide-react';
+import { MapPin, Key, Copy, RefreshCw, Globe, Clock, Shield, CheckCircle, Loader2, AlertCircle, Eye, EyeOff, AlertTriangle, Download, Play, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEffect, useState, useRef } from 'react';
 import type { License } from '@/lib/store';
@@ -171,6 +171,26 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
   const { t } = useTranslation();
   const [keyVisible, setKeyVisible] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [geoCountry, setGeoCountry] = useState<string|null>(null);
+
+  useEffect(() => {
+    if (!lic?.ip || lic.ip === 'Unknown') return;
+    let alive = true;
+    fetch(`https://get.geojs.io/v1/ip/country/${lic.ip}.json`)
+      .then(r => r.json())
+      .then(d => {
+        if (alive && d.country && d.name) {
+          const codePoints = d.country
+            .toUpperCase()
+            .split('')
+            .map((char: any) => 127397 + char.charCodeAt(0));
+          const flag = String.fromCodePoint(...codePoints);
+          setGeoCountry(`${flag} ${d.name}`);
+        }
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [lic?.ip]);
   const rawKey     = lic?.key ?? '';
   const displayKey = rawKey.endsWith('_INTERNAL') ? rawKey.replace('_INTERNAL','') : rawKey;
   const expiresAt  = lic?.expiresAt ?? new Date(Date.now()+30*86400000).toISOString();
@@ -256,9 +276,9 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
           { icon:Shield, label:t('license.hwid','HWID'), val:lic?.hwid || t('common.noData','Not bound') },
           { icon:Globe,  label:t('license.ip','IP'),   val:lic?.ip   || t('common.noData','Unknown')   },
           { icon:Clock,  label:t('license.lastLogin','Last Login'), val:lic?.lastLogin ? new Date(lic.lastLogin).toLocaleDateString() : '—' },
-          { icon:Key,    label:'Product',    val:isInternal?'Internal':'Fake Lag' },
-        ].map(({ icon:Icon, label, val })=>(
-          <div key={label} style={{ padding:'10px 12px',borderRadius:13,background:'rgba(255,255,255,.025)',border:'1px solid rgba(255,255,255,.055)' }}>
+          { icon:MapPin, label:t('license.country','Country'), val:geoCountry || '—' },
+        ].map(({ icon:Icon, label, val }, i)=>(
+          <div key={i} style={{ padding:'10px 12px',borderRadius:13,background:'rgba(255,255,255,.025)',border:'1px solid rgba(255,255,255,.055)' }}>
             <div style={{ display:'flex',alignItems:'center',gap:4,marginBottom:4 }}>
               <Icon size={9} color="rgba(255,255,255,.3)"/>
               <span style={{ fontSize:9,fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(255,255,255,.3)' }}>{label}</span>
@@ -567,7 +587,7 @@ export default function LicensesPage() {
       {/* ── LICENSE CARDS ── */}
       {intActive.length > 0 && (
         <div style={{ animation:'lc-in .5s .18s both', marginBottom: lagActive.length > 0 ? 16 : 0 }}>
-          <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.5)', letterSpacing:'.08em', marginBottom:12, textTransform:'uppercase' }}>1999X INTERNAL PANEL-</div>
+          <div style={{ fontSize:12, fontWeight:400, color:'rgba(255,255,255,.6)', marginBottom:12 }}>1999X INTERNAL PANEL-</div>
           <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
             {intActive.map((l:any)=><LicenseCard key={l?.id||Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} variant="internal"/>)}
           </div>
@@ -576,7 +596,7 @@ export default function LicensesPage() {
 
       {lagActive.length > 0 && (
         <div style={{ animation:'lc-in .5s .18s both' }}>
-          <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,.5)', letterSpacing:'.08em', marginBottom:12, textTransform:'uppercase' }}>1999X FAKE LAG PANEL-</div>
+          <div style={{ fontSize:12, fontWeight:400, color:'rgba(255,255,255,.6)', marginBottom:12 }}>1999X FAKE LAG PANEL-</div>
           <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
             {lagActive.map((l:any)=><LicenseCard key={l?.id||Math.random()} lic={l} onCopy={copyKey} onReset={setHwidTarget} variant="lag"/>)}
           </div>
