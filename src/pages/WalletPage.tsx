@@ -1447,9 +1447,11 @@ export default function WalletPage() {
         const timer = setTimeout(()=>controller.abort(),18000);
         let result: any = null;
         try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const token = session?.access_token || SUPABASE_ANON;
           const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-key`,{
             method:'POST',
-            headers:{'Content-Type':'application/json','Authorization':`Bearer ${SUPABASE_ANON}`,'apikey':SUPABASE_ANON},
+            headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'apikey':SUPABASE_ANON},
             body:JSON.stringify({ panel_type:p, days, user_email:user?.email }),
             signal:controller.signal
           });

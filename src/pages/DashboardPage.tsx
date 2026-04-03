@@ -36,7 +36,9 @@ async function upsertBonusRow(userId: string, userEmail: string, bonusPoints: nu
 }
 async function generateKey(panelType: 'lag'|'internal', days: number) {
   try {
-    const res = await fetch(`${SUPA_URL}/functions/v1/generate-key`, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${ANON}`, apikey:ANON }, body:JSON.stringify({ panel_type:panelType, days }) });
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || ANON;
+    const res = await fetch(`${SUPA_URL}/functions/v1/generate-key`, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}`, apikey:ANON }, body:JSON.stringify({ panel_type:panelType, days }) });
     return await res.json();
   } catch(e) { return { success:false, message:String(e) }; }
 }
@@ -231,9 +233,11 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
     setGenerating(true);
     toast.loading('Generating trial…', { id:'free-trial' });
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || ANON;
       const [lagRes, intRes] = await Promise.all([
-        fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${ANON}`,apikey:ANON},body:JSON.stringify({panel_type:'lag',days:1,hours:0,mask:'1999X-FREE-****',is_free:true,price:0})}).then(r=>r.json()),
-        fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${ANON}`,apikey:ANON},body:JSON.stringify({panel_type:'internal',days:1,hours:0,mask:'1999X-FREE-****',is_free:true,price:0})}).then(r=>r.json()),
+        fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`,apikey:ANON},body:JSON.stringify({panel_type:'lag',days:1,hours:0,mask:'1999X-FREE-****',is_free:true,price:0})}).then(r=>r.json()),
+        fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`,apikey:ANON},body:JSON.stringify({panel_type:'internal',days:1,hours:0,mask:'1999X-FREE-****',is_free:true,price:0})}).then(r=>r.json()),
       ]);
       const lagKey = lagRes?.success?lagRes.key:null;
       const intKey = intRes?.success?intRes.key:null;

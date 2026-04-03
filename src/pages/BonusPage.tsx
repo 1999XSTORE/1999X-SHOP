@@ -13,9 +13,11 @@ const COOLDOWN_MS   = 86400000; // 24 hours
 // ── Generate key via Edge Function ─────────────────────────
 async function generateKey(panelType: 'lag'|'internal', days: number): Promise<{ success: boolean; key?: string; panel_type?: string; message?: string }> {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || SUPABASE_ANON;
     const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-key`, {
       method: 'POST',
-      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${SUPABASE_ANON}`, 'apikey':SUPABASE_ANON },
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}`, 'apikey':SUPABASE_ANON },
       body: JSON.stringify({ panel_type: panelType, days }),
     });
     return await res.json();
