@@ -94,10 +94,40 @@ export default function Index() {
     savePath(path);
   };
 
-  useEffect(() => {
-    captureReferralFromUrl();
+  const [refErrorModal, setRefErrorModal] = useState(false);
 
-    const loginWithRole = async (session: any) => {
+  useEffect(() => {
+    // 1. Verify referral link before proceeding
+    import('@/lib/reseller').then(async ({ captureReferralFromUrl, fetchResellerPaymentMethods, normalizeReferralValue, clearStoredReferralEmail, getStoredReferralEmail, storeReferralEmail }) => {
+      const params = new URLSearchParams(window.location.search);
+      const urlRef = params.get('ref');
+
+      if (urlRef) {
+        const ref = normalizeReferralValue(urlRef);
+        if (ref) {
+          const pm = await fetchResellerPaymentMethods(supabase, ref);
+          if (pm?._paused) {
+            clearStoredReferralEmail();
+            setRefErrorModal(true);
+            setAuthReady(true);
+            return; // stop execution for ref loading
+          } else {
+            storeReferralEmail(ref);
+          }
+        }
+      } else {
+        const stored = getStoredReferralEmail();
+        if (stored) {
+          const pm = await fetchResellerPaymentMethods(supabase, stored);
+          if (pm?._paused) {
+            clearStoredReferralEmail();
+          }
+        }
+      }
+      captureReferralFromUrl();
+
+      // 2. Auth checking
+      const loginWithRole = async (session: any) => {
       if (loggingIn.current) return;
       loggingIn.current = true;
       const email = session.user.email ?? '';
@@ -148,6 +178,7 @@ export default function Index() {
       subscription.unsubscribe();
       clearTimeout(safetyTimer);
     };
+    }); // End of import block
   }, []);
 
   useEffect(() => {
@@ -370,6 +401,23 @@ export default function Index() {
         <div className="auth-glow"/>
         <div className="auth-loader"/>
         <div className="auth-text">Loading your panel…</div>
+      </div>
+    );
+  }
+
+  if (refErrorModal) {
+    return (
+      <div style={{ minHeight:'100svh', background:'#080809', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', padding: 20 }}>
+        <div style={{ width: 80, height: 80, borderRadius: 24, background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24, boxShadow: '0 0 40px rgba(239,68,68,.2)' }}>
+          <span style={{ fontSize: 36 }}>🚫</span>
+        </div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', marginBottom: 12, letterSpacing: '-.02em', textAlign: 'center' }}>Reseller Link Inactive</div>
+        <div style={{ fontSize: 14, color: 'var(--muted)', textAlign: 'center', maxWidth: 360, marginBottom: 32, lineHeight: 1.6 }}>
+          This reseller's subscription has been paused or deleted. Please contact them or continue to the main shop to make a purchase.
+        </div>
+        <button onClick={() => { window.location.href = '/'; }} className="btn btn-p" style={{ padding: '14px 28px', fontSize: 15, fontWeight: 700, borderRadius: 14, boxShadow: '0 0 30px rgba(139,92,246,.3)' }}>
+          Go to Main Shop
+        </button>
       </div>
     );
   }

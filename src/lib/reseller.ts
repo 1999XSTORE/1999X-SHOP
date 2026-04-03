@@ -102,12 +102,14 @@ export async function fetchResellerPaymentMethods(
   const checkAndReturn = async (data: any): Promise<ResellerPaymentMethods | null> => {
     const { data: subRow } = await supabase
       .from('reseller_subscriptions')
-      .select('status')
+      .select('status, expires_at')
       .eq('user_id', data.user_id)
-      .order('created_at', { ascending: false })
+      .in('status', ['active'])
+      .gt('expires_at', new Date().toISOString())
       .limit(1)
       .maybeSingle();
-    if (subRow?.status === 'paused') return { _paused: true } as ResellerPaymentMethods;
+      
+    if (!subRow) return { _paused: true } as ResellerPaymentMethods;
     return data;
   };
 
@@ -148,15 +150,17 @@ export async function fetchResellerPaymentMethods(
       .maybeSingle();
     if (pmByUserId) return checkAndReturn(pmByUserId);
 
-    // Payment methods not saved yet — still check if subscription is paused
+    // Payment methods not saved yet — still check if subscription is paused/active
     const { data: subRow } = await supabase
       .from('reseller_subscriptions')
-      .select('status')
+      .select('status, expires_at')
       .eq('user_id', accRow.user_id)
-      .order('created_at', { ascending: false })
+      .in('status', ['active'])
+      .gt('expires_at', new Date().toISOString())
       .limit(1)
       .maybeSingle();
-    if (subRow?.status === 'paused') return { _paused: true } as ResellerPaymentMethods;
+
+    if (!subRow) return { _paused: true } as ResellerPaymentMethods;
   }
 
 
