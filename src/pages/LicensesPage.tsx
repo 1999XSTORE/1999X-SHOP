@@ -179,7 +179,7 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
 
   const isInternal = variant === 'internal';
   const accent = isInternal ? '#818cf8' : '#a78bfa';
-  const accentBg = isInternal ? 'rgba(129,140,248,' : 'rgba(167,139,250,';
+  const ab = (a: number) => isInternal ? `rgba(129,140,248,${a})` : `rgba(167,139,250,${a})`;
   const gradFrom = isInternal ? 'rgba(30,27,75,.6)' : 'rgba(60,30,85,.55)';
 
   const copy = () => { onCopy(displayKey); setCopied(true); setTimeout(()=>setCopied(false),1800); };
@@ -190,19 +190,19 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
     <div style={{
       position:'relative', borderRadius:22, overflow:'hidden',
       background:`linear-gradient(145deg,${gradFrom},rgba(8,6,20,.97))`,
-      border:`1px solid ${accentBg}.22)`,
-      boxShadow:`0 0 0 1px rgba(255,255,255,.04) inset, 0 16px 48px rgba(0,0,0,.6), 0 0 40px ${accentBg}.1)`,
+      border:`1px solid ab(.22)`,
+      boxShadow:`0 0 0 1px rgba(255,255,255,.04) inset, 0 16px 48px rgba(0,0,0,.6), 0 0 40px ab(.1)`,
       animation:'lc-in .6s cubic-bezier(.22,1,.36,1) both',
     }}>
       {/* Top glow line */}
       <div style={{ position:'absolute',top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${accent},transparent)`,pointerEvents:'none' }}/>
       {/* BG orb */}
-      <div style={{ position:'absolute',top:-30,right:-20,width:140,height:140,borderRadius:'50%',background:`radial-gradient(circle,${accentBg}.1) 0%,transparent 65%)`,pointerEvents:'none' }}/>
+      <div style={{ position:'absolute',top:-30,right:-20,width:140,height:140,borderRadius:'50%',background:`radial-gradient(circle,ab(.1) 0%,transparent 65%)`,pointerEvents:'none' }}/>
 
       {/* ── HEADER: panel name + status + timer inline ── */}
       <div style={{ padding:'18px 20px 14px', position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid rgba(255,255,255,.06)` }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <div style={{ width:40,height:40,borderRadius:13,background:`${accentBg}.12)`,border:`1px solid ${accentBg}.22)`,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:`0 0 16px ${accentBg}.16)`,flexShrink:0 }}>
+          <div style={{ width:40,height:40,borderRadius:13,background:`ab(.12)`,border:`1px solid ab(.22)`,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:`0 0 16px ab(.16)`,flexShrink:0 }}>
             {isInternal ? <Shield size={19} color={accent}/> : <Zap size={19} color={accent}/>}
           </div>
           <div>
@@ -227,7 +227,7 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
           </div>
           {/* Mini progress */}
           <div style={{ width:80,height:3,borderRadius:99,background:'rgba(255,255,255,.07)',overflow:'hidden',marginTop:5,marginLeft:'auto' }}>
-            <div style={{ height:'100%',width:`${progressPct}%`,borderRadius:99,background:isExpired?'#ef4444':accent,boxShadow:isExpired?'none':`0 0 6px ${accentBg}.6)`,transition:'width .8s cubic-bezier(.22,1,.36,1)' }}/>
+            <div style={{ height:'100%',width:`${progressPct}%`,borderRadius:99,background:isExpired?'#ef4444':accent,boxShadow:isExpired?'none':`0 0 6px ab(.6)`,transition:'width .8s cubic-bezier(.22,1,.36,1)' }}/>
           </div>
         </div>
       </div>
@@ -235,15 +235,15 @@ function LicenseCard({ lic, onCopy, onReset, variant }: {
       {/* ── LICENSE KEY — full width prominent ── */}
       <div style={{ padding:'14px 20px 12px', position:'relative' }}>
         <div style={{ fontSize:9,fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',color:'rgba(255,255,255,.3)',marginBottom:8 }}>License Key</div>
-        <div style={{ padding:'14px 16px',borderRadius:14,background:'rgba(0,0,0,.35)',border:`1px solid ${accentBg}.18)`,boxShadow:`0 0 20px ${accentBg}.08) inset`,display:'flex',alignItems:'center',gap:10 }}>
-          <code style={{ flex:1,fontSize:13,fontFamily:'monospace',fontWeight:600,color:keyVisible?accent:'rgba(255,255,255,.65)',letterSpacing:keyVisible?'1.5px':'.5px',filter:keyVisible?'none':'blur(6px)',transition:'all .3s',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textShadow:keyVisible?`0 0 12px ${accentBg}.6)`:'none' }}>
+        <div style={{ padding:'14px 16px',borderRadius:14,background:'rgba(0,0,0,.35)',border:`1px solid ab(.18)`,boxShadow:`0 0 20px ab(.08) inset`,display:'flex',alignItems:'center',gap:10 }}>
+          <code style={{ flex:1,fontSize:13,fontFamily:'monospace',fontWeight:600,color:keyVisible?accent:'rgba(255,255,255,.65)',letterSpacing:keyVisible?'1.5px':'.5px',filter:keyVisible?'none':'blur(6px)',transition:'all .3s',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textShadow:keyVisible?`0 0 12px ab(.6)`:'none' }}>
             {displayKey || '(no key)'}
           </code>
           <button onClick={()=>setKeyVisible(!keyVisible)} style={{ padding:'7px 9px',borderRadius:9,background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.09)',cursor:'pointer',color:'rgba(255,255,255,.4)',flexShrink:0,transition:'all .15s' }}
             onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,.1)';}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,.05)';}}>
             {keyVisible?<EyeOff size={13}/>:<Eye size={13}/>}
           </button>
-          <button onClick={copy} style={{ display:'flex',alignItems:'center',gap:5,padding:'7px 13px',borderRadius:9,background:copied?`${accentBg}.15)`:`${accentBg}.06)`,border:`1px solid ${accentBg}${copied?'.3)':'.15)'})`,cursor:'pointer',color:accent,fontSize:11,fontWeight:700,flexShrink:0,transition:'all .18s',boxShadow:copied?`0 0 14px ${accentBg}.3)`:'none' }}>
+          <button onClick={copy} style={{ display:'flex',alignItems:'center',gap:5,padding:'7px 13px',borderRadius:9,background:copied?ab(.15):ab(.06),border:`1px solid ${copied?ab(.3):ab(.15)}`,cursor:'pointer',color:accent,fontSize:11,fontWeight:700,flexShrink:0,transition:'all .18s',boxShadow:copied?`0 0 14px ${ab(.3)}`:'none' }}>
             {copied?<><CheckCircle size={11}/>Copied</>:<><Copy size={11}/>Copy</>}
           </button>
         </div>

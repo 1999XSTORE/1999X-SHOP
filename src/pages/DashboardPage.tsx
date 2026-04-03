@@ -131,13 +131,13 @@ function RewardModal({ bonusPoints, userId, userEmail, onClose, onRedeem }: {
             </div>
             <div style={{ display:'flex',flexDirection:'column',gap:10 }}>
               {[
-                { fn:claimBalance, icon:'💰', label:'$3 Balance', sub:'Instantly added to wallet', ac:'rgba(124,92,255,', acv:.22, col:'#a78bfa' },
-                { fn:claimKey,     icon:'🔑', label:'3-Day Key',  sub:'Free panel license key',  ac:'rgba(255,255,255,', acv:.1, col:'#fff' },
+                { fn:claimBalance, icon:'💰', label:'$3 Balance', sub:'Instantly added to wallet', bg:'rgba(124,92,255,0.06)', bgHover:'rgba(124,92,255,0.12)', border:'rgba(124,92,255,0.22)', col:'#a78bfa' },
+                { fn:claimKey,     icon:'🔑', label:'3-Day Key',  sub:'Free panel license key',  bg:'rgba(255,255,255,0.06)', bgHover:'rgba(255,255,255,0.12)', border:'rgba(255,255,255,0.1)', col:'#fff' },
               ].map((opt,i)=>(
                 <button key={i} onClick={opt.fn} disabled={loading&&i===1}
-                  style={{ padding:'18px 20px',borderRadius:16,background:`${opt.ac}0.06)`,border:`1px solid ${opt.ac}${opt.acv})`,cursor:'pointer',display:'flex',alignItems:'center',gap:14,transition:'all .2s',fontFamily:'inherit',textAlign:'left' }}
-                  onMouseEnter={e=>{e.currentTarget.style.background=`${opt.ac}0.12)`;}}
-                  onMouseLeave={e=>{e.currentTarget.style.background=`${opt.ac}0.06)`;}}>
+                  style={{ padding:'18px 20px',borderRadius:16,background:opt.bg,border:`1px solid ${opt.border}`,cursor:'pointer',display:'flex',alignItems:'center',gap:14,transition:'all .2s',fontFamily:'inherit',textAlign:'left' }}
+                  onMouseEnter={e=>{e.currentTarget.style.background=opt.bgHover;}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=opt.bg;}}>
                   {loading&&i===1?<Loader2 size={22} className="animate-spin" style={{ color:opt.col }}/>:<span style={{ fontSize:26 }}>{opt.icon}</span>}
                   <div>
                     <div style={{ fontSize:15,fontWeight:700,color:opt.col,marginBottom:2 }}>{opt.label}</div>
@@ -260,7 +260,7 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
   return (
     <div className="px-panel" style={{ animationDelay:`${animDelay}ms`, padding:'32px 36px', position:'relative', overflow:'hidden' }}>
       <div className="px-glow" style={{ opacity:.55, background:`radial-gradient(ellipse at 95% 50%,${ab(.22)} 0%,transparent 55%)` }}/>
-      <div style={{ position:'absolute',top:-40,left:-40,width:220,height:220,borderRadius:'50%',background:`radial-gradient(circle,${ab(.06)} 0%,transparent 65%)`,pointerEvents:'none' }}/>
+      <div style={{ position:'absolute',top:-40,left:-40,width:220,height:220,borderRadius:'50%',background:'radial-gradient(circle,rgba(124,92,255,0.06) 0%,transparent 65%)',pointerEvents:'none' }}/>
       <div style={{ position:'relative' }}>
 
         {/* Top: label + status + owner toggle */}
