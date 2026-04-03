@@ -9,7 +9,7 @@ import type { License } from '@/lib/store';
 
 const SUPABASE_URL  = 'https://awjouzwzdkrevvnlenvn.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3am91end6ZGtyZXZ2bmxlbnZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTg4MjEsImV4cCI6MjA5MDAzNDgyMX0._I_I-WA_8-YqDfaRzKiVgpEAhkH9faxlEIV6e766A0M';
-const FF_IMAGE      = 'https://www.dropbox.com/scl/fi/b09vgdpumapu0qrmauzf2/Combo.png?rlkey=nph0m7pxg7klstq9n5voxs0qj&st=rzke1bmt&raw=1';
+const FF_IMAGE      = 'https://www.dropbox.com/scl/fi/1tcp0knla43l2lfqd124o/.jpg?rlkey=oowz57k8n4j003m83xwo0wr4k&st=jf3cu08y&raw=1';
 const DOWNLOAD_URL  = 'https://www.asuswebstorage.com/navigate/a/#/s/4E1D05A81552402C8D05FCE0E61402A64';
 const TUTORIAL_URL  = 'https://youtu.be/vwUYk589SzU';
 
@@ -328,13 +328,15 @@ function LicenseCard({ lic, onCopy, onReset, onUnlink, variant }: {
           Reset HWID
           <span style={{ marginLeft:'auto',fontSize:10,color:'rgba(255,255,255,.3)',fontWeight:500 }}>{resetsLeft} reset{resetsLeft!==1?'s':''} remaining</span>
         </button>
-        <button onClick={()=>onUnlink(lic)}
-          style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'10px 14px',borderRadius:13,background:'transparent',border:'1px solid rgba(239,68,68,.15)',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:600,color:'rgba(239,68,68,.7)',transition:'all .18s',width:'100%' }}
-          onMouseEnter={e=>{e.currentTarget.style.background='rgba(239,68,68,.08)';e.currentTarget.style.color='#f87171';}}
-          onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='rgba(239,68,68,.7)';}}>
-          <Unlink size={13}/>
-          Unlink Key from Account
-        </button>
+        <div style={{ textAlign:'right', marginTop:2 }}>
+          <button onClick={()=>onUnlink(lic)}
+            style={{ display:'inline-flex',alignItems:'center',gap:4,padding:'4px 6px',borderRadius:6,background:'transparent',border:'none',cursor:'pointer',fontFamily:'inherit',fontSize:10,fontWeight:600,color:'rgba(239,68,68,.5)',transition:'all .15s' }}
+            onMouseEnter={e=>{e.currentTarget.style.color='rgba(239,68,68,1)';}}
+            onMouseLeave={e=>{e.currentTarget.style.color='rgba(239,68,68,.5)';}}>
+            <Unlink size={10}/>
+            Unlink Key
+          </button>
+        </div>
       </div>
     </div>
   );
