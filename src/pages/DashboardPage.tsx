@@ -172,6 +172,33 @@ function RewardModal({ bonusPoints, userId, userEmail, onClose, onRedeem }: {
 }
 
 /* ─── FREE KEY CARD ROW ─────────────────────────────────────── */
+// ── Glass Fan Card SVG Icons ─────────────────────────────────
+function IconGift() {
+  return (
+    <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
+      <rect x="3" y="16" width="32" height="20" rx="4" fill="rgba(167,139,250,0.18)" stroke="rgba(167,139,250,0.5)" strokeWidth="1.5"/>
+      <rect x="9" y="10" width="20" height="8" rx="3" fill="rgba(167,139,250,0.12)" stroke="rgba(167,139,250,0.4)" strokeWidth="1.5"/>
+      <path d="M19 10 C19 10 14 4 11 6 C8 8 12 10 19 10 C26 10 30 8 27 6 C24 4 19 10 19 10Z" fill="rgba(196,181,253,0.3)" stroke="rgba(196,181,253,0.6)" strokeWidth="1"/>
+      <line x1="19" y1="10" x2="19" y2="36" stroke="rgba(196,181,253,0.5)" strokeWidth="1.5"/>
+      <line x1="3" y1="20" x2="35" y2="20" stroke="rgba(196,181,253,0.3)" strokeWidth="1"/>
+    </svg>
+  );
+}
+function IconZap() {
+  return (
+    <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
+      <polygon points="22,4 8,22 18,22 16,34 30,16 20,16" fill="rgba(251,191,36,0.2)" stroke="rgba(251,191,36,0.7)" strokeWidth="1.5" strokeLinejoin="round"/>
+      <polygon points="22,4 8,22 18,22 16,34 30,16 20,16" fill="url(#zapGrad)" opacity="0.6"/>
+      <defs>
+        <linearGradient id="zapGrad" x1="8" y1="4" x2="30" y2="34" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#fbbf24" stopOpacity="0.8"/>
+          <stop offset="1" stopColor="#f59e0b" stopOpacity="0.2"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
 function FreeKeyCard({ animDelay }: { animDelay: number }) {
   const { user, addLicense } = useAppStore();
   const [row, setRow] = useState<FreeRow|null>(null);
@@ -179,9 +206,9 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
   const [generating, setGenerating] = useState(false);
   const [canClaim, setCanClaim] = useState(false);
   const [cooldownMs, setCooldownMs] = useState(0);
-  const [expanded, setExpanded] = useState(false);
   const [panelEnabled, setPanelEnabled] = useState<boolean>(true);
   const [togglingPanel, setTogglingPanel] = useState(false);
+  const [keyCopied, setKeyCopied] = useState<'lag'|'int'|null>(null);
   const userIsOwner = isOwner(user?.role);
 
   useEffect(() => {
@@ -223,9 +250,7 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || ANON;
-      
       const { ip } = await fetch('https://api.ipify.org?format=json').then(r=>r.json()).catch(()=>({ip:''}));
-      
       const [lagRes, intRes] = await Promise.all([
         fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`,apikey:ANON},body:JSON.stringify({panel_type:'lag',days:0,hours:5.1,mask:'1999X-FREE-****',is_free:true,price:0,ip:ip||''})}).then(r=>r.json()),
         fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`,apikey:ANON},body:JSON.stringify({panel_type:'internal',days:0,hours:5.1,mask:'1999X-FREE-****',is_free:true,price:0,ip:ip||''})}).then(r=>r.json()),
@@ -237,84 +262,135 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
       const expiresAt = new Date(Date.now()+FREE_KEY_TTL).toISOString();
       const { error } = await supabase.from('free_trial_keys').upsert({ user_id:user.id,user_email:user.email,lag_key:lagKey,internal_key:intKey,claimed_at:now,expires_at:expiresAt },{ onConflict:'user_id' });
       if (error) { toast.dismiss('free-trial'); toast.error(error.message); setGenerating(false); return; }
-      
       const licRows: any[] = [];
       if (lagKey) { addLicense({ id:`free_lag_${Date.now()}`,productId:'keyauth-lag',productName:'Fake Lag (Free Trial)',key:lagKey,hwid:'',lastLogin:now,expiresAt,status:'active',ip:ip||'',device:'',hwidResetsUsed:0,hwidResetMonth:new Date().getMonth() }); licRows.push({ user_id:user.id,user_email:user.email,product_id:'keyauth-lag',product_name:'Fake Lag (Free Trial)',license_key:lagKey,keyauth_username:lagKey,hwid:'',last_login:now,expires_at:expiresAt,status:'active',ip:ip||'',device:'',hwid_resets_used:0,hwid_reset_month:new Date().getMonth() }); }
       if (intKey) { addLicense({ id:`free_int_${Date.now()}`,productId:'keyauth-internal',productName:'Internal (Free Trial)',key:`${intKey}_INTERNAL`,hwid:'',lastLogin:now,expiresAt,status:'active',ip:ip||'',device:'',hwidResetsUsed:0,hwidResetMonth:new Date().getMonth() }); licRows.push({ user_id:user.id,user_email:user.email,product_id:'keyauth-internal',product_name:'Internal (Free Trial)',license_key:`${intKey}_INTERNAL`,keyauth_username:intKey,hwid:'',last_login:now,expires_at:expiresAt,status:'active',ip:ip||'',device:'',hwid_resets_used:0,hwid_reset_month:new Date().getMonth() }); }
       if (licRows.length > 0) await supabase.from('user_licenses').upsert(licRows, { onConflict:'user_id,license_key' });
-      
       setRow({ lag_key:lagKey,internal_key:intKey,claimed_at:now,expires_at:expiresAt });
       toast.dismiss('free-trial'); toast.success('Trial activated!');
-      setExpanded(true); // auto-expand to show keys
     } catch(e) { toast.dismiss('free-trial'); toast.error(String(e)); }
     setGenerating(false);
   };
 
+  const copyKey = (key: string, which: 'lag'|'int') => {
+    navigator.clipboard.writeText(key);
+    setKeyCopied(which);
+    setTimeout(() => setKeyCopied(null), 2000);
+    toast.success('Key copied!');
+  };
+
   if (dbLoading) return null;
   const isActive = !!row && new Date(row.expires_at).getTime()>Date.now();
+  const ready = canClaim && panelEnabled;
 
   return (
-    <div style={{ background:'rgba(255,255,255,0.02)', borderRadius:16, border:'1px solid rgba(255,255,255,0.04)', overflow:'hidden', transition:'all .3s', animation:`px-fade-in .5s ease-out`, animationDelay:`${animDelay}ms`, animationFillMode:'both' }}>
-      <div onClick={() => setExpanded(!expanded)} style={{ padding:20, display:'flex', alignItems:'center', justifyContent:'space-between', cursor:'pointer' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-          <div style={{ width:48, height:48, borderRadius:14, background:'rgba(167,139,250,0.1)', display:'flex', alignItems:'center', justifyContent:'center', color:'#c4b5fd' }}>
-            <Zap size={24}/>
-          </div>
-          <div>
-            <div style={{ fontSize:15, fontWeight:700, color:'#fff', marginBottom:4 }}>Premium Free Trial</div>
-            <div style={{ fontSize:13, color:'rgba(255,255,255,0.4)', fontWeight:500 }}>5-Hour Access • Internal + Fake Lag</div>
-          </div>
+    <div
+      className="glass-fan-card gfc-zap"
+      style={{ animationDelay:`${animDelay}ms` }}
+    >
+      <div className="gfc-shimmer-border"/>
+      <div className="gfc-ambient" style={{ background:'radial-gradient(ellipse 70% 60% at 30% 100%, rgba(251,191,36,0.1) 0%, transparent 65%)' }}/>
+      <div className="gfc-inner">
+        <div className="gfc-icon-wrap" style={{ background:'linear-gradient(135deg, rgba(251,191,36,0.12), rgba(245,158,11,0.05))', border:'1px solid rgba(251,191,36,0.25)', boxShadow:'0 0 28px rgba(251,191,36,0.15)' }}>
+          <IconZap/>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-          {!panelEnabled && !userIsOwner ? <span style={{ color:'#f87171', fontSize:13, fontWeight:700 }}>Paused</span>
-          : isActive && row ? <span style={{ color:'#4ade80', fontSize:13, fontWeight:700 }}>Active - <LiveClock ms={new Date(row.expires_at).getTime()}/></span>
-          : canClaim ? <span style={{ color:'#c4b5fd', fontSize:13, fontWeight:700 }}>Ready to claim</span>
-          : <span style={{ color:'rgba(255,255,255,0.3)', fontSize:13 }}><Clock size={12} style={{display:'inline',marginRight:4,verticalAlign:'-2px'}}/>Next in <LiveClock ms={cooldownMs}/></span>}
-          <ChevronDown size={20} color="rgba(255,255,255,0.3)" style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition:'all .3s' }}/>
+        <div className="gfc-header">
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
+            <span style={{ fontSize:11, fontWeight:700, letterSpacing:'.18em', textTransform:'uppercase', color:'rgba(251,191,36,0.7)' }}>FREE TRIAL</span>
+            {isActive && row
+              ? <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'2px 9px', borderRadius:99, background:'rgba(34,197,94,0.1)', border:'1px solid rgba(34,197,94,0.3)', fontSize:10, fontWeight:700, color:'#4ade80', letterSpacing:'.1em' }}>● ACTIVE</span>
+              : !panelEnabled && !userIsOwner
+              ? <span style={{ display:'inline-flex', padding:'2px 9px', borderRadius:99, background:'rgba(248,113,113,0.1)', border:'1px solid rgba(248,113,113,0.3)', fontSize:10, fontWeight:700, color:'#f87171' }}>PAUSED</span>
+              : ready
+              ? <span style={{ display:'inline-flex', padding:'2px 9px', borderRadius:99, background:'rgba(167,139,250,0.1)', border:'1px solid rgba(167,139,250,0.3)', fontSize:10, fontWeight:700, color:'#c4b5fd' }}>READY</span>
+              : null}
+          </div>
+          <h3 style={{ margin:0, fontSize:'clamp(22px,3vw,28px)', fontWeight:800, color:'#fff', letterSpacing:'-.03em', lineHeight:1.1 }}>Premium Free Trial</h3>
+          <p style={{ margin:'8px 0 0', fontSize:13, color:'rgba(255,255,255,0.42)', fontWeight:500, lineHeight:1.5 }}>
+            5-Hour full access · Internal + Fake Lag · No payment needed
+          </p>
         </div>
-      </div>
-
-      {expanded && (
-        <div style={{ padding:'0 20px 20px', borderTop:'1px solid rgba(255,255,255,0.05)', marginTop:4, paddingTop:24 }}>
-          {isActive && row ? (
-            <div>
-              <div style={{ fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:12, fontWeight:500 }}>Your active premium keys:</div>
-              <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
-                {row.lag_key && (
-                  <div style={{ flex:1, minWidth:200, padding:16, borderRadius:12, background:'rgba(236,72,153,0.05)', border:'1px solid rgba(236,72,153,0.2)' }}>
-                    <div style={{ fontSize:12, color:'rgba(236,72,153,0.8)', fontWeight:700, marginBottom:8 }}>Fake Lag License</div>
-                    <code style={{ fontSize:14, color:'#fff', fontFamily:'monospace' }}>{row.lag_key}</code>
-                  </div>
-                )}
-                {row.internal_key && (
-                  <div style={{ flex:1, minWidth:200, padding:16, borderRadius:12, background:'rgba(139,92,246,0.05)', border:'1px solid rgba(139,92,246,0.2)' }}>
-                    <div style={{ fontSize:12, color:'rgba(139,92,246,0.8)', fontWeight:700, marginBottom:8 }}>Internal License</div>
-                    <code style={{ fontSize:14, color:'#fff', fontFamily:'monospace' }}>{row.internal_key}</code>
-                  </div>
-                )}
+        <div className="gfc-features">
+          {['Internal Panel','Fake Lag Panel','5-Hour Access','No Credit Card'].map((f, i) => (
+            <div key={i} className="gfc-feature-pill">
+              <span style={{ color:'#fbbf24', fontSize:10, marginRight:4 }}>✦</span>
+              <span>{f}</span>
+            </div>
+          ))}
+        </div>
+        {isActive && row && (
+          <div className="gfc-keys-area">
+            {row.lag_key && (
+              <div className="gfc-key-row" onClick={() => copyKey(row.lag_key!, 'lag')} style={{ cursor:'pointer' }}>
+                <span style={{ fontSize:10, fontWeight:700, color:'rgba(236,72,153,0.8)', textTransform:'uppercase', letterSpacing:'.1em', marginBottom:4, display:'block' }}>Fake Lag</span>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <code style={{ flex:1, fontSize:11, color:'rgba(255,255,255,0.8)', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{row.lag_key}</code>
+                  <span style={{ color: keyCopied==='lag' ? '#4ade80':'rgba(255,255,255,0.3)', fontSize:14, flexShrink:0 }}>{keyCopied==='lag'?'✓':'⎘'}</span>
+                </div>
               </div>
+            )}
+            {row.internal_key && (
+              <div className="gfc-key-row" onClick={() => copyKey(row.internal_key!, 'int')} style={{ cursor:'pointer' }}>
+                <span style={{ fontSize:10, fontWeight:700, color:'rgba(139,92,246,0.8)', textTransform:'uppercase', letterSpacing:'.1em', marginBottom:4, display:'block' }}>Internal</span>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <code style={{ flex:1, fontSize:11, color:'rgba(255,255,255,0.8)', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{row.internal_key}</code>
+                  <span style={{ color: keyCopied==='int' ? '#4ade80':'rgba(255,255,255,0.3)', fontSize:14, flexShrink:0 }}>{keyCopied==='int'?'✓':'⎘'}</span>
+                </div>
+              </div>
+            )}
+            <div style={{ fontSize:12, color:'rgba(255,255,255,0.35)', textAlign:'center', marginTop:4 }}>
+              Expires in: <span style={{ color:'#4ade80', fontWeight:700 }}><LiveClock ms={new Date(row.expires_at).getTime()}/></span>
+            </div>
+          </div>
+        )}
+        {!isActive && !ready && panelEnabled && (
+          <div style={{ textAlign:'center', padding:'10px 0 4px' }}>
+            <span style={{ fontSize:12, color:'rgba(255,255,255,0.3)' }}>Next claim in: </span>
+            <span style={{ fontSize:13, fontWeight:700, color:'rgba(251,191,36,0.7)', fontFamily:'monospace' }}>
+              <LiveClock ms={cooldownMs}/>
+            </span>
+          </div>
+        )}
+        <div className="gfc-cta">
+          {isActive && row ? (
+            <div style={{ textAlign:'center', fontSize:12, color:'rgba(255,255,255,0.4)', padding:'8px 0' }}>
+              Trial is active · Keys shown above
             </div>
           ) : (
-            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-              <button onClick={handleClaim} disabled={!canClaim||generating||!panelEnabled}
-                className="px-btn" style={{ flex:'none', padding:'12px 24px', borderRadius:12, background:canClaim&&panelEnabled?'linear-gradient(135deg, rgba(167,139,250,0.2), rgba(124,92,255,0.2))':'rgba(255,255,255,0.05)', color:canClaim&&panelEnabled?'#c4b5fd':'rgba(255,255,255,0.4)', border:`1px solid ${canClaim&&panelEnabled?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.1)'}`, fontWeight:700, cursor:canClaim&&panelEnabled?'pointer':'not-allowed' }}>
-                {generating ? <><Loader2 size={16} className="animate-spin" style={{marginRight:8,display:'inline',verticalAlign:'-3px'}}/>Generating...</>
-                  : canClaim && panelEnabled ? <><Zap size={16} style={{marginRight:8,display:'inline',verticalAlign:'-3px'}}/> Claim Free Trial</>
-                  : !panelEnabled ? 'Unavailable' : 'Wait for Cooldown'}
-              </button>
-              {userIsOwner && (
-                <button onClick={togglePanel} disabled={togglingPanel}
-                  style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 24px', borderRadius:12, background:'transparent', border:`1px solid ${panelEnabled?'rgba(239,68,68,.3)':'rgba(34,197,94,.3)'}`, color:panelEnabled?'#f87171':'#4ade80', fontWeight:700, cursor:'pointer' }}>
-                  {togglingPanel ? <Loader2 size={16} className="animate-spin"/> : panelEnabled?'Pause Trial':'Resume Trial'}
-                </button>
-              )}
-            </div>
+            <button
+              onClick={handleClaim}
+              disabled={!ready || generating}
+              className="gfc-btn"
+              style={{
+                background: ready ? 'linear-gradient(135deg, rgba(251,191,36,0.22), rgba(245,158,11,0.12))' : 'rgba(255,255,255,0.04)',
+                border: ready ? '1px solid rgba(251,191,36,0.45)' : '1px solid rgba(255,255,255,0.08)',
+                color: ready ? '#fbbf24' : 'rgba(255,255,255,0.3)',
+                boxShadow: ready ? '0 0 30px rgba(251,191,36,0.15)' : 'none',
+                cursor: ready ? 'pointer' : 'not-allowed',
+              }}
+            >
+              {generating
+                ? <><Loader2 size={15} className="animate-spin"/>Generating…</>
+                : !panelEnabled && !userIsOwner
+                ? <>Unavailable</>
+                : ready
+                ? <><Zap size={15}/>Claim Free Trial</>
+                : <><Clock size={14}/>On Cooldown</>}
+            </button>
+          )}
+          {userIsOwner && (
+            <button
+              onClick={togglePanel} disabled={togglingPanel}
+              style={{ display:'flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:10,background:'transparent',border:`1px solid ${panelEnabled?'rgba(248,113,113,0.25)':'rgba(34,197,94,0.25)'}`,color:panelEnabled?'#f87171':'#4ade80',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit',transition:'all .2s' }}>
+              {togglingPanel ? <Loader2 size={12} className="animate-spin"/> : panelEnabled ? 'Pause Trial' : 'Resume Trial'}
+            </button>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
+
 
 
 
@@ -568,6 +644,164 @@ export default function DashboardPage() {
         .px-bot   { grid-template-columns: 1fr; }
         @media(max-width:900px) { .px-top { grid-template-columns:1fr 1fr; } }
         @media(max-width:540px) { .px-top { grid-template-columns:1fr; } }
+
+        /* ══ GLASS FAN CARD ══════════════════════════════════════ */
+        /* Uiverse-inspired glass fan — two big cards side by side */
+        .gfc-duo-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          margin-top: 4px;
+        }
+        @media(max-width:820px) { .gfc-duo-grid { grid-template-columns: 1fr; } }
+
+        .glass-fan-card {
+          position: relative;
+          border-radius: 28px;
+          background: linear-gradient(160deg, rgba(255,255,255,0.065) 0%, rgba(255,255,255,0.018) 60%, rgba(255,255,255,0.005) 100%);
+          border: 1px solid rgba(255,255,255,0.1);
+          box-shadow:
+            0 30px 60px rgba(0,0,0,0.5),
+            0 1px 0 rgba(255,255,255,0.08) inset,
+            0 -1px 0 rgba(0,0,0,0.2) inset;
+          backdrop-filter: blur(32px);
+          -webkit-backdrop-filter: blur(32px);
+          overflow: hidden;
+          transition: transform 0.55s cubic-bezier(0.34,1.56,0.64,1),
+                      box-shadow 0.4s ease,
+                      border-color 0.3s ease;
+          animation: px-in 0.65s cubic-bezier(.22,1,.36,1) both;
+          cursor: default;
+        }
+        .glass-fan-card:hover {
+          transform: translateY(-8px) scale(1.01);
+          border-color: rgba(255,255,255,0.18);
+          box-shadow:
+            0 48px 90px rgba(0,0,0,0.6),
+            0 1px 0 rgba(255,255,255,0.14) inset,
+            0 0 80px rgba(109,40,217,0.12);
+        }
+        .gfc-purple:hover {
+          box-shadow:
+            0 48px 90px rgba(0,0,0,0.6),
+            0 1px 0 rgba(255,255,255,0.14) inset,
+            0 0 80px rgba(139,92,246,0.15);
+        }
+        .gfc-zap:hover {
+          box-shadow:
+            0 48px 90px rgba(0,0,0,0.6),
+            0 1px 0 rgba(255,255,255,0.14) inset,
+            0 0 80px rgba(251,191,36,0.12);
+        }
+
+        /* Animated shimmer border */
+        .gfc-shimmer-border {
+          position: absolute; inset: 0; border-radius: 28px; pointer-events: none; z-index: 1;
+          padding: 1px;
+          background: linear-gradient(135deg,
+            rgba(255,255,255,0.22) 0%,
+            rgba(255,255,255,0.06) 25%,
+            rgba(255,255,255,0.0) 50%,
+            rgba(255,255,255,0.06) 75%,
+            rgba(255,255,255,0.22) 100%);
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          background-size: 200% 200%;
+          animation: gfc-border-spin 6s linear infinite;
+        }
+        @keyframes gfc-border-spin {
+          0%   { background-position: 0% 0%; }
+          50%  { background-position: 100% 100%; }
+          100% { background-position: 0% 0%; }
+        }
+
+        /* Ambient color orb */
+        .gfc-ambient {
+          position: absolute; inset: 0; pointer-events: none; z-index: 0;
+          transition: opacity 0.4s ease;
+          opacity: 0.7;
+        }
+        .glass-fan-card:hover .gfc-ambient { opacity: 1; }
+
+        /* Inner layout */
+        .gfc-inner {
+          position: relative; z-index: 2;
+          padding: 32px 32px 28px;
+          display: flex; flex-direction: column; gap: 20px;
+          height: 100%;
+        }
+
+        /* Icon wrapper */
+        .gfc-icon-wrap {
+          width: 64px; height: 64px; border-radius: 20px;
+          display: flex; align-items: center; justify-content: center;
+          transition: transform 0.4s cubic-bezier(.34,1.56,.64,1), box-shadow 0.3s;
+          flex-shrink: 0;
+        }
+        .glass-fan-card:hover .gfc-icon-wrap {
+          transform: translateY(-4px) rotate(-4deg) scale(1.08);
+        }
+
+        /* Header text */
+        .gfc-header { display: flex; flex-direction: column; }
+
+        /* Feature pills */
+        .gfc-features {
+          display: flex; flex-wrap: wrap; gap: 8px;
+        }
+        .gfc-feature-pill {
+          display: inline-flex; align-items: center;
+          padding: 5px 12px; border-radius: 99px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.08);
+          font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.55);
+          letter-spacing: .02em;
+          transition: background 0.2s, border-color 0.2s, color 0.2s;
+        }
+        .glass-fan-card:hover .gfc-feature-pill {
+          background: rgba(255,255,255,0.08);
+          border-color: rgba(255,255,255,0.14);
+          color: rgba(255,255,255,0.75);
+        }
+
+        /* Keys area */
+        .gfc-keys-area {
+          display: flex; flex-direction: column; gap: 10px;
+          padding: 14px; border-radius: 16px;
+          background: rgba(0,0,0,0.25);
+          border: 1px solid rgba(255,255,255,0.06);
+        }
+        .gfc-key-row {
+          padding: 10px 12px; border-radius: 12px;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.07);
+          transition: background 0.2s;
+          user-select: none;
+        }
+        .gfc-key-row:hover { background: rgba(255,255,255,0.07); }
+
+        /* CTA area */
+        .gfc-cta {
+          display: flex; flex-direction: column; gap: 10px;
+          margin-top: auto;
+        }
+
+        /* CTA button */
+        .gfc-btn {
+          width: 100%; padding: 14px 20px; border-radius: 14px;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          font-family: inherit; font-size: 14px; font-weight: 700;
+          transition: all 0.3s cubic-bezier(.22,1,.36,1);
+          position: relative; overflow: hidden; letter-spacing: .02em;
+        }
+        .gfc-btn::after {
+          content: ''; position: absolute; top: 0; bottom: 0; left: -100%; width: 60%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+          transition: left 0.55s ease;
+        }
+        .gfc-btn:not(:disabled):hover::after { left: 140%; }
+        .gfc-btn:not(:disabled):hover { transform: translateY(-2px); }
       `}</style>
 
       {/* Mesh bg */}
@@ -783,94 +1017,95 @@ export default function DashboardPage() {
 
 
 
-        {/* ══ BOTTOM: Daily Bonus · Free Trial — stacked full width ══ */}
-        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+        {/* ══ BOTTOM: Daily Bonus + Free Trial — Glass Fan Cards Side by Side ══ */}
+        <div className="gfc-duo-grid">
 
-          {/* ── DAILY BONUS SaaS PREMIUM ── */}
-          <div style={{ animation: `px-in .65s cubic-bezier(.22,1,.36,1) both, px-float-slow 8s ease-in-out infinite`, animationDelay:`340ms, 0s`, position:'relative', borderRadius:32, background:'linear-gradient(145deg, rgba(20,5,50,0.8), rgba(10,5,20,0.9))', border:'1px solid rgba(167,139,250,0.3)', padding:40, overflow:'hidden', boxShadow:'0 30px 60px rgba(0,0,0,0.6), 0 0 100px rgba(139,92,246,0.1) inset' }}>
-            <div style={{ position:'absolute', top:'-30%', left:'30%', width:'50%', height:'50%', background:'radial-gradient(circle, rgba(167,139,250,0.15) 0%, transparent 70%)', animation:'px-glow-pulse 8s ease-in-out infinite', pointerEvents:'none' }}/>
-
-            {/* Top row: label + redeem button */}
-            <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:30 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-                <div style={{ width:56, height:56, borderRadius:20, background:'linear-gradient(135deg, rgba(167,139,250,0.2), rgba(109,40,217,0.2))', border:'1px solid rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 10px 30px rgba(167,139,250,0.2)' }}>
-                  <Gift size={28} color="#c4b5fd"/>
-                </div>
-                <div>
-                  <div style={{ fontSize:14, fontWeight:800, letterSpacing:'.1em', textTransform:'uppercase', color:'rgba(255,255,255,0.9)', marginBottom:4 }}>💎 Daily Bonus</div>
-                  <div style={{ fontSize:14, fontWeight:600, color:'rgba(255,255,255,0.4)' }}>Claim +10 Points Every 24h</div>
-                </div>
+          {/* ── DAILY BONUS GLASS CARD ── */}
+          <div className="glass-fan-card gfc-purple" style={{ animationDelay:'340ms' }}>
+            <div className="gfc-shimmer-border"/>
+            <div className="gfc-ambient" style={{ background:'radial-gradient(ellipse 70% 60% at 70% 0%, rgba(139,92,246,0.13) 0%, transparent 65%)' }}/>
+            <div className="gfc-inner">
+              {/* Icon */}
+              <div className="gfc-icon-wrap" style={{ background:'linear-gradient(135deg, rgba(167,139,250,0.15), rgba(109,40,217,0.05))', border:'1px solid rgba(167,139,250,0.28)', boxShadow:'0 0 28px rgba(139,92,246,0.18)' }}>
+                <IconGift/>
               </div>
-              {bonusPoints>=100 && (
-                <button onClick={()=>setShowRewardModal(true)}
-                  style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 24px', borderRadius:16, background:'linear-gradient(135deg,rgba(167,139,250,.2),rgba(124,92,255,.1))', border:`1px solid rgba(167,139,250,.4)`, cursor:'pointer', fontFamily:'inherit', fontSize:14, fontWeight:800, color:'#c4b5fd', boxShadow:'0 0 30px rgba(139,92,246,.25)', transition:'all .2s' }}
-                  onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.boxShadow='0 0 40px rgba(139,92,246,.4)';}}
-                  onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='0 0 30px rgba(139,92,246,.25)';}}>
-                  <Star size={16}/> Redeem Rewards
-                </button>
-              )}
-            </div>
 
-            {/* Main content: big number + progress + rewards */}
-            <div style={{ position:'relative', display:'flex', alignItems:'center', gap:40, flexWrap:'wrap', justifyContent:'space-between' }}>
-              
-              {/* Big points number */}
-              <div style={{ flex:'0 0 auto' }}>
-                <div style={{ display:'flex', alignItems:'baseline', gap:8, lineHeight:1 }}>
-                  <span style={{ fontSize:'clamp(72px, 10vw, 110px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:1, background:'linear-gradient(135deg, #fff 10%, #d8b4fe 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
-                    {bonusPoints}
+              {/* Header */}
+              <div className="gfc-header">
+                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
+                  <span style={{ fontSize:11, fontWeight:700, letterSpacing:'.18em', textTransform:'uppercase', color:'rgba(167,139,250,0.7)' }}>DAILY BONUS</span>
+                  {bonusPoints>=100
+                    ? <span style={{ display:'inline-flex', padding:'2px 9px', borderRadius:99, background:'rgba(74,222,128,0.1)', border:'1px solid rgba(74,222,128,0.3)', fontSize:10, fontWeight:700, color:'#4ade80' }}>● READY</span>
+                    : <span style={{ display:'inline-flex', padding:'2px 9px', borderRadius:99, background:'rgba(167,139,250,0.1)', border:'1px solid rgba(167,139,250,0.2)', fontSize:10, fontWeight:700, color:'#c4b5fd' }}>24H CYCLE</span>}
+                </div>
+                <h3 style={{ margin:0, fontSize:'clamp(22px,3vw,28px)', fontWeight:800, color:'#fff', letterSpacing:'-.03em', lineHeight:1.1 }}>Daily Reward Points</h3>
+                <p style={{ margin:'8px 0 0', fontSize:13, color:'rgba(255,255,255,0.42)', fontWeight:500, lineHeight:1.5 }}>
+                  Claim +10 points daily · Reach 100 to unlock rewards
+                </p>
+              </div>
+
+              {/* Big points counter */}
+              <div style={{ display:'flex', alignItems:'baseline', gap:8, padding:'4px 0' }}>
+                <span style={{ fontSize:'clamp(54px,7vw,80px)', fontWeight:900, letterSpacing:'-.05em', lineHeight:1,
+                  background:'linear-gradient(135deg, #fff 10%, #d8b4fe 100%)',
+                  WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+                  {bonusPoints}
+                </span>
+                <span style={{ fontSize:20, color:'rgba(255,255,255,0.18)', fontWeight:800 }}>/100</span>
+              </div>
+
+              {/* Progress bar */}
+              <div>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                  <span style={{ fontSize:10, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)' }}>Progress to Reward</span>
+                  <span style={{ fontSize:12, fontWeight:800, color:bonusPoints>=100?'#4ade80':'#c4b5fd' }}>
+                    {bonusPoints>=100 ? '🎁 Ready' : `${progressPct}%`}
                   </span>
-                  <span style={{ fontSize:28, color:'rgba(255,255,255,.15)', fontWeight:800, letterSpacing:'-.02em' }}>/100</span>
                 </div>
-                <div style={{ fontSize:16, color:'rgba(167,139,250,.8)', fontWeight:800, marginTop:10, letterSpacing:'.1em', textTransform:'uppercase' }}>Available Points</div>
-              </div>
-
-              {/* Progress + rewards */}
-              <div style={{ flex:1, minWidth:260, display:'flex', flexDirection:'column', gap:20 }}>
-                {/* Reward milestone visuals */}
-                <div style={{ display:'flex', gap:16 }}>
-                  {[{icon:'💵',v:'$3 Wallet',l:'Balance Credit'},{icon:'🔑',v:'3-Day',l:'Premium Access'}].map(r=>(
-                    <div key={r.v} style={{ display:'flex', alignItems:'center', gap:12, padding:'16px 20px', borderRadius:20, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)', flex:1, transition:'all .2s' }}>
-                      <span style={{ fontSize:24, filter:'drop-shadow(0 4px 8px rgba(0,0,0,0.4))' }}>{r.icon}</span>
-                      <div>
-                        <div style={{ fontSize:15, fontWeight:800, color:'#e9d5ff', lineHeight:1 }}>{r.v}</div>
-                        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'.05em', marginTop:4 }}>{r.l}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Smooth Progress Bar */}
-                <div>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
-                    <span style={{ fontSize:13, color:'rgba(255,255,255,.4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'.08em' }}>Goal Progress</span>
-                    <span style={{ fontSize:14, color:bonusPoints>=100?'#4ade80':'#c4b5fd', fontWeight:800 }}>
-                      {bonusPoints>=100?'🎁 Ready to Redeem':progressPct+'%'}
-                    </span>
-                  </div>
-                  <div style={{ height:12, borderRadius:99, background:'rgba(0,0,0,0.4)', border:'1px solid rgba(255,255,255,0.05)', overflow:'hidden' }}>
-                    <div style={{ height:'100%', borderRadius:99, background:'linear-gradient(90deg, #6d28d9, #c4b5fd, #e9d5ff)', width:`${Math.min(progressPct===0&&bonusPoints>=100?100:progressPct,100)}%`, boxShadow:'0 0 20px rgba(167,139,250,.5)', transition:'width 1s cubic-bezier(.22,1,.36,1)' }}/>
-                  </div>
+                <div style={{ height:6, borderRadius:99, background:'rgba(255,255,255,0.07)', overflow:'hidden' }}>
+                  <div style={{ height:'100%', borderRadius:99, background:'linear-gradient(90deg,#6d28d9,#c4b5fd,#e9d5ff)', width:`${Math.min(progressPct===0&&bonusPoints>=100?100:progressPct,100)}%`, boxShadow:'0 0 12px rgba(167,139,250,.5)', transition:'width 1.2s cubic-bezier(.22,1,.36,1)' }}/>
                 </div>
               </div>
 
-              {/* Claim button */}
-              <div style={{ flex:'0 0 auto', alignSelf:'center' }}>
+              {/* Reward pills */}
+              <div className="gfc-features">
+                {[{icon:'💵',label:'$3 Balance'},{icon:'🔑',label:'3-Day Key'}].map((r,i) => (
+                  <div key={i} className="gfc-feature-pill" style={{ flex:1 }}>
+                    <span style={{ marginRight:5 }}>{r.icon}</span>
+                    <span>{r.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA area */}
+              <div className="gfc-cta">
+                {bonusPoints>=100 && (
+                  <button onClick={()=>setShowRewardModal(true)}
+                    className="gfc-btn"
+                    style={{ background:'linear-gradient(135deg,rgba(167,139,250,0.25),rgba(109,40,217,0.15))', border:'1px solid rgba(167,139,250,0.45)', color:'#c4b5fd', boxShadow:'0 0 28px rgba(139,92,246,0.2)', cursor:'pointer' }}>
+                    <Star size={15}/> Redeem 100 Points
+                  </button>
+                )}
                 <button onClick={handleClaimBonus} disabled={!canClaimBonus||claimingBonus}
-                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'24px 44px', borderRadius:24, background: (canClaimBonus) ? 'linear-gradient(135deg, #7c3aed, #c026d3)' : 'rgba(255,255,255,0.05)', border:(canClaimBonus)?'none':'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:18, fontWeight:900, textTransform:'uppercase', letterSpacing:'.05em', cursor:(canClaimBonus)?'pointer':'not-allowed', boxShadow:(canClaimBonus)?'0 20px 50px rgba(167,139,250,0.3)':'none', transition:'all 0.3s', transform:(canClaimBonus)?'scale(1)':'scale(0.98)' }}
-                  onMouseEnter={e=>{if(canClaimBonus)e.currentTarget.style.transform='scale(1.05) translateY(-4px)';}}
-                  onMouseLeave={e=>{if(canClaimBonus)e.currentTarget.style.transform='scale(1)';}}>
+                  className="gfc-btn"
+                  style={{
+                    background: canClaimBonus ? 'linear-gradient(135deg,rgba(124,92,255,0.2),rgba(109,40,217,0.1))' : 'rgba(255,255,255,0.04)',
+                    border: canClaimBonus ? '1px solid rgba(139,92,246,0.45)' : '1px solid rgba(255,255,255,0.08)',
+                    color: canClaimBonus ? '#a78bfa' : 'rgba(255,255,255,0.3)',
+                    boxShadow: canClaimBonus ? '0 0 28px rgba(109,40,217,0.18)' : 'none',
+                    cursor: canClaimBonus ? 'pointer' : 'not-allowed',
+                  }}>
                   {claimingBonus
-                    ? <><Loader2 size={24} className="animate-spin"/>Claiming...</>
+                    ? <><Loader2 size={15} className="animate-spin"/>Claiming…</>
                     : canClaimBonus
-                      ? <><Sparkles size={24}/>Claim +10</>
-                      : <><Clock size={18}/> {bonusCooldown}</>}
+                    ? <><Sparkles size={15}/>Claim +10 Points</>
+                    : <><Clock size={14}/>{bonusCooldown}</>}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* ── FREE TRIAL ── */}
+          {/* ── FREE TRIAL GLASS CARD ── */}
           <FreeKeyCard animDelay={420}/>
 
         </div>

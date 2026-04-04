@@ -809,41 +809,38 @@ function PanelProductCard({ group, balance, onBuy, onAddBalance }: { group: type
         {/* CTA */}
         <div style={{ marginTop:'auto', paddingTop:8 }}>
         {can ? (
-          <button onClick={()=>onBuy({
-            ...plan, keyauthPanel:plan.keyauthPanel, duration:`${plan.days} days`,
-            name:`${copy.name} — ${getWalletPlanLabel(t, plan.label)}`, description:copy.description,
-            badgeType:isFeatured?'gold':group.id==='internal'?'green':'indigo', emoji:group.emoji,
-          })} style={{
-            width:'100%', padding:'15px 20px', borderRadius:14,
-            border:`1px solid ${group.bc}`,
-            background:`linear-gradient(135deg, ${group.gradFrom}, rgba(0,0,0,.2))`,
-            cursor:'pointer', fontFamily:'inherit', fontSize:14, fontWeight:800, color:'#fff',
-            display:'flex', alignItems:'center', justifyContent:'space-between',
-            transition:'all .22s', boxShadow:`0 0 28px ${group.glow}`,
-          }}
-            onMouseEnter={e=>{
-              (e.currentTarget as HTMLButtonElement).style.boxShadow=`0 0 48px ${group.glow}`;
-              (e.currentTarget as HTMLButtonElement).style.borderColor=group.color;
-              (e.currentTarget as HTMLButtonElement).style.background=`linear-gradient(135deg,${group.gradFrom},rgba(255,255,255,.04))`;
-            }}
-            onMouseLeave={e=>{
-              (e.currentTarget as HTMLButtonElement).style.boxShadow=`0 0 28px ${group.glow}`;
-              (e.currentTarget as HTMLButtonElement).style.borderColor=group.bc;
-              (e.currentTarget as HTMLButtonElement).style.background=`linear-gradient(135deg,${group.gradFrom},rgba(0,0,0,.2))`;
-            }}
+          <div
+            className="uv-btn-container"
+            onClick={()=>onBuy({
+              ...plan, keyauthPanel:plan.keyauthPanel, duration:`${plan.days} days`,
+              name:`${copy.name} — ${getWalletPlanLabel(t, plan.label)}`, description:copy.description,
+              badgeType:isFeatured?'gold':group.id==='internal'?'green':'indigo', emoji:group.emoji,
+            })}
+            style={{ '--uv-color': group.color, '--uv-glow': group.glow, '--uv-grad': group.gradFrom } as any}
           >
-            <span style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <span style={{ fontSize:15 }}>🔑</span>
-              {t('shop.purchaseKey')}
-            </span>
-            <div style={{
-              width:32, height:32, borderRadius:10, background:group.color,
-              display:'flex', alignItems:'center', justifyContent:'center',
-              boxShadow:`0 0 16px ${group.glow}`,
-            }}>
-              <ArrowRight size={16} color="#000"/>
+            {/* Left animated side */}
+            <div className="uv-left">
+              {/* Card graphic */}
+              <div className="uv-card">
+                <div className="uv-card-line"/>
+                <div className="uv-card-buttons"/>
+              </div>
+              {/* Receipt that slides up */}
+              <div className="uv-post">
+                <div className="uv-post-line"/>
+                <div className="uv-post-screen"/>
+                <div className="uv-post-numbers"/>
+                <div className="uv-post-numbers2"/>
+              </div>
             </div>
-          </button>
+            {/* Right text side */}
+            <div className="uv-right">
+              <span className="uv-label">Purchase Key</span>
+              <svg className="uv-arrow" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 7h12M8 2l5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          </div>
         ) : (
           <button onClick={onAddBalance} style={{
             width:'100%', padding:'15px 20px', borderRadius:14, fontSize:14, fontWeight:800,
@@ -1066,6 +1063,182 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
         .ab-submit:hover::before { left:160%; }
         .ab-submit:active { transform: translateY(0) scale(.97); }
         .ab-submit:disabled { opacity:.35; cursor:not-allowed; transform:none !important; }
+
+        /* ══ UIVERSE CARD BUTTON ══════════════════════════════════ */
+        .uv-btn-container {
+          width: 100%;
+          height: 68px;
+          position: relative;
+          display: flex;
+          border-radius: 12px;
+          overflow: hidden;
+          cursor: pointer;
+          transition: transform 0.3s cubic-bezier(.22,1,.36,1), box-shadow 0.3s ease;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.35);
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.1);
+          user-select: none;
+        }
+        .uv-btn-container:hover {
+          transform: scale(1.025) translateY(-2px);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 40px var(--uv-glow, rgba(109,40,217,0.35));
+        }
+        .uv-btn-container:active { transform: scale(0.98); }
+
+        /* Left animated panel */
+        .uv-left {
+          background: linear-gradient(135deg, var(--uv-grad, #7c3aed), rgba(109,40,217,0.6));
+          width: 80px;
+          height: 100%;
+          border-radius: 10px 0 0 10px;
+          position: relative;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          flex-shrink: 0;
+          overflow: hidden;
+          transition: width 0.35s cubic-bezier(.22,1,.36,1);
+        }
+        .uv-btn-container:hover .uv-left { width: 100%; }
+
+        /* Card graphic */
+        .uv-card {
+          width: 44px;
+          height: 28px;
+          background: rgba(255,255,255,0.18);
+          border-radius: 5px;
+          position: absolute;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          box-shadow: 3px 3px 8px rgba(0,0,0,0.3);
+          backdrop-filter: blur(4px);
+          z-index: 10;
+          transition: transform 0.15s;
+        }
+        .uv-card-line {
+          width: 38px;
+          height: 7px;
+          background: rgba(255,255,255,0.35);
+          border-radius: 2px;
+          margin-top: 5px;
+        }
+        .uv-card-buttons {
+          width: 5px;
+          height: 5px;
+          background: rgba(255,255,255,0.6);
+          box-shadow: 0 -5px 0 0 rgba(255,255,255,0.4), 0 5px 0 0 rgba(255,255,255,0.8);
+          border-radius: 50%;
+          margin-top: 4px;
+          transform: rotate(90deg);
+          margin-left: -16px;
+        }
+        .uv-btn-container:hover .uv-card {
+          animation: uv-slide-card 0.9s cubic-bezier(0.68,-0.55,0.265,1.55) both;
+        }
+
+        /* Receipt/post graphic */
+        .uv-post {
+          width: 38px;
+          height: 46px;
+          background: rgba(255,255,255,0.12);
+          position: absolute;
+          z-index: 11;
+          bottom: 4px;
+          top: 68px;
+          border-radius: 4px;
+          overflow: hidden;
+          backdrop-filter: blur(4px);
+        }
+        .uv-post-line {
+          width: 28px; height: 4px; background: rgba(255,255,255,0.5);
+          position: absolute; border-radius: 0 0 2px 2px; right: 5px; top: 5px;
+        }
+        .uv-post-line::before {
+          content: ''; position: absolute; width: 28px; height: 4px;
+          background: rgba(255,255,255,0.3); top: -4px;
+        }
+        .uv-post-screen {
+          width: 28px; height: 12px; background: rgba(255,255,255,0.25);
+          position: absolute; top: 13px; right: 5px; border-radius: 2px;
+        }
+        .uv-post-numbers {
+          width: 6px; height: 6px; background: rgba(255,255,255,0.4);
+          box-shadow: 0 -9px 0 0 rgba(255,255,255,0.4), 0 9px 0 0 rgba(255,255,255,0.4);
+          border-radius: 1px; position: absolute; transform: rotate(90deg);
+          left: 16px; top: 30px;
+        }
+        .uv-post-numbers2 {
+          width: 6px; height: 6px; background: rgba(255,255,255,0.25);
+          box-shadow: 0 -9px 0 0 rgba(255,255,255,0.25), 0 9px 0 0 rgba(255,255,255,0.25);
+          border-radius: 1px; position: absolute; transform: rotate(90deg);
+          left: 16px; top: 40px;
+        }
+        .uv-btn-container:hover .uv-post {
+          animation: uv-slide-post 0.7s cubic-bezier(0.23,1,0.32,1) both;
+        }
+
+        @keyframes uv-slide-card {
+          0%   { transform: translateY(0) rotate(0deg); }
+          50%  { transform: translateY(-42px) rotate(90deg); }
+          60%  { transform: translateY(-42px) rotate(90deg); }
+          100% { transform: translateY(-4px) rotate(90deg); }
+        }
+        @keyframes uv-slide-post {
+          50%  { transform: translateY(0); }
+          100% { transform: translateY(-42px); }
+        }
+
+        /* Right text area */
+        .uv-right {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 16px;
+          overflow: hidden;
+          position: relative;
+          transition: background 0.3s;
+        }
+        .uv-right::before {
+          content: '';
+          position: absolute; inset: 0;
+          background: rgba(255,255,255,0);
+          border-radius: 50%;
+          top: 50%; left: 50%;
+          transform: translate(-50%,-50%);
+          pointer-events: none;
+          transition: all 0.4s ease-out;
+        }
+        .uv-btn-container:hover .uv-right::before {
+          background: rgba(255,255,255,0.04);
+          width: 300px; height: 300px;
+        }
+        .uv-label {
+          font-size: 14px;
+          font-weight: 700;
+          color: rgba(255,255,255,0.9);
+          letter-spacing: .01em;
+          white-space: nowrap;
+          transition: color 0.2s;
+        }
+        .uv-btn-container:hover .uv-label { color: #fff; }
+        .uv-arrow {
+          width: 16px; height: 16px;
+          color: rgba(255,255,255,0.5);
+          flex-shrink: 0;
+          transition: transform 0.3s ease, color 0.2s;
+        }
+        .uv-btn-container:hover .uv-arrow {
+          transform: translateX(5px);
+          color: #fff;
+        }
+
+        /* Purple variant for payment button */
+        .uv-btn-purple { --uv-grad: #7c3aed; --uv-glow: rgba(109,40,217,0.4); }
+        .uv-btn-purple .uv-left {
+          background: linear-gradient(135deg, #7c3aed, #5b21b6);
+        }
 
         /* Copy pill button */
         .ab-copy-btn {
@@ -1297,13 +1470,33 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
                     </div>
                   </div>
 
-                  <button className="ab-submit" onClick={()=>{
-                    if (!txnId.trim()){toast.error('Enter your transaction ID');return;}
-                    if (!email.trim()){toast.error('Enter your email');return;}
-                    setStep(3);
-                  }}>
-                    I've Sent Payment <ArrowRight size={16}/>
-                  </button>
+                  <div
+                    className="uv-btn-container uv-btn-purple"
+                    onClick={()=>{\
+                      if (!txnId.trim()){toast.error('Enter your transaction ID');return;}\
+                      if (!email.trim()){toast.error('Enter your email');return;}\
+                      setStep(3);\
+                    }}
+                  >
+                    <div className="uv-left">
+                      <div className="uv-card">
+                        <div className="uv-card-line"/>
+                        <div className="uv-card-buttons"/>
+                      </div>
+                      <div className="uv-post">
+                        <div className="uv-post-line"/>
+                        <div className="uv-post-screen"/>
+                        <div className="uv-post-numbers"/>
+                        <div className="uv-post-numbers2"/>
+                      </div>
+                    </div>
+                    <div className="uv-right">
+                      <span className="uv-label">I've Sent Payment</span>
+                      <svg className="uv-arrow" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1 7h12M8 2l5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  </div>
                 </>
               )}
             </div>
