@@ -391,12 +391,14 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
           </div>
         )}
         {showCooldown && (
-          <div style={{ textAlign:'center', padding:'10px 0 4px' }}>
-            <span style={{ fontSize:12, color:'rgba(255,255,255,0.3)' }}>Next claim in: </span>
-            <span style={{ fontSize:13, fontWeight:700, color:'rgba(251,191,36,0.7)', fontFamily:'monospace' }}>
+          <div style={{ textAlign:'center', padding:'14px 0 8px' }}>
+            <div style={{ fontSize:11, fontWeight:800, letterSpacing:'.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.34)', marginBottom:8 }}>
+              Next Claim
+            </div>
+            <div style={{ fontSize:24, fontWeight:900, color:'#fbbf24', fontFamily:'monospace', textShadow:'0 0 18px rgba(251,191,36,0.45), 0 0 36px rgba(245,158,11,0.22)' }}>
               <LiveClock ms={cooldownMs}/>
-            </span>
-            <div style={{ marginTop:6, fontSize:11, color:'rgba(255,255,255,0.34)' }}>
+            </div>
+            <div style={{ marginTop:8, fontSize:13, fontWeight:700, color:'rgba(255,245,200,0.86)', textShadow:'0 0 14px rgba(251,191,36,0.18)' }}>
               Available on {nextClaimAtText}
             </div>
           </div>
@@ -406,12 +408,8 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
             <div style={{ textAlign:'center', fontSize:11, color:'rgba(255,255,255,0.3)', padding:'4px 0', letterSpacing:'.04em' }}>
               Click any key to copy · Trial expires in 5 hours
             </div>
-          ) : showCooldown ? (
+          ) : showCooldown ? null : (
             // expired — show reclaim hint (cooldown timer handles next claim)
-            <div style={{ textAlign:'center', fontSize:11, color:'rgba(255,255,255,0.28)', padding:'4px 0' }}>
-              Next free trial available in: <span style={{ color:'rgba(251,191,36,0.6)', fontWeight:700, fontFamily:'monospace' }}><LiveClock ms={cooldownMs}/></span>
-            </div>
-          ) : (
             <button
               onClick={handleClaim}
               disabled={!ready || generating}
@@ -994,10 +992,10 @@ export default function DashboardPage() {
                 </div>
               </div>
               {/* Big number */}
-              <div style={{ display:'flex', alignItems:'baseline', gap:4, marginBottom:8, overflow:'visible', paddingBottom:4 }}>
+              <div style={{ display:'flex', alignItems:'baseline', gap:4, marginBottom:8, overflow:'visible', paddingRight:10, paddingBottom:4 }}>
                 <span style={{ fontSize:'clamp(44px,5vw,58px)', fontWeight:700, letterSpacing:'-.05em', lineHeight:1.1,
                   background:'linear-gradient(135deg,#fff 0%,rgba(196,181,253,.9) 100%)',
-                  WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', display:'block' }}>
+                  WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', display:'block', paddingRight:4 }}>
                   {statsLoading ? '—' : <CountUp to={totalUsers}/>}
                 </span>
                 {!statsLoading && <span style={{ fontSize:20, fontWeight:500, color:'rgba(196,181,253,.6)', letterSpacing:'-.02em', flexShrink:0 }}>+</span>}
@@ -1030,10 +1028,10 @@ export default function DashboardPage() {
                 </div>
               </div>
               {/* Number */}
-              <div style={{ display:'flex', alignItems:'baseline', gap:8, marginBottom:8, overflow:'visible', paddingBottom:4 }}>
+              <div style={{ display:'flex', alignItems:'baseline', gap:8, marginBottom:8, overflow:'visible', paddingRight:10, paddingBottom:4 }}>
                 <span style={{ fontSize:'clamp(44px,5vw,58px)', fontWeight:700, letterSpacing:'-.05em', lineHeight:1.1,
                   background:'linear-gradient(135deg,#fff 0%,rgba(134,239,172,.85) 100%)',
-                  WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', display:'block' }}>
+                  WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text', display:'block', paddingRight:4 }}>
                   {statsLoading ? '—' : <CountUp to={totalOnline}/>}
                 </span>
               </div>

@@ -7,7 +7,7 @@ import { safeQuery } from '@/lib/safeFetch';
 import { logActivity } from '@/lib/activity';
 import { buildReferralLink, sanitizeReferralCode, normalizeResellerEmail, captureReferralFromUrl, getStoredReferralEmail, normalizeReferralValue, clearStoredReferralEmail } from '@/lib/reseller';
 import type { ResellerPaymentMethods } from '@/lib/reseller';
-import { isOwner } from '@/lib/roles';
+import { isOwner, normalizeRole } from '@/lib/roles';
 import { Copy, CheckCircle, Loader2, ArrowRight, TrendingUp, DollarSign, Link2, ChevronDown, Wallet, Users, BarChart3, ExternalLink, RefreshCw, Settings, CreditCard, ShoppingBag, Check, X, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -228,6 +228,7 @@ export default function ResellerPage() {
   // ── Load subscription ────────────────────────────────────────
   const loadSubscription = async () => {
     if (!user?.id) { setSubLoading(false); return; }
+    const initialRole = normalizeRole(user.role);
     setSubLoading(true);
     // Fetch any subscription — active OR paused — so we can show correct UI
     const { data } = await safeQuery(() =>
@@ -242,7 +243,7 @@ export default function ResellerPage() {
     );
     setSub(data as Subscription | null);
     // Only grant reseller role if subscription is active (not paused)
-    if (user?.role === 'user' || user?.role === 'reseller') {
+    if (initialRole === 'user' || initialRole === 'reseller') {
       setUserRole(data?.status === 'active' ? 'reseller' : 'user');
     }
     setSubLoading(false);
@@ -400,7 +401,7 @@ export default function ResellerPage() {
     });
 
     toast.success(`🎉 Reseller subscription activated! $${plan.price.toFixed(2)} deducted from main balance.`);
-    if (user.role === 'user' || user.role === 'reseller') setUserRole('reseller');
+    if (normalizeRole(user.role) === 'user' || normalizeRole(user.role) === 'reseller') setUserRole('reseller');
     await loadSubscription();
     setPurchasing(false);
   };

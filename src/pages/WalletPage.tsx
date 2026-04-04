@@ -662,6 +662,36 @@ const PANEL_GROUPS = [
   { id:'lag', name:'Fake Lag', tagline:'Network Domination', desc:'Lag-based advantages. Confuse and conquer.', emoji:'🔷', color:'#818cf8', glow:'rgba(129,140,248,.3)', gradFrom:'rgba(30,27,75,.55)', gradTo:'rgba(15,14,46,.35)', bc:'rgba(129,140,248,.22)', features:['Lag switch control','Packet manipulation','Adjustable delay','OB52 Undetected'], plans:[{id:'lag-7d',label:'7 Days',price:5,days:7,keyauthPanel:'lag' as const},{id:'lag-30d',label:'30 Days',price:10,days:30,keyauthPanel:'lag' as const}] },
 ];
 
+const SHOP_PRICE_SETTINGS_KEY = 'shop_price_overrides_v1';
+type ShopPriceOverrides = Record<string, number>;
+
+function parseShopPriceOverrides(raw: unknown): ShopPriceOverrides {
+  if (typeof raw !== 'string' || !raw.trim()) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+    return Object.fromEntries(
+      Object.entries(parsed as Record<string, unknown>)
+        .map(([key, value]) => [key, Number(value)])
+        .filter(([, value]) => Number.isFinite(value) && value > 0)
+    );
+  } catch {
+    return {};
+  }
+}
+
+function applyShopPriceOverrides(groups: typeof PANEL_GROUPS, overrides: ShopPriceOverrides) {
+  return groups.map(group => ({
+    ...group,
+    plans: group.plans.map(plan => {
+      const override = overrides[plan.id];
+      return override && override > 0
+        ? { ...plan, originalPrice: plan.price, price: override }
+        : { ...plan, originalPrice: plan.price };
+    }),
+  }));
+}
+
 function PanelProductCard({ group, balance, onBuy, onAddBalance }: { group: typeof PANEL_GROUPS[number]; balance: number; onBuy: (plan: any) => void; onAddBalance: () => void }) {
   const { t, i18n } = useTranslation();
   const [sel, setSel] = useState(0);
@@ -670,6 +700,9 @@ function PanelProductCard({ group, balance, onBuy, onAddBalance }: { group: type
   const isFeatured = !!(group as any).featured;
   const basePerDay = group.plans[0].price / group.plans[0].days;
   const copy = getWalletPanelText(t, group.id);
+  const originalPrice = Number((plan as any).originalPrice ?? plan.price);
+  const hasDiscount = originalPrice > plan.price;
+  const discountPct = hasDiscount ? Math.max(1, Math.round((1 - plan.price / originalPrice) * 100)) : 0;
 
   const defaultImages: Record<string,string> = {
     internal: 'https://www.dropbox.com/scl/fi/vmjmtlagavp3qnxy44vng/Internal.png?rlkey=wu9oxjcrvwh1tw685aqa7z8gm&st=xsnlein0&raw=1',
@@ -736,17 +769,43 @@ function PanelProductCard({ group, balance, onBuy, onAddBalance }: { group: type
         {/* Price badge on image */}
         <div style={{
           position:'absolute', bottom:14, left:16, zIndex:2,
-          display:'flex', alignItems:'baseline', gap:4,
+          display:'flex', flexDirection:'column', alignItems:'flex-start', gap:6,
         }}>
-          <span style={{
-              fontSize:42, fontWeight:900, color:'#fff', letterSpacing:'-.05em', lineHeight:1,
-              textShadow:`0 0 30px ${group.glow}, 0 2px 8px rgba(0,0,0,.8)`,
+          {hasDiscount && (
+            <div style={{
+              display:'inline-flex', alignItems:'center', gap:8,
+              padding:'5px 10px', borderRadius:999,
+              background:'rgba(239,68,68,.18)', border:'1px solid rgba(248,113,113,.35)',
+              boxShadow:'0 0 24px rgba(239,68,68,.18)',
             }}>
-            {getCurrencyForLang(i18n.language).code === 'USD'
-              ? `$${plan.price}`
-              : formatPriceShort(plan.price, i18n.language)
-            }
-          </span>
+              <span style={{ fontSize:10, fontWeight:900, color:'#fecaca', letterSpacing:'.14em', textTransform:'uppercase' }}>
+                Sale
+              </span>
+              <span style={{ fontSize:11, fontWeight:900, color:'#fff' }}>-{discountPct}%</span>
+            </div>
+          )}
+          <div style={{ display:'flex', alignItems:'baseline', gap:8, flexWrap:'wrap' }}>
+            {hasDiscount && (
+              <span style={{
+                fontSize:18, fontWeight:800, color:'rgba(255,255,255,.7)', textDecoration:'line-through',
+                textDecorationColor:'rgba(248,113,113,.7)', textShadow:'0 2px 8px rgba(0,0,0,.7)',
+              }}>
+                {getCurrencyForLang(i18n.language).code === 'USD'
+                  ? `$${originalPrice}`
+                  : formatPriceShort(originalPrice, i18n.language)
+                }
+              </span>
+            )}
+            <span style={{
+                fontSize:42, fontWeight:900, color:'#fff', letterSpacing:'-.05em', lineHeight:1,
+                textShadow:`0 0 30px ${group.glow}, 0 2px 8px rgba(0,0,0,.8)`,
+              }}>
+              {getCurrencyForLang(i18n.language).code === 'USD'
+                ? `$${plan.price}`
+                : formatPriceShort(plan.price, i18n.language)
+              }
+            </span>
+          </div>
         </div>
       </div>
 
@@ -777,13 +836,17 @@ function PanelProductCard({ group, balance, onBuy, onAddBalance }: { group: type
                 boxShadow: active?`0 0 18px ${group.glow}, inset 0 1px 0 rgba(255,255,255,.1)`:'none',
                 display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
               }}>
-                {pSavePct>0 && (
+                {(pSavePct>0 || ((p as any).originalPrice ?? p.price) > p.price) && (
                   <span style={{
                     position:'absolute', top:-8, right:-4,
                     fontSize:8, fontWeight:900, color:'#4ade80',
                     background:'rgba(74,222,128,.15)', border:'1px solid rgba(74,222,128,.25)',
                     borderRadius:99, padding:'1px 5px',
-                  }}>-{pSavePct}%</span>
+                  }}>
+                    -{((p as any).originalPrice ?? p.price) > p.price
+                      ? Math.max(1, Math.round((1 - p.price / Number((p as any).originalPrice ?? p.price)) * 100))
+                      : pSavePct}%
+                  </span>
                 )}
                 <span style={{ fontSize:16, fontWeight:800, color:active?'#fff':'rgba(255,255,255,.45)', letterSpacing:'-.01em' }}>{getWalletPlanLabel(t, p.label)}</span>
               </button>
@@ -1373,12 +1436,18 @@ export default function WalletPage() {
   const [purchaseSuccess, setPurchaseSuccess] = useState<{ product: any; keys: Array<{ key: string; panelId: string; panelName: string; expiresAt: string }> } | null>(null);
   const [confirmPending, setConfirmPending] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<'products'|'deposit'|'history'>('products');
+  const [shopPriceOverrides, setShopPriceOverrides] = useState<ShopPriceOverrides>({});
+  const [ownerPriceDrafts, setOwnerPriceDrafts] = useState<Record<string, string>>({});
+  const [ownerPricesLoading, setOwnerPricesLoading] = useState(false);
+  const [ownerPricesSaving, setOwnerPricesSaving] = useState(false);
 
   const isAdmin   = user?.role === 'admin';
   const isSupport = user?.role === 'support';
   const canApprove = canApprovePayments(user?.role);
+  const ownerMode = isOwner(user?.role);
   const normalizedUserEmail = normalizeResellerEmail(user?.email ?? '');
   const sortedPurchasedLicenses = [...licenses].sort((a, b) => new Date(b.expiresAt).getTime() - new Date(a.expiresAt).getTime());
+  const effectiveShopGroups = applyShopPriceOverrides(PANEL_GROUPS, shopPriceOverrides);
 
 
   const loadTxns = async () => {
@@ -1427,6 +1496,55 @@ export default function WalletPage() {
       setPageResellerMethods(m ?? null);
     });
   }, [activeReferral]);
+
+  const loadOwnerShopPrices = async () => {
+    setOwnerPricesLoading(true);
+    const { data } = await safeQuery(() =>
+      supabase.from('system_settings').select('value').eq('key', SHOP_PRICE_SETTINGS_KEY).maybeSingle()
+    );
+    const overrides = parseShopPriceOverrides(data?.value);
+    setShopPriceOverrides(overrides);
+    setOwnerPriceDrafts(
+      Object.fromEntries(
+        PANEL_GROUPS.flatMap(group =>
+          group.plans.map(plan => [plan.id, String(overrides[plan.id] ?? plan.price)])
+        )
+      )
+    );
+    setOwnerPricesLoading(false);
+  };
+
+  useEffect(() => {
+    void loadOwnerShopPrices();
+  }, []);
+
+  const saveOwnerShopPrices = async () => {
+    if (!ownerMode) return;
+    const nextOverrides = Object.fromEntries(
+      PANEL_GROUPS.flatMap(group =>
+        group.plans.map(plan => {
+          const raw = ownerPriceDrafts[plan.id];
+          const parsed = Number(raw);
+          return [plan.id, Number.isFinite(parsed) && parsed > 0 ? parsed : plan.price];
+        })
+      )
+    );
+    setOwnerPricesSaving(true);
+    const { error } = await safeQuery(() =>
+      supabase.from('system_settings').upsert({
+        key: SHOP_PRICE_SETTINGS_KEY,
+        value: JSON.stringify(nextOverrides),
+        updated_at: new Date().toISOString(),
+      }, { onConflict:'key' })
+    );
+    setOwnerPricesSaving(false);
+    if (error) {
+      toast.error(error.message || 'Failed to save shop prices');
+      return;
+    }
+    setShopPriceOverrides(nextOverrides);
+    toast.success('Shop prices updated');
+  };
 
   useEffect(() => {
     if (!user || canApprove || isSupport) return;
@@ -1514,9 +1632,52 @@ export default function WalletPage() {
     if (user) logActivity({ userId:user.id, userEmail:user.email, userName:user.name, action:'purchase', product:product.name, amount:product.price, status:'success', meta:{ keys:generatedKeys.map((k:any)=>k.panelName) } });
   };
 
-  // Admin view
+  // Admin / Owner view
   if (canApprove) return (
     <div style={{ display:'flex',flexDirection:'column',gap:18 }}>
+      {ownerMode && (
+        <div className="g fu" style={{ padding:'20px 22px' }}>
+          <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18,flexWrap:'wrap',gap:10 }}>
+            <div>
+              <div style={{ fontSize:16,fontWeight:800,color:'#fff' }}>Shop Price Manager</div>
+              <div style={{ fontSize:12,color:'var(--muted)',marginTop:2 }}>Update prices for every customer and show sale discounts automatically.</div>
+            </div>
+            <button
+              onClick={saveOwnerShopPrices}
+              disabled={ownerPricesSaving || ownerPricesLoading}
+              style={{ padding:'10px 14px',borderRadius:11,border:'1px solid rgba(251,191,36,.24)',background:'rgba(251,191,36,.08)',cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:700,color:'#fbbf24' }}
+            >
+              {ownerPricesSaving ? 'Saving...' : 'Save Prices'}
+            </button>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))', gap:14 }}>
+            {PANEL_GROUPS.map(group => (
+              <div key={group.id} style={{ borderRadius:18, padding:'16px 16px 14px', background:'rgba(255,255,255,.03)', border:`1px solid ${group.bc}` }}>
+                <div style={{ fontSize:14, fontWeight:800, color:'#fff', marginBottom:4 }}>{group.name}</div>
+                <div style={{ fontSize:11, color:'rgba(255,255,255,.35)', marginBottom:14 }}>{group.tagline}</div>
+                <div style={{ display:'grid', gap:10 }}>
+                  {group.plans.map(plan => (
+                    <div key={plan.id} style={{ display:'grid', gridTemplateColumns:'1fr 92px', gap:10, alignItems:'center' }}>
+                      <div>
+                        <div style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,.82)' }}>{plan.label}</div>
+                        <div style={{ fontSize:10, color:'rgba(255,255,255,.35)' }}>Base: ${plan.price.toFixed(2)}</div>
+                      </div>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={ownerPriceDrafts[plan.id] ?? String(plan.price)}
+                        onChange={e => setOwnerPriceDrafts(prev => ({ ...prev, [plan.id]: e.target.value }))}
+                        style={{ width:'100%', background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.1)', borderRadius:10, padding:'10px 12px', color:'#fff', fontFamily:'inherit', fontSize:13, fontWeight:700, outline:'none', boxSizing:'border-box' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="g fu" style={{ padding:'20px 22px' }}>
         <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:10 }}>
           <div style={{ display:'flex',alignItems:'center',gap:14 }}>
@@ -1720,7 +1881,7 @@ export default function WalletPage() {
               )}
               {!(pageResellerMethods as any)?._paused && (
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:18, alignItems:'stretch' }}>
-                  {PANEL_GROUPS.map(group => {
+                  {effectiveShopGroups.map(group => {
                     // Apply reseller custom pricing if set
                     const rm = pageResellerMethods as any;
                     if (rm && !rm._paused) console.log('[Reseller] Applying prices from:', rm);
