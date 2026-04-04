@@ -1472,11 +1472,7 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
 
                   <div
                     className="uv-btn-container uv-btn-purple"
-                    onClick={()=>{\
-                      if (!txnId.trim()){toast.error('Enter your transaction ID');return;}\
-                      if (!email.trim()){toast.error('Enter your email');return;}\
-                      setStep(3);\
-                    }}
+                    onClick={()=>{ if (!txnId.trim()){toast.error('Enter your transaction ID');return;} if (!email.trim()){toast.error('Enter your email');return;} setStep(3); }}
                   >
                     <div className="uv-left">
                       <div className="uv-card">
