@@ -223,22 +223,23 @@ export default function Index() {
     }
   };
 
+
   useEffect(() => {
     if (!user || user.role === 'owner' || user.role === 'admin' || user.role === 'support') return;
 
-    const creditedKey = `1999x-credited-${user.id}`;
+    // ── CRITICAL: credited tracking is stored in Supabase, not localStorage ──
+    // localStorage was wiped on new device/browser causing re-crediting of all old transactions
     const rejectedKey = `1999x-rejected-${user.id}`;
 
-    const readIds = (key: string): Set<string> => {
-      try { return new Set<string>(JSON.parse(localStorage.getItem(key) || '[]')); }
+    const readRejected = (): Set<string> => {
+      try { return new Set<string>(JSON.parse(localStorage.getItem(rejectedKey) || '[]')); }
       catch { return new Set<string>(); }
     };
-
-    const writeId = (key: string, id: string) => {
-      const ids = readIds(key);
+    const writeRejected = (id: string) => {
+      const ids = readRejected();
       if (ids.has(id)) return;
       ids.add(id);
-      try { localStorage.setItem(key, JSON.stringify([...ids])); } catch {}
+      try { localStorage.setItem(rejectedKey, JSON.stringify([...ids])); } catch {}
     };
 
     let checking = false;
@@ -248,35 +249,51 @@ export default function Index() {
       if (checking || disposed) return;
       checking = true;
       try {
+        // Fetch transactions WITH the credited flag from DB
         const { data, error } = await safeQuery(
-          async () => await supabase.from('transactions').select('id, amount, status').eq('user_id', user.id)
+          async () => await supabase
+            .from('transactions')
+            .select('id, amount, status, credited')
+            .eq('user_id', user.id)
         );
         if (error || !data || disposed) return;
 
-        const rows = data as Array<{ id: string; amount: number; status: string }>;
+        const rows = data as Array<{ id: string; amount: number; status: string; credited?: boolean }>;
+
         for (const tx of rows) {
           if (tx.status === 'approved') {
-            const credited = readIds(creditedKey);
-            if (!credited.has(tx.id)) {
-              writeId(creditedKey, tx.id);
-              addBalance(Number(tx.amount) || 0);
-              toast.success(`Payment approved! $${Number(tx.amount || 0).toFixed(2)} added!`);
-              logActivity({
-                userId: user.id,
-                userEmail: user.email,
-                userName: user.name,
-                action: 'balance_add',
-                amount: Number(tx.amount) || 0,
-                status: 'success',
-                meta: { transaction_id: tx.id, source: 'global_balance_sync' },
-              });
+            // Only credit if DB says it hasn't been credited yet
+            // tx.credited may not exist on old rows — treat null/undefined as not credited
+            const alreadyCredited = tx.credited === true;
+            if (!alreadyCredited) {
+              // Mark as credited in DB FIRST before adding balance (prevent race)
+              const { error: markErr } = await supabase
+                .from('transactions')
+                .update({ credited: true })
+                .eq('id', tx.id)
+                .eq('user_id', user.id); // extra safety filter
+
+              if (!markErr) {
+                addBalance(Number(tx.amount) || 0);
+                toast.success(`Payment approved! $${Number(tx.amount || 0).toFixed(2)} added!`);
+                logActivity({
+                  userId: user.id,
+                  userEmail: user.email,
+                  userName: user.name,
+                  action: 'balance_add',
+                  amount: Number(tx.amount) || 0,
+                  status: 'success',
+                  meta: { transaction_id: tx.id, source: 'global_balance_sync' },
+                });
+              }
+              // If markErr (e.g. column doesn't exist yet), fall back silently — don't double-credit
             }
           }
 
           if (tx.status === 'rejected') {
-            const rejected = readIds(rejectedKey);
+            const rejected = readRejected();
             if (!rejected.has(tx.id)) {
-              writeId(rejectedKey, tx.id);
+              writeRejected(tx.id);
               toast.error(`Payment of $${Number(tx.amount || 0).toFixed(2)} was rejected.`);
             }
           }

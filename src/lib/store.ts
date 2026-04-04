@@ -129,16 +129,18 @@ const generateId = () => Math.random().toString(36).substring(2, 10);
 interface UserData {
   balance: number;
   licenses: License[];
-  bonusPoints: number;
-  lastBonusClaim: string | null;
+  // bonusPoints + lastBonusClaim removed — always fetched from user_bonus DB table
 }
 
 function loadUserData(userId: string): UserData {
   try {
     const raw = localStorage.getItem(`1999x-user-${userId}`);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { balance: parsed.balance ?? 0, licenses: parsed.licenses ?? [] };
+    }
   } catch {}
-  return { balance: 0, licenses: [], bonusPoints: 0, lastBonusClaim: null };
+  return { balance: 0, licenses: [] };
 }
 
 function saveUserData(userId: string, data: Partial<UserData>) {
@@ -287,15 +289,17 @@ export const useAppStore = create<AppState>()(
       isAuthenticated: false,
 
       login: (user) => {
-        // Always load this user's saved data — works after logout, refresh, or new device
+        // localStorage is a display cache only — balance shows instantly on same device.
+        // syncBalance in Index.tsx reconciles from DB using credited column (device-independent).
+        // bonusPoints/lastBonusClaim always fetched fresh from user_bonus DB table.
         const saved = loadUserData(user.id);
         set({
           user,
-          isAuthenticated:  true,
-          balance:          saved.balance,
-          licenses:         saved.licenses,
-          bonusPoints:      saved.bonusPoints,
-          lastBonusClaim:   saved.lastBonusClaim,
+          isAuthenticated: true,
+          balance:         saved.balance,  // display cache; DB-reconciled by syncBalance
+          licenses:        saved.licenses, // display cache; overwritten by LicensesPage DB fetch
+          bonusPoints:     0,              // always from DB (user_bonus table)
+          lastBonusClaim:  null,           // always from DB (user_bonus table)
         });
       },
 
@@ -304,17 +308,15 @@ export const useAppStore = create<AppState>()(
       })),
 
       logout: () => {
-        // Save current data before clearing the screen
+        // Save balance + licenses to localStorage for same-device fast restore.
+        // bonusPoints/lastBonusClaim are NOT saved — always fetched fresh from DB.
         const state = get();
         if (state.user?.id) {
           saveUserData(state.user.id, {
-            balance:        state.balance,
-            licenses:       state.licenses,
-            bonusPoints:    state.bonusPoints,
-            lastBonusClaim: state.lastBonusClaim,
+            balance:  state.balance,
+            licenses: state.licenses,
           });
         }
-        // Only clear identity — NOT the saved data in localStorage
         set({
           user:            null,
           isAuthenticated: false,
@@ -399,20 +401,16 @@ export const useAppStore = create<AppState>()(
         if (state.lastBonusClaim && now - new Date(state.lastBonusClaim).getTime() < 86400000) return false;
         const newPoints = state.bonusPoints + 10;
         const newClaim  = new Date().toISOString();
+        // Only update in-memory state — DB write handled by DashboardPage upsertBonusRow
         set({ bonusPoints: newPoints, lastBonusClaim: newClaim });
-        if (state.user?.id) {
-          saveUserData(state.user.id, { bonusPoints: newPoints, lastBonusClaim: newClaim });
-        }
         return true;
       },
       redeemPoints: (pts: number) => {
         const state = get();
         if (state.bonusPoints < pts) return false;
         const newPoints = state.bonusPoints - pts;
+        // Only update in-memory state — DB write handled by DashboardPage upsertBonusRow
         set({ bonusPoints: newPoints });
-        if (state.user?.id) {
-          saveUserData(state.user.id, { bonusPoints: newPoints });
-        }
         return true;
       },
 
