@@ -22,7 +22,7 @@ const PLANS = [
     id: 'monthly',
     label: 'Monthly',
     labelKey: 'reseller.monthly',
-    price: 50,
+    price: 35,
     duration: 30,
     tag: 'STARTER',
     tagColor: '#8b5cf6',
