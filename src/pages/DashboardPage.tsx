@@ -17,7 +17,7 @@ const SUPA_URL = 'https://awjouzwzdkrevvnlenvn.supabase.co';
 const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3am91end6ZGtyZXZ2bmxlbnZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTg4MjEsImV4cCI6MjA5MDAzNDgyMX0._I_I-WA_8-YqDfaRzKiVgpEAhkH9faxlEIV6e766A0M';
 const BONUS_COOLDOWN = 86400000;
 const FREE_KEY_COOLDOWN = 172800000;
-const FREE_KEY_TTL = 86400000;
+const FREE_KEY_TTL = 18000000; // 5 hours in ms
 
 interface FreeRow { lag_key: string|null; internal_key: string|null; claimed_at: string; expires_at: string; }
 interface BonusRow { bonus_points: number; last_claim_time: string|null; }
@@ -236,8 +236,8 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || ANON;
       const [lagRes, intRes] = await Promise.all([
-        fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`,apikey:ANON},body:JSON.stringify({panel_type:'lag',days:1,hours:0,mask:'1999X-FREE-****',is_free:true,price:0})}).then(r=>r.json()),
-        fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`,apikey:ANON},body:JSON.stringify({panel_type:'internal',days:1,hours:0,mask:'1999X-FREE-****',is_free:true,price:0})}).then(r=>r.json()),
+        fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`,apikey:ANON},body:JSON.stringify({panel_type:'lag',days:0,hours:5,mask:'1999X-FREE-****',is_free:true,price:0})}).then(r=>r.json()),
+        fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`,apikey:ANON},body:JSON.stringify({panel_type:'internal',days:0,hours:5,mask:'1999X-FREE-****',is_free:true,price:0})}).then(r=>r.json()),
       ]);
       const lagKey = lagRes?.success?lagRes.key:null;
       const intKey = intRes?.success?intRes.key:null;
