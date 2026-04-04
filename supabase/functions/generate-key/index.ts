@@ -40,8 +40,32 @@ Deno.serve(async (req) => {
     if (!user) return json({ success: false, message: 'Unauthorized' }, 401);
 
     // ── Pre-generation ──────────────────────────────────────
+    if (isFree) {
+      const admin = createClient(supabaseUrl, serviceRole);
+      const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || '';
+      const providedIp = body.ip || '';
+      
+      const ipsToCheck = [];
+      if (clientIp) ipsToCheck.push(clientIp);
+      if (providedIp && providedIp !== clientIp) ipsToCheck.push(providedIp);
 
+      if (ipsToCheck.length > 0) {
+        const { data: claims } = await admin
+          .from('user_licenses')
+          .select('last_login')
+          .in('ip', ipsToCheck)
+          .ilike('product_name', '%Free Trial%')
+          .order('last_login', { ascending: false })
+          .limit(1);
 
+        if (claims && claims.length > 0) {
+          const lastClaim = new Date(claims[0].last_login).getTime();
+          if (Date.now() - lastClaim < 86400000) {
+            return json({ success: false, message: 'This IP address has already claimed a free trial today. Come back in 24 hours!' }, 403);
+          }
+        }
+      }
+    }
     // ── Generate key from KeyAuth ──────────────────────────
     const sellerKey = pt === 'lag'
       ? (Deno.env.get('KA_LAG_SELLER_KEY') ?? Deno.env.get('KA_SELLER_KEY') ?? '')

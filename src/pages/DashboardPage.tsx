@@ -4,7 +4,7 @@ import { logActivity, notifyAll, sendNotificationEmail } from '@/lib/activity';
 import {
   Gift, Clock, Zap, Copy, CheckCircle, Eye, EyeOff,
   Loader2, Sparkles, Send, X, Plus, Trash2,
-  Users, Activity, Shield, Star
+  Users, Activity, Shield, Star, ChevronDown
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
@@ -171,27 +171,23 @@ function RewardModal({ bonusPoints, userId, userEmail, onClose, onRedeem }: {
   );
 }
 
-/* ─── FREE KEY CARD ─────────────────────────────────────── */
+/* ─── FREE KEY CARD ROW ─────────────────────────────────────── */
 function FreeKeyCard({ animDelay }: { animDelay: number }) {
-  const { t } = useTranslation();
-  const { addLicense, user } = useAppStore();
+  const { user, addLicense } = useAppStore();
   const [row, setRow] = useState<FreeRow|null>(null);
   const [dbLoading, setDbLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [canClaim, setCanClaim] = useState(false);
   const [cooldownMs, setCooldownMs] = useState(0);
-  const [revealed, setRevealed] = useState(false);
-  // Global panel enabled/disabled state
+  const [expanded, setExpanded] = useState(false);
   const [panelEnabled, setPanelEnabled] = useState<boolean>(true);
   const [togglingPanel, setTogglingPanel] = useState(false);
   const userIsOwner = isOwner(user?.role);
 
-  // Load panel enabled state from system_settings
   useEffect(() => {
     supabase.from('system_settings').select('value').eq('key', 'free_trial_enabled').maybeSingle()
       .then(({ data }) => {
         if (data) setPanelEnabled(data.value !== 'false' && data.value !== false);
-        else setPanelEnabled(true); // default on if no row
       });
   }, []);
 
@@ -215,40 +211,24 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
     if (!userIsOwner || togglingPanel) return;
     setTogglingPanel(true);
     const newVal = !panelEnabled;
-    const { error } = await supabase.from('system_settings').upsert(
-      { key:'free_trial_enabled', value: String(newVal), updated_at: new Date().toISOString() },
-      { onConflict:'key' }
-    );
-    if (error) { toast.error('Failed to update panel status'); }
-    else {
-      setPanelEnabled(newVal);
-      toast.success(newVal ? 'Free panel resumed for everyone!' : 'Free panel stopped for everyone!');
-    }
+    const { error } = await supabase.from('system_settings').upsert({ key:'free_trial_enabled', value: String(newVal), updated_at: new Date().toISOString() },{ onConflict:'key' });
+    if (error) toast.error('Failed to update status');
+    else { setPanelEnabled(newVal); toast.success(newVal?'Trial running!':'Trial stopped!'); }
     setTogglingPanel(false);
   };
 
   const handleClaim = async () => {
-    if (!canClaim||generating||!user) return;
-    if (!panelEnabled) { toast.error('Free trial is currently disabled by the owner.'); return; }
-    setGenerating(true);
-    toast.loading('Generating trial…', { id:'free-trial' });
+    if (!canClaim||generating||!user||!panelEnabled) return;
+    setGenerating(true); toast.loading('Generating trial…', { id:'free-trial' });
     try {
-      const { ip } = await fetch('https://api.ipify.org?format=json').then(r=>r.json()).catch(()=>({ip:''}));
-      if (ip) {
-        const { data: claims } = await supabase.from('user_licenses').select('last_login').eq('ip', ip).ilike('product_name', '%Free Trial%').order('last_login', { ascending: false }).limit(1);
-        if (claims && claims.length > 0) {
-          const lastClaim = new Date(claims[0].last_login).getTime();
-          if (Date.now() - lastClaim < FREE_KEY_COOLDOWN) {
-            toast.dismiss('free-trial'); toast.error('This IP address has already claimed a trial today. Come back in 24 hours!');
-            setGenerating(false); return;
-          }
-        }
-      }
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || ANON;
+      
+      const { ip } = await fetch('https://api.ipify.org?format=json').then(r=>r.json()).catch(()=>({ip:''}));
+      
       const [lagRes, intRes] = await Promise.all([
-        fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`,apikey:ANON},body:JSON.stringify({panel_type:'lag',days:0,hours:5,mask:'1999X-FREE-****',is_free:true,price:0})}).then(r=>r.json()),
-        fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`,apikey:ANON},body:JSON.stringify({panel_type:'internal',days:0,hours:5,mask:'1999X-FREE-****',is_free:true,price:0})}).then(r=>r.json()),
+        fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`,apikey:ANON},body:JSON.stringify({panel_type:'lag',days:0,hours:5.1,mask:'1999X-FREE-****',is_free:true,price:0,ip:ip||''})}).then(r=>r.json()),
+        fetch(`${SUPA_URL}/functions/v1/generate-key`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`,apikey:ANON},body:JSON.stringify({panel_type:'internal',days:0,hours:5.1,mask:'1999X-FREE-****',is_free:true,price:0,ip:ip||''})}).then(r=>r.json()),
       ]);
       const lagKey = lagRes?.success?lagRes.key:null;
       const intKey = intRes?.success?intRes.key:null;
@@ -257,119 +237,77 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
       const expiresAt = new Date(Date.now()+FREE_KEY_TTL).toISOString();
       const { error } = await supabase.from('free_trial_keys').upsert({ user_id:user.id,user_email:user.email,lag_key:lagKey,internal_key:intKey,claimed_at:now,expires_at:expiresAt },{ onConflict:'user_id' });
       if (error) { toast.dismiss('free-trial'); toast.error(error.message); setGenerating(false); return; }
+      
       const licRows: any[] = [];
       if (lagKey) { addLicense({ id:`free_lag_${Date.now()}`,productId:'keyauth-lag',productName:'Fake Lag (Free Trial)',key:lagKey,hwid:'',lastLogin:now,expiresAt,status:'active',ip:ip||'',device:'',hwidResetsUsed:0,hwidResetMonth:new Date().getMonth() }); licRows.push({ user_id:user.id,user_email:user.email,product_id:'keyauth-lag',product_name:'Fake Lag (Free Trial)',license_key:lagKey,keyauth_username:lagKey,hwid:'',last_login:now,expires_at:expiresAt,status:'active',ip:ip||'',device:'',hwid_resets_used:0,hwid_reset_month:new Date().getMonth() }); }
       if (intKey) { addLicense({ id:`free_int_${Date.now()}`,productId:'keyauth-internal',productName:'Internal (Free Trial)',key:`${intKey}_INTERNAL`,hwid:'',lastLogin:now,expiresAt,status:'active',ip:ip||'',device:'',hwidResetsUsed:0,hwidResetMonth:new Date().getMonth() }); licRows.push({ user_id:user.id,user_email:user.email,product_id:'keyauth-internal',product_name:'Internal (Free Trial)',license_key:`${intKey}_INTERNAL`,keyauth_username:intKey,hwid:'',last_login:now,expires_at:expiresAt,status:'active',ip:ip||'',device:'',hwid_resets_used:0,hwid_reset_month:new Date().getMonth() }); }
       if (licRows.length > 0) await supabase.from('user_licenses').upsert(licRows, { onConflict:'user_id,license_key' });
+      
       setRow({ lag_key:lagKey,internal_key:intKey,claimed_at:now,expires_at:expiresAt });
       toast.dismiss('free-trial'); toast.success('Trial activated!');
+      setExpanded(true); // auto-expand to show keys
     } catch(e) { toast.dismiss('free-trial'); toast.error(String(e)); }
     setGenerating(false);
   };
 
   if (dbLoading) return null;
   const isActive = !!row && new Date(row.expires_at).getTime()>Date.now();
-  const accentColor = panelEnabled ? '#a78bfa' : '#f87171';
-  const ab = (a: number) => panelEnabled ? `rgba(124,92,255,${a})` : `rgba(239,68,68,${a})`;
 
   return (
-    <div style={{ animation: `px-in .65s cubic-bezier(.22,1,.36,1) both, px-float 6s ease-in-out infinite`, animationDelay:`${animDelay}ms, 0s`, position:'relative', borderRadius:32, background:'linear-gradient(145deg, rgba(30,10,60,0.8), rgba(15,5,30,0.9))', border:'1px solid rgba(139,92,246,0.3)', padding:40, overflow:'hidden', boxShadow:'0 30px 60px rgba(0,0,0,0.6), 0 0 100px rgba(124,92,255,0.1) inset' }}>
-      {/* Background glow meshes */}
-      <div style={{ position:'absolute', top:'-20%', left:'-10%', width:'50%', height:'50%', background:'radial-gradient(circle, rgba(236,72,153,0.15) 0%, transparent 70%)', animation:'px-glow-pulse 8s ease-in-out infinite', pointerEvents:'none' }}/>
-      <div style={{ position:'absolute', bottom:'-20%', right:'-10%', width:'60%', height:'60%', background:'radial-gradient(circle, rgba(124,92,255,0.15) 0%, transparent 70%)', animation:'px-glow-pulse 10s ease-in-out infinite reverse', pointerEvents:'none' }}/>
-
-      {/* Glassy top bar: Title + Status */}
-      <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:30 }}>
+    <div style={{ background:'rgba(255,255,255,0.02)', borderRadius:16, border:'1px solid rgba(255,255,255,0.04)', overflow:'hidden', transition:'all .3s', animation:`px-fade-in .5s ease-out`, animationDelay:`${animDelay}ms`, animationFillMode:'both' }}>
+      <div onClick={() => setExpanded(!expanded)} style={{ padding:20, display:'flex', alignItems:'center', justifyContent:'space-between', cursor:'pointer' }}>
         <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-          <div style={{ width:56, height:56, borderRadius:20, background:'linear-gradient(135deg, rgba(236,72,153,0.2), rgba(124,92,255,0.2))', border:'1px solid rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 10px 30px rgba(236,72,153,0.2)' }}>
-            <Zap size={28} color="#fbcfe8"/>
+          <div style={{ width:48, height:48, borderRadius:14, background:'rgba(167,139,250,0.1)', display:'flex', alignItems:'center', justifyContent:'center', color:'#c4b5fd' }}>
+            <Zap size={24}/>
           </div>
           <div>
-            <div style={{ fontSize:14, fontWeight:800, letterSpacing:'.1em', textTransform:'uppercase', color:'rgba(255,255,255,0.9)', marginBottom:4 }}>🚀 Premium Free Trial</div>
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <span style={{ width:8, height:8, borderRadius:'50%', background:panelEnabled?'#4ade80':'#f87171', boxShadow:`0 0 12px ${panelEnabled?'#4ade80':'#f87171'}`, animation:panelEnabled?'px-live 2s infinite':'none' }}/>
-              <span style={{ fontSize:14, fontWeight:700, color:panelEnabled?'#4ade80':'#f87171' }}>{panelEnabled?'Online':'Paused'}</span>
-            </div>
+            <div style={{ fontSize:15, fontWeight:700, color:'#fff', marginBottom:4 }}>Premium Free Trial</div>
+            <div style={{ fontSize:13, color:'rgba(255,255,255,0.4)', fontWeight:500 }}>5-Hour Access • Internal + Fake Lag</div>
           </div>
         </div>
-        {userIsOwner && (
-          <button onClick={togglePanel} disabled={togglingPanel}
-            style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 20px', borderRadius:14, background:panelEnabled?'rgba(239,68,68,.1)':'rgba(34,197,94,.1)', border:`1px solid ${panelEnabled?'rgba(239,68,68,.3)':'rgba(34,197,94,.3)'}`, cursor:'pointer', fontFamily:'inherit', fontSize:13, fontWeight:800, color:panelEnabled?'#f87171':'#4ade80', transition:'all .2s' }}>
-            {togglingPanel?<Loader2 size={14} className="animate-spin"/>:panelEnabled?'⏸ Halt Trial':'▶ Start Trial'}
-          </button>
-        )}
+        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+          {!panelEnabled && !userIsOwner ? <span style={{ color:'#f87171', fontSize:13, fontWeight:700 }}>Paused</span>
+          : isActive && row ? <span style={{ color:'#4ade80', fontSize:13, fontWeight:700 }}>Active - <LiveClock ms={new Date(row.expires_at).getTime()}/></span>
+          : canClaim ? <span style={{ color:'#c4b5fd', fontSize:13, fontWeight:700 }}>Ready to claim</span>
+          : <span style={{ color:'rgba(255,255,255,0.3)', fontSize:13 }}><Clock size={12} style={{display:'inline',marginRight:4,verticalAlign:'-2px'}}/>Next in <LiveClock ms={cooldownMs}/></span>}
+          <ChevronDown size={20} color="rgba(255,255,255,0.3)" style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition:'all .3s' }}/>
+        </div>
       </div>
 
-      {/* Main SaaS Value Prop Area */}
-      <div style={{ position:'relative', display:'flex', flexWrap:'wrap', gap:40, alignItems:'center', justifyContent:'space-between' }}>
-        
-        {/* Left: Big Text & Timer */}
-        <div style={{ flex:1, minWidth:260 }}>
+      {expanded && (
+        <div style={{ padding:'0 20px 20px', borderTop:'1px solid rgba(255,255,255,0.05)', marginTop:4, paddingTop:24 }}>
           {isActive && row ? (
             <div>
-              <div style={{ fontSize:16, fontWeight:800, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:'.15em', marginBottom:10 }}>Time Remaining</div>
-              <div style={{ fontSize:'clamp(56px, 8vw, 84px)', fontWeight:900, color:'#fff', lineHeight:1, letterSpacing:'-.04em', background:'linear-gradient(to right, #fbcfe8, #a78bfa)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
-                <LiveClock ms={new Date(row.expires_at).getTime()}/>
+              <div style={{ fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:12, fontWeight:500 }}>Your active premium keys:</div>
+              <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
+                {row.lag_key && (
+                  <div style={{ flex:1, minWidth:200, padding:16, borderRadius:12, background:'rgba(236,72,153,0.05)', border:'1px solid rgba(236,72,153,0.2)' }}>
+                    <div style={{ fontSize:12, color:'rgba(236,72,153,0.8)', fontWeight:700, marginBottom:8 }}>Fake Lag License</div>
+                    <code style={{ fontSize:14, color:'#fff', fontFamily:'monospace' }}>{row.lag_key}</code>
+                  </div>
+                )}
+                {row.internal_key && (
+                  <div style={{ flex:1, minWidth:200, padding:16, borderRadius:12, background:'rgba(139,92,246,0.05)', border:'1px solid rgba(139,92,246,0.2)' }}>
+                    <div style={{ fontSize:12, color:'rgba(139,92,246,0.8)', fontWeight:700, marginBottom:8 }}>Internal License</div>
+                    <code style={{ fontSize:14, color:'#fff', fontFamily:'monospace' }}>{row.internal_key}</code>
+                  </div>
+                )}
               </div>
-            </div>
-          ) : !panelEnabled && !userIsOwner ? (
-            <div>
-              <div style={{ fontSize:24, fontWeight:800, color:'#f87171', marginBottom:8 }}>🚫 Temporarily Unavailable</div>
-              <div style={{ fontSize:15, color:'rgba(248,113,113,.7)' }}>The owner has paused the free trial.</div>
             </div>
           ) : (
-            <div>
-              <div style={{ fontSize:14, fontWeight:800, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:'.15em', marginBottom:10 }}>Free Every 24 Hours</div>
-              <div style={{ fontSize:'clamp(42px, 5vw, 64px)', fontWeight:900, color:'#fff', lineHeight:1.1, letterSpacing:'-.03em' }}>
-                Get Your <span style={{ background:'linear-gradient(135deg, #f472b6, #818cf8)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>5-Hour</span> Access Key Now.
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right: Actions & Chips */}
-        <div style={{ flex:'0 0 auto', display:'flex', flexDirection:'column', alignItems:'flex-end', gap:16 }}>
-          <div style={{ display:'flex', gap:12, marginBottom:10 }}>
-            <div style={{ padding:'8px 16px', borderRadius:20, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', fontSize:12, fontWeight:700, color:'#fbcfe8' }}>⚡ Fake Lag</div>
-            <div style={{ padding:'8px 16px', borderRadius:20, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', fontSize:12, fontWeight:700, color:'#a78bfa' }}>🔒 Internal</div>
-          </div>
-          
-          {isActive && row && (
-            <button onClick={()=>setRevealed(!revealed)}
-              style={{ display:'flex', alignItems:'center', gap:10, padding:'16px 32px', borderRadius:20, background:revealed?'rgba(236,72,153,0.1)':'rgba(255,255,255,0.05)', border:`1px solid ${revealed?'rgba(236,72,153,0.3)':'rgba(255,255,255,0.15)'}`, cursor:'pointer', color:revealed?'#fbcfe8':'#fff', fontSize:15, fontWeight:800, transition:'all .2s' }}>
-              {revealed?<EyeOff size={18}/>:<Eye size={18}/>} {revealed?'Hide Premium Keys':'View Premium Keys'}
-            </button>
-          )}
-
-          {(!isActive || !row) && (
-            <button onClick={handleClaim} disabled={!canClaim||generating||!panelEnabled} 
-              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, padding:'20px 40px', borderRadius:24, background: (canClaim && panelEnabled) ? 'linear-gradient(135deg, #ec4899, #8b5cf6)' : 'rgba(255,255,255,0.05)', border:(canClaim && panelEnabled)?'none':'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:16, fontWeight:800, cursor:(canClaim && panelEnabled)?'pointer':'not-allowed', boxShadow:(canClaim && panelEnabled)?'0 20px 40px rgba(236,72,153,0.4)':'none', transition:'all 0.3s', transform:(canClaim && panelEnabled)?'scale(1)':'scale(0.98)' }}
-              onMouseEnter={e=>{if(canClaim&&panelEnabled)e.currentTarget.style.transform='scale(1.05) translateY(-4px)';}}
-              onMouseLeave={e=>{if(canClaim&&panelEnabled)e.currentTarget.style.transform='scale(1)';}}>
-              {generating ? <><Loader2 size={20} className="animate-spin"/>Generating...</>
-                : canClaim && panelEnabled ? <><Zap size={20}/> Claim Now</>
-                : !panelEnabled ? <>🚫 Unavailable</>
-                : <><Clock size={16}/> Next Claim in <LiveClock ms={cooldownMs}/></>}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Keys reveal area */}
-      {isActive && row && revealed && (
-        <div style={{ marginTop:40, paddingTop:30, borderTop:'1px solid rgba(255,255,255,0.05)', display:'flex', gap:24, flexWrap:'wrap' }}>
-          {row.lag_key && (
-            <div style={{ flex:1, minWidth:260, padding:'24px', borderRadius:24, background:'linear-gradient(to bottom right, rgba(236,72,153,0.05), rgba(0,0,0,0.2))', border:'1px solid rgba(236,72,153,0.2)', position:'relative', overflow:'hidden' }}>
-              <div style={{ position:'absolute', top:0, left:0, width:4, height:'100%', background:'#ec4899' }}/>
-              <div style={{ fontSize:13, color:'rgba(236,72,153,0.8)', fontWeight:800, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:12 }}>⚡ Fake Lag License</div>
-              <code style={{ fontSize:15, color:'#fff', fontFamily:'monospace', wordBreak:'break-all' }}>{row.lag_key}</code>
-            </div>
-          )}
-          {row.internal_key && (
-            <div style={{ flex:1, minWidth:260, padding:'24px', borderRadius:24, background:'linear-gradient(to bottom right, rgba(139,92,246,0.05), rgba(0,0,0,0.2))', border:'1px solid rgba(139,92,246,0.2)', position:'relative', overflow:'hidden' }}>
-              <div style={{ position:'absolute', top:0, left:0, width:4, height:'100%', background:'#8b5cf6' }}/>
-              <div style={{ fontSize:13, color:'rgba(139,92,246,0.8)', fontWeight:800, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:12 }}>🔒 Internal License</div>
-              <code style={{ fontSize:15, color:'#fff', fontFamily:'monospace', wordBreak:'break-all' }}>{row.internal_key}</code>
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+              <button onClick={handleClaim} disabled={!canClaim||generating||!panelEnabled}
+                className="px-btn" style={{ flex:'none', padding:'12px 24px', borderRadius:12, background:canClaim&&panelEnabled?'linear-gradient(135deg, rgba(167,139,250,0.2), rgba(124,92,255,0.2))':'rgba(255,255,255,0.05)', color:canClaim&&panelEnabled?'#c4b5fd':'rgba(255,255,255,0.4)', border:`1px solid ${canClaim&&panelEnabled?'rgba(167,139,250,0.4)':'rgba(255,255,255,0.1)'}`, fontWeight:700, cursor:canClaim&&panelEnabled?'pointer':'not-allowed' }}>
+                {generating ? <><Loader2 size={16} className="animate-spin" style={{marginRight:8,display:'inline',verticalAlign:'-3px'}}/>Generating...</>
+                  : canClaim && panelEnabled ? <><Zap size={16} style={{marginRight:8,display:'inline',verticalAlign:'-3px'}}/> Claim Free Trial</>
+                  : !panelEnabled ? 'Unavailable' : 'Wait for Cooldown'}
+              </button>
+              {userIsOwner && (
+                <button onClick={togglePanel} disabled={togglingPanel}
+                  style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 24px', borderRadius:12, background:'transparent', border:`1px solid ${panelEnabled?'rgba(239,68,68,.3)':'rgba(34,197,94,.3)'}`, color:panelEnabled?'#f87171':'#4ade80', fontWeight:700, cursor:'pointer' }}>
+                  {togglingPanel ? <Loader2 size={16} className="animate-spin"/> : panelEnabled?'Pause Trial':'Resume Trial'}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -394,6 +332,7 @@ export default function DashboardPage() {
   const [claimingBonus, setClaimingBonus] = useState(false);
   const [bonusLoaded, setBonusLoaded] = useState(false);
   const [showRewardModal, setShowRewardModal] = useState(false);
+  const [bonusExpanded, setBonusExpanded] = useState(false);
   const [lag, setLag] = useState(OFFLINE);
   const [int, setInt] = useState(OFFLINE);
   const [statsLoading, setStatsLoading] = useState(false);
