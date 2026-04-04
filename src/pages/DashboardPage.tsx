@@ -426,7 +426,7 @@ export default function DashboardPage() {
   const { balance, licenses, transactions, user, systemStatus } = useAppStore();
   const isSystemOnline = systemStatus==='online';
   const isMod = canManageAnnouncements(user?.role);
-  const bgRef = useRef<HTMLCanvasElement>(null);
+  const bgRef = useRef<HTMLCanvasElement>(null); // kept for ref compat, canvas removed
 
   const [bonusPoints, setBonusPoints] = useState(0);
   const [lastBonusClaim, setLastBonusClaim] = useState<string|null>(null);
@@ -506,30 +506,7 @@ export default function DashboardPage() {
     return ()=>clearTimeout(timer);
   }, [balance]);
 
-  // Soft mesh background
-  useEffect(() => {
-    const canvas = bgRef.current; if (!canvas) return;
-    const ctx = canvas.getContext('2d'); if (!ctx) return;
-    let raf: number, t = 0;
-    const resize = () => { canvas.width=canvas.offsetWidth; canvas.height=canvas.offsetHeight; };
-    resize(); window.addEventListener('resize', resize);
-    const draw = () => {
-      t += 0.00025;
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      const S=44;
-      const ox=(t*6)%S, oy=(t*4)%S;
-      for(let c=-1;c<Math.ceil(canvas.width/S)+2;c++)
-        for(let r=-1;r<Math.ceil(canvas.height/S)+2;r++){
-          const wx=c*S-ox, wy=r*S-oy;
-          const w=0.5+0.5*Math.sin(c*.5+t*1.8)*Math.cos(r*.5+t*1.2);
-          ctx.beginPath(); ctx.arc(wx,wy,1.2,0,Math.PI*2);
-          ctx.fillStyle=`rgba(139,92,246,${.025+.02*w})`; ctx.fill();
-        }
-      raf=requestAnimationFrame(draw);
-    };
-    draw();
-    return ()=>{ cancelAnimationFrame(raf); window.removeEventListener('resize',resize); };
-  }, []);
+  // Canvas mesh removed — was running requestAnimationFrame at 60fps across full screen
 
   const handleClaimBonus = async () => {
     if (!user||!canClaimBonus||claimingBonus||!bonusLoaded) return;
@@ -831,8 +808,7 @@ export default function DashboardPage() {
         .gfc-btn:not(:disabled):hover { transform: translateY(-2px); }
       `}</style>
 
-      {/* Mesh bg */}
-      <canvas ref={bgRef} style={{ position:'fixed',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:0 }}/>
+      
 
       <div style={{ position:'relative', zIndex:1 }}>
 
