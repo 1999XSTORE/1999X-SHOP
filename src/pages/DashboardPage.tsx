@@ -76,6 +76,19 @@ function LiveClock({ ms }: { ms: number }) {
   return <span>{txt}</span>;
 }
 
+function getFreeTrialClaimMs(row: FreeRow | null) {
+  if (!row) return null;
+  const claimedMs = new Date(row.claimed_at).getTime();
+  if (Number.isFinite(claimedMs) && claimedMs > 0) return claimedMs;
+
+  const expiresMs = new Date(row.expires_at).getTime();
+  if (Number.isFinite(expiresMs) && expiresMs > FREE_KEY_TTL) {
+    return expiresMs - FREE_KEY_TTL;
+  }
+
+  return null;
+}
+
 /* ─── REWARD MODAL ──────────────────────────────────────── */
 function RewardModal({ bonusPoints, userId, userEmail, onClose, onRedeem }: {
   bonusPoints: number; userId: string; userEmail: string;
@@ -227,12 +240,14 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
   useEffect(() => {
     const tick = () => {
       if (!row) { setCanClaim(true); setCooldownMs(0); return; }
-      const next = new Date(row.claimed_at).getTime()+FREE_KEY_COOLDOWN;
+      const claimMs = getFreeTrialClaimMs(row);
+      if (!claimMs) { setCanClaim(false); setCooldownMs(Date.now() + FREE_KEY_COOLDOWN); return; }
+      const next = claimMs + FREE_KEY_COOLDOWN;
       const left = next-Date.now();
       if (left<=0) { setCanClaim(true); setCooldownMs(0); } else { setCanClaim(false); setCooldownMs(next); }
     };
     tick(); const id = setInterval(tick,1000); return ()=>clearInterval(id);
-  }, [row?.claimed_at]);
+  }, [row]);
 
   const togglePanel = async () => {
     if (!userIsOwner || togglingPanel) return;
@@ -283,6 +298,15 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
   const isActive = !!row && new Date(row.expires_at).getTime()>Date.now();
   const ready = canClaim && panelEnabled;
   const showCooldown = !isActive && !!row && !ready && panelEnabled && cooldownMs > Date.now();
+  const nextClaimAtText = showCooldown
+    ? new Date(cooldownMs).toLocaleString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : '';
 
   return (
     <div
@@ -372,6 +396,9 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
             <span style={{ fontSize:13, fontWeight:700, color:'rgba(251,191,36,0.7)', fontFamily:'monospace' }}>
               <LiveClock ms={cooldownMs}/>
             </span>
+            <div style={{ marginTop:6, fontSize:11, color:'rgba(255,255,255,0.34)' }}>
+              Available on {nextClaimAtText}
+            </div>
           </div>
         )}
         <div className="gfc-cta">
