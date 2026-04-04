@@ -282,6 +282,7 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
   if (dbLoading) return null;
   const isActive = !!row && new Date(row.expires_at).getTime()>Date.now();
   const ready = canClaim && panelEnabled;
+  const showCooldown = !isActive && !!row && !ready && panelEnabled && cooldownMs > Date.now();
 
   return (
     <div
@@ -365,7 +366,7 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
             </div>
           </div>
         )}
-        {!isActive && !ready && panelEnabled && (
+        {showCooldown && (
           <div style={{ textAlign:'center', padding:'10px 0 4px' }}>
             <span style={{ fontSize:12, color:'rgba(255,255,255,0.3)' }}>Next claim in: </span>
             <span style={{ fontSize:13, fontWeight:700, color:'rgba(251,191,36,0.7)', fontFamily:'monospace' }}>
@@ -378,7 +379,7 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
             <div style={{ textAlign:'center', fontSize:11, color:'rgba(255,255,255,0.3)', padding:'4px 0', letterSpacing:'.04em' }}>
               Click any key to copy · Trial expires in 5 hours
             </div>
-          ) : !isActive && row ? (
+          ) : showCooldown ? (
             // expired — show reclaim hint (cooldown timer handles next claim)
             <div style={{ textAlign:'center', fontSize:11, color:'rgba(255,255,255,0.28)', padding:'4px 0' }}>
               Next free trial available in: <span style={{ color:'rgba(251,191,36,0.6)', fontWeight:700, fontFamily:'monospace' }}><LiveClock ms={cooldownMs}/></span>
