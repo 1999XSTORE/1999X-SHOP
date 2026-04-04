@@ -16,7 +16,7 @@ import { safeFetch } from '@/lib/safeFetch';
 const SUPA_URL = 'https://awjouzwzdkrevvnlenvn.supabase.co';
 const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3am91end6ZGtyZXZ2bmxlbnZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTg4MjEsImV4cCI6MjA5MDAzNDgyMX0._I_I-WA_8-YqDfaRzKiVgpEAhkH9faxlEIV6e766A0M';
 const BONUS_COOLDOWN = 86400000;
-const FREE_KEY_COOLDOWN = 172800000;
+const FREE_KEY_COOLDOWN = 86400000; // 24 hours
 const FREE_KEY_TTL = 18000000; // 5 hours in ms
 
 interface FreeRow { lag_key: string|null; internal_key: string|null; claimed_at: string; expires_at: string; }
@@ -233,6 +233,17 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
     setGenerating(true);
     toast.loading('Generating trial…', { id:'free-trial' });
     try {
+      const { ip } = await fetch('https://api.ipify.org?format=json').then(r=>r.json()).catch(()=>({ip:''}));
+      if (ip) {
+        const { data: claims } = await supabase.from('user_licenses').select('last_login').eq('ip', ip).ilike('product_name', '%Free Trial%').order('last_login', { ascending: false }).limit(1);
+        if (claims && claims.length > 0) {
+          const lastClaim = new Date(claims[0].last_login).getTime();
+          if (Date.now() - lastClaim < FREE_KEY_COOLDOWN) {
+            toast.dismiss('free-trial'); toast.error('This IP address has already claimed a trial today. Come back in 24 hours!');
+            setGenerating(false); return;
+          }
+        }
+      }
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || ANON;
       const [lagRes, intRes] = await Promise.all([
@@ -247,8 +258,8 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
       const { error } = await supabase.from('free_trial_keys').upsert({ user_id:user.id,user_email:user.email,lag_key:lagKey,internal_key:intKey,claimed_at:now,expires_at:expiresAt },{ onConflict:'user_id' });
       if (error) { toast.dismiss('free-trial'); toast.error(error.message); setGenerating(false); return; }
       const licRows: any[] = [];
-      if (lagKey) { addLicense({ id:`free_lag_${Date.now()}`,productId:'keyauth-lag',productName:'Fake Lag (Free Trial)',key:lagKey,hwid:'',lastLogin:now,expiresAt,status:'active',ip:'',device:'',hwidResetsUsed:0,hwidResetMonth:new Date().getMonth() }); licRows.push({ user_id:user.id,user_email:user.email,product_id:'keyauth-lag',product_name:'Fake Lag (Free Trial)',license_key:lagKey,keyauth_username:lagKey,hwid:'',last_login:now,expires_at:expiresAt,status:'active',ip:'',device:'',hwid_resets_used:0,hwid_reset_month:new Date().getMonth() }); }
-      if (intKey) { addLicense({ id:`free_int_${Date.now()}`,productId:'keyauth-internal',productName:'Internal (Free Trial)',key:`${intKey}_INTERNAL`,hwid:'',lastLogin:now,expiresAt,status:'active',ip:'',device:'',hwidResetsUsed:0,hwidResetMonth:new Date().getMonth() }); licRows.push({ user_id:user.id,user_email:user.email,product_id:'keyauth-internal',product_name:'Internal (Free Trial)',license_key:`${intKey}_INTERNAL`,keyauth_username:intKey,hwid:'',last_login:now,expires_at:expiresAt,status:'active',ip:'',device:'',hwid_resets_used:0,hwid_reset_month:new Date().getMonth() }); }
+      if (lagKey) { addLicense({ id:`free_lag_${Date.now()}`,productId:'keyauth-lag',productName:'Fake Lag (Free Trial)',key:lagKey,hwid:'',lastLogin:now,expiresAt,status:'active',ip:ip||'',device:'',hwidResetsUsed:0,hwidResetMonth:new Date().getMonth() }); licRows.push({ user_id:user.id,user_email:user.email,product_id:'keyauth-lag',product_name:'Fake Lag (Free Trial)',license_key:lagKey,keyauth_username:lagKey,hwid:'',last_login:now,expires_at:expiresAt,status:'active',ip:ip||'',device:'',hwid_resets_used:0,hwid_reset_month:new Date().getMonth() }); }
+      if (intKey) { addLicense({ id:`free_int_${Date.now()}`,productId:'keyauth-internal',productName:'Internal (Free Trial)',key:`${intKey}_INTERNAL`,hwid:'',lastLogin:now,expiresAt,status:'active',ip:ip||'',device:'',hwidResetsUsed:0,hwidResetMonth:new Date().getMonth() }); licRows.push({ user_id:user.id,user_email:user.email,product_id:'keyauth-internal',product_name:'Internal (Free Trial)',license_key:`${intKey}_INTERNAL`,keyauth_username:intKey,hwid:'',last_login:now,expires_at:expiresAt,status:'active',ip:ip||'',device:'',hwid_resets_used:0,hwid_reset_month:new Date().getMonth() }); }
       if (licRows.length > 0) await supabase.from('user_licenses').upsert(licRows, { onConflict:'user_id,license_key' });
       setRow({ lag_key:lagKey,internal_key:intKey,claimed_at:now,expires_at:expiresAt });
       toast.dismiss('free-trial'); toast.success('Trial activated!');
@@ -278,7 +289,7 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
               <div style={{ display:'flex',alignItems:'center',gap:7 }}>
                 <span style={{ width:6,height:6,borderRadius:'50%',background:panelEnabled?'#4ade80':'#f87171',boxShadow:`0 0 8px ${panelEnabled?'#4ade80':'#f87171'}`,animation:panelEnabled?'px-live 2s infinite':'none',flexShrink:0 }}/>
                 <span style={{ fontSize:13,fontWeight:700,color:panelEnabled?'#4ade80':'#f87171' }}>{panelEnabled?'Online':'Paused'}</span>
-                <span style={{ fontSize:12,color:'rgba(255,255,255,.25)' }}>· 48h cooldown</span>
+                <span style={{ fontSize:12,color:'rgba(255,255,255,.25)' }}>· 24h cooldown</span>
               </div>
             </div>
           </div>
@@ -318,8 +329,8 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
               </div>
             ) : (
               <div>
-                <div style={{ fontSize:10,color:'rgba(255,255,255,.25)',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',marginBottom:6 }}>Free · Every 48 Hours</div>
-                <div style={{ fontSize:14,color:'rgba(255,255,255,.38)',fontWeight:600 }}>Internal + Fake Lag included</div>
+                <div style={{ fontSize:10,color:'rgba(255,255,255,.25)',fontWeight:700,letterSpacing:'.14em',textTransform:'uppercase',marginBottom:6 }}>Free · Every 24 Hours</div>
+                <div style={{ fontSize:14,color:'rgba(255,255,255,.38)',fontWeight:600 }}>5-Hour Key · Internal + Fake Lag</div>
               </div>
             )}
           </div>
