@@ -34,12 +34,13 @@ html, body, #root { min-height: 100%; }
 
 body {
   font-family: 'Poppins', -apple-system, sans-serif;
-  background: #000; /* Stric grayscale */
+  background: #080809;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   min-height: 100svh;
   overflow-x: hidden;
   position: relative;
+  isolation: isolate;
 }
 
 /* Liquid Glass Aesthetics */
@@ -91,57 +92,36 @@ body {
   }
 }
 
-/* ── SaaS Background System ────────────────────────────────── */
-/* Layer 1: Deep space gradient base + subtle grid */
+/* ── SaaS Background — smooth glowing orbs, no grid ───────── */
+/* Layer 1: base colour gradient + horizon bloom */
 body::before {
   content: '';
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
-    /* Horizon glow — soft purple bloom from bottom center */
-    radial-gradient(ellipse 80% 55% at 50% 102%, rgba(80, 50, 220, 0.18) 0%, transparent 60%),
-    /* Top-left faint cool tint */
-    radial-gradient(ellipse 60% 45% at -5% 0%, rgba(40, 60, 180, 0.10) 0%, transparent 55%),
-    /* Top-right warm accent */
-    radial-gradient(ellipse 50% 35% at 105% 0%, rgba(100, 40, 200, 0.08) 0%, transparent 50%),
-    /* Pure black base */
-    #080809;
-
-  /* Subtle dot-grid overlay */
-  --dot-color: rgba(255,255,255,0.028);
-  --dot-size: 1.2px;
-  --dot-space: 32px;
-  background-image:
-    radial-gradient(ellipse 80% 55% at 50% 102%, rgba(80, 50, 220, 0.18) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 45% at -5% 0%, rgba(40, 60, 180, 0.10) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 35% at 105% 0%, rgba(100, 40, 200, 0.08) 0%, transparent 50%),
-    radial-gradient(circle, var(--dot-color) var(--dot-size), transparent var(--dot-size));
-  background-size: 100% 100%, 100% 100%, 100% 100%, var(--dot-space) var(--dot-space);
-  background-repeat: no-repeat, no-repeat, no-repeat, repeat;
+    radial-gradient(ellipse 90% 60% at 50% 105%, rgba(72, 40, 210, 0.22) 0%, rgba(50, 25, 160, 0.10) 45%, transparent 68%),
+    radial-gradient(ellipse 65% 50% at -8% 0%,   rgba(38, 55, 190, 0.12) 0%, transparent 58%),
+    radial-gradient(ellipse 55% 40% at 108% 0%,  rgba(90, 35, 195, 0.10) 0%, transparent 55%);
 }
 
-/* Layer 2: Floating orbs + horizon edge light */
+/* Layer 2: soft floating orbs that slowly breathe */
 body::after {
   content: '';
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
-    /* Main horizon floor glow */
-    radial-gradient(ellipse 55% 28% at 50% 100%, rgba(90, 55, 240, 0.16) 0%, rgba(60, 30, 180, 0.06) 55%, transparent 75%),
-    /* Floating orb — upper left */
-    radial-gradient(ellipse 28% 22% at 15% 18%, rgba(80, 40, 200, 0.07) 0%, transparent 65%),
-    /* Floating orb — upper right */
-    radial-gradient(ellipse 24% 20% at 88% 12%, rgba(60, 30, 180, 0.06) 0%, transparent 60%),
-    /* Floating orb — mid right */
-    radial-gradient(ellipse 20% 25% at 95% 55%, rgba(100, 50, 220, 0.05) 0%, transparent 65%),
-    /* Floating orb — mid left */
-    radial-gradient(ellipse 22% 20% at 5% 62%, rgba(50, 30, 160, 0.05) 0%, transparent 65%);
-  filter: blur(0.5px);
-  animation: bg-breathe 18s ease-in-out infinite alternate;
+    radial-gradient(ellipse 60% 30% at 50% 102%, rgba(85, 50, 235, 0.18) 0%, rgba(55, 28, 175, 0.07) 50%, transparent 72%),
+    radial-gradient(ellipse 38% 30% at 12% 20%,  rgba(70, 35, 200, 0.09) 0%, transparent 68%),
+    radial-gradient(ellipse 32% 28% at 90% 14%,  rgba(55, 25, 185, 0.07) 0%, transparent 65%),
+    radial-gradient(ellipse 28% 32% at 96% 58%,  rgba(95, 42, 220, 0.06) 0%, transparent 68%),
+    radial-gradient(ellipse 30% 26% at 4%  65%,  rgba(45, 22, 160, 0.06) 0%, transparent 66%),
+    radial-gradient(ellipse 22% 20% at 50% 30%,  rgba(80, 40, 210, 0.04) 0%, transparent 60%);
+  filter: blur(8px);
+  animation: bg-breathe 20s ease-in-out infinite alternate;
 }
 
 @keyframes bg-breathe {
-  0%   { opacity: 0.7; }
-  50%  { opacity: 1.0; }
-  100% { opacity: 0.75; }
+  0%   { opacity: 0.65; }
+  50%  { opacity: 1.00; }
+  100% { opacity: 0.70; }
 }
 
 body > #root { position: relative; z-index: 1; }

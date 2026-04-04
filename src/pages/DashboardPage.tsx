@@ -318,28 +318,50 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
             </div>
           ))}
         </div>
-        {isActive && row && (
-          <div className="gfc-keys-area">
-            {row.lag_key && (
-              <div className="gfc-key-row" onClick={() => copyKey(row.lag_key!, 'lag')} style={{ cursor:'pointer' }}>
-                <span style={{ fontSize:10, fontWeight:700, color:'rgba(236,72,153,0.8)', textTransform:'uppercase', letterSpacing:'.1em', marginBottom:4, display:'block' }}>Fake Lag</span>
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <code style={{ flex:1, fontSize:11, color:'rgba(255,255,255,0.8)', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{row.lag_key}</code>
-                  <span style={{ color: keyCopied==='lag' ? '#4ade80':'rgba(255,255,255,0.3)', fontSize:14, flexShrink:0 }}>{keyCopied==='lag'?'✓':'⎘'}</span>
+        {isActive && row && (() => {
+          const expiresMs = new Date(row.expires_at).getTime();
+          return (
+            <div className="gfc-keys-area">
+              {row.lag_key && (
+                <div className="gfc-key-row" onClick={() => copyKey(row.lag_key!, 'lag')} style={{ cursor:'pointer' }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:5 }}>
+                    <span style={{ fontSize:10, fontWeight:700, color:'rgba(236,72,153,0.8)', textTransform:'uppercase', letterSpacing:'.1em' }}>Fake Lag</span>
+                    <span style={{ fontSize:10, fontWeight:700, color:'#4ade80', fontFamily:'monospace', display:'flex', alignItems:'center', gap:4 }}>
+                      <span style={{ width:5, height:5, borderRadius:'50%', background:'#4ade80', display:'inline-block', boxShadow:'0 0 6px #4ade80' }}/>
+                      <LiveClock ms={expiresMs}/>
+                    </span>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <code style={{ flex:1, fontSize:11, color:'rgba(255,255,255,0.8)', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{row.lag_key}</code>
+                    <span style={{ color: keyCopied==='lag' ? '#4ade80':'rgba(255,255,255,0.3)', fontSize:14, flexShrink:0 }}>{keyCopied==='lag'?'✓':'⎘'}</span>
+                  </div>
                 </div>
-              </div>
-            )}
-            {row.internal_key && (
-              <div className="gfc-key-row" onClick={() => copyKey(row.internal_key!, 'int')} style={{ cursor:'pointer' }}>
-                <span style={{ fontSize:10, fontWeight:700, color:'rgba(139,92,246,0.8)', textTransform:'uppercase', letterSpacing:'.1em', marginBottom:4, display:'block' }}>Internal</span>
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <code style={{ flex:1, fontSize:11, color:'rgba(255,255,255,0.8)', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{row.internal_key}</code>
-                  <span style={{ color: keyCopied==='int' ? '#4ade80':'rgba(255,255,255,0.3)', fontSize:14, flexShrink:0 }}>{keyCopied==='int'?'✓':'⎘'}</span>
+              )}
+              {row.internal_key && (
+                <div className="gfc-key-row" onClick={() => copyKey(row.internal_key!, 'int')} style={{ cursor:'pointer' }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:5 }}>
+                    <span style={{ fontSize:10, fontWeight:700, color:'rgba(139,92,246,0.8)', textTransform:'uppercase', letterSpacing:'.1em' }}>Internal</span>
+                    <span style={{ fontSize:10, fontWeight:700, color:'#4ade80', fontFamily:'monospace', display:'flex', alignItems:'center', gap:4 }}>
+                      <span style={{ width:5, height:5, borderRadius:'50%', background:'#4ade80', display:'inline-block', boxShadow:'0 0 6px #4ade80' }}/>
+                      <LiveClock ms={expiresMs}/>
+                    </span>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <code style={{ flex:1, fontSize:11, color:'rgba(255,255,255,0.8)', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{row.internal_key}</code>
+                    <span style={{ color: keyCopied==='int' ? '#4ade80':'rgba(255,255,255,0.3)', fontSize:14, flexShrink:0 }}>{keyCopied==='int'?'✓':'⎘'}</span>
+                  </div>
                 </div>
-              </div>
-            )}
-            <div style={{ fontSize:12, color:'rgba(255,255,255,0.35)', textAlign:'center', marginTop:4 }}>
-              Expires in: <span style={{ color:'#4ade80', fontWeight:700 }}><LiveClock ms={new Date(row.expires_at).getTime()}/></span>
+              )}
+            </div>
+          );
+        })()}
+        {/* Expired state — trial was claimed but time is up */}
+        {!isActive && row && (
+          <div style={{ padding:'14px 16px', borderRadius:14, background:'rgba(248,113,113,0.06)', border:'1px solid rgba(248,113,113,0.18)', display:'flex', alignItems:'center', gap:12 }}>
+            <span style={{ fontSize:22, flexShrink:0 }}>⏰</span>
+            <div>
+              <div style={{ fontSize:13, fontWeight:700, color:'#f87171', marginBottom:3 }}>5-Hour Trial Ended</div>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,0.38)', lineHeight:1.5 }}>Your free trial has expired. Claim again tomorrow or purchase a full license.</div>
             </div>
           </div>
         )}
@@ -353,8 +375,13 @@ function FreeKeyCard({ animDelay }: { animDelay: number }) {
         )}
         <div className="gfc-cta">
           {isActive && row ? (
-            <div style={{ textAlign:'center', fontSize:12, color:'rgba(255,255,255,0.4)', padding:'8px 0' }}>
-              Trial is active · Keys shown above
+            <div style={{ textAlign:'center', fontSize:11, color:'rgba(255,255,255,0.3)', padding:'4px 0', letterSpacing:'.04em' }}>
+              Click any key to copy · Trial expires in 5 hours
+            </div>
+          ) : !isActive && row ? (
+            // expired — show reclaim hint (cooldown timer handles next claim)
+            <div style={{ textAlign:'center', fontSize:11, color:'rgba(255,255,255,0.28)', padding:'4px 0' }}>
+              Next free trial available in: <span style={{ color:'rgba(251,191,36,0.6)', fontWeight:700, fontFamily:'monospace' }}><LiveClock ms={cooldownMs}/></span>
             </div>
           ) : (
             <button
@@ -1045,13 +1072,13 @@ export default function DashboardPage() {
               </div>
 
               {/* Big points counter */}
-              <div style={{ display:'flex', alignItems:'baseline', gap:8, padding:'4px 0' }}>
-                <span style={{ fontSize:'clamp(54px,7vw,80px)', fontWeight:900, letterSpacing:'-.05em', lineHeight:1,
+              <div style={{ display:'flex', alignItems:'baseline', gap:6, padding:'4px 0' }}>
+                <span style={{ fontSize:'clamp(32px,4vw,46px)', fontWeight:900, letterSpacing:'-.05em', lineHeight:1,
                   background:'linear-gradient(135deg, #fff 10%, #d8b4fe 100%)',
                   WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
                   {bonusPoints}
                 </span>
-                <span style={{ fontSize:20, color:'rgba(255,255,255,0.18)', fontWeight:800 }}>/100</span>
+                <span style={{ fontSize:14, color:'rgba(255,255,255,0.18)', fontWeight:800 }}>/100</span>
               </div>
 
               {/* Progress bar */}

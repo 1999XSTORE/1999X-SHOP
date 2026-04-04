@@ -1064,33 +1064,35 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
         .ab-submit:active { transform: translateY(0) scale(.97); }
         .ab-submit:disabled { opacity:.35; cursor:not-allowed; transform:none !important; }
 
-        /* ══ UIVERSE CARD BUTTON ══════════════════════════════════ */
+        /* ══ UIVERSE CARD BUTTON — fixed ══════════════════════════ */
         .uv-btn-container {
           width: 100%;
-          height: 68px;
+          height: 75px;
           position: relative;
           display: flex;
-          border-radius: 12px;
+          border-radius: 10px;
+          /* overflow hidden only on the outer shell so left-side expansion clips correctly */
           overflow: hidden;
           cursor: pointer;
           transition: transform 0.3s cubic-bezier(.22,1,.36,1), box-shadow 0.3s ease;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.35);
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.1);
+          box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.09);
           user-select: none;
+          flex-shrink: 0;
         }
         .uv-btn-container:hover {
-          transform: scale(1.025) translateY(-2px);
-          box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 40px var(--uv-glow, rgba(109,40,217,0.35));
+          transform: scale(1.02) translateY(-2px);
+          box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 36px var(--uv-glow, rgba(109,40,217,0.35));
         }
         .uv-btn-container:active { transform: scale(0.98); }
 
-        /* Left animated panel */
+        /* Left animated panel — expands on hover */
         .uv-left {
-          background: linear-gradient(135deg, var(--uv-grad, #7c3aed), rgba(109,40,217,0.6));
-          width: 80px;
-          height: 100%;
-          border-radius: 10px 0 0 10px;
+          background: linear-gradient(135deg, var(--uv-grad, #7c3aed), rgba(80,30,180,0.75));
+          width: 85px;
+          height: 75px;
+          border-radius: 8px 0 0 8px;
           position: relative;
           display: flex;
           justify-content: center;
@@ -1101,78 +1103,77 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
         }
         .uv-btn-container:hover .uv-left { width: 100%; }
 
-        /* Card graphic */
+        /* Credit card graphic — stays in left panel */
         .uv-card {
-          width: 44px;
-          height: 28px;
-          background: rgba(255,255,255,0.18);
+          width: 48px;
+          height: 30px;
+          background: rgba(255,255,255,0.22);
           border-radius: 5px;
           position: absolute;
           display: flex;
           flex-direction: column;
           align-items: center;
-          box-shadow: 3px 3px 8px rgba(0,0,0,0.3);
-          backdrop-filter: blur(4px);
+          box-shadow: 4px 4px 8px rgba(0,0,0,0.35);
           z-index: 10;
-          transition: transform 0.15s;
         }
         .uv-card-line {
-          width: 38px;
-          height: 7px;
-          background: rgba(255,255,255,0.35);
+          width: 42px;
+          height: 8px;
+          background: rgba(255,255,255,0.4);
           border-radius: 2px;
           margin-top: 5px;
         }
         .uv-card-buttons {
-          width: 5px;
-          height: 5px;
-          background: rgba(255,255,255,0.6);
-          box-shadow: 0 -5px 0 0 rgba(255,255,255,0.4), 0 5px 0 0 rgba(255,255,255,0.8);
+          width: 5px; height: 5px;
+          background: rgba(255,255,255,0.7);
+          box-shadow: 0 -6px 0 0 rgba(255,255,255,0.45), 0 6px 0 0 rgba(255,255,255,0.9);
           border-radius: 50%;
-          margin-top: 4px;
+          margin-top: 3px;
           transform: rotate(90deg);
-          margin-left: -16px;
+          margin-left: -18px;
         }
         .uv-btn-container:hover .uv-card {
           animation: uv-slide-card 0.9s cubic-bezier(0.68,-0.55,0.265,1.55) both;
         }
 
-        /* Receipt/post graphic */
+        /* Receipt graphic — slides up from below */
         .uv-post {
-          width: 38px;
-          height: 46px;
-          background: rgba(255,255,255,0.12);
+          width: 42px;
+          height: 50px;
+          background: rgba(240,240,240,0.15);
           position: absolute;
           z-index: 11;
-          bottom: 4px;
-          top: 68px;
+          top: 75px; /* hidden below */
           border-radius: 4px;
           overflow: hidden;
-          backdrop-filter: blur(4px);
         }
         .uv-post-line {
-          width: 28px; height: 4px; background: rgba(255,255,255,0.5);
+          width: 32px; height: 5px;
+          background: rgba(255,255,255,0.55);
           position: absolute; border-radius: 0 0 2px 2px; right: 5px; top: 5px;
         }
         .uv-post-line::before {
-          content: ''; position: absolute; width: 28px; height: 4px;
-          background: rgba(255,255,255,0.3); top: -4px;
+          content: ''; position: absolute; width: 32px; height: 5px;
+          background: rgba(255,255,255,0.35); top: -5px;
         }
         .uv-post-screen {
-          width: 28px; height: 12px; background: rgba(255,255,255,0.25);
-          position: absolute; top: 13px; right: 5px; border-radius: 2px;
+          width: 32px; height: 15px;
+          background: rgba(255,255,255,0.28);
+          position: absolute; top: 14px; right: 5px; border-radius: 2px;
         }
         .uv-post-numbers {
-          width: 6px; height: 6px; background: rgba(255,255,255,0.4);
-          box-shadow: 0 -9px 0 0 rgba(255,255,255,0.4), 0 9px 0 0 rgba(255,255,255,0.4);
+          width: 7px; height: 7px;
+          background: rgba(255,255,255,0.45);
+          box-shadow: 0 -11px 0 0 rgba(255,255,255,0.45), 0 11px 0 0 rgba(255,255,255,0.45);
           border-radius: 1px; position: absolute; transform: rotate(90deg);
-          left: 16px; top: 30px;
+          left: 17px; top: 34px;
         }
         .uv-post-numbers2 {
-          width: 6px; height: 6px; background: rgba(255,255,255,0.25);
-          box-shadow: 0 -9px 0 0 rgba(255,255,255,0.25), 0 9px 0 0 rgba(255,255,255,0.25);
+          width: 7px; height: 7px;
+          background: rgba(255,255,255,0.3);
+          box-shadow: 0 -11px 0 0 rgba(255,255,255,0.3), 0 11px 0 0 rgba(255,255,255,0.3);
           border-radius: 1px; position: absolute; transform: rotate(90deg);
-          left: 16px; top: 40px;
+          left: 17px; top: 45px;
         }
         .uv-btn-container:hover .uv-post {
           animation: uv-slide-post 0.7s cubic-bezier(0.23,1,0.32,1) both;
@@ -1180,65 +1181,56 @@ function AddBalanceUI({ user, onSuccess, referralEmail }: { user: any; onSuccess
 
         @keyframes uv-slide-card {
           0%   { transform: translateY(0) rotate(0deg); }
-          50%  { transform: translateY(-42px) rotate(90deg); }
-          60%  { transform: translateY(-42px) rotate(90deg); }
-          100% { transform: translateY(-4px) rotate(90deg); }
+          50%  { transform: translateY(-48px) rotate(90deg); }
+          60%  { transform: translateY(-48px) rotate(90deg); }
+          100% { transform: translateY(-5px) rotate(90deg); }
         }
         @keyframes uv-slide-post {
           50%  { transform: translateY(0); }
-          100% { transform: translateY(-42px); }
+          100% { transform: translateY(-48px); }
         }
 
-        /* Right text area */
+        /* Right text side */
         .uv-right {
           flex: 1;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 0 16px;
+          padding: 0 18px;
           overflow: hidden;
           position: relative;
-          transition: background 0.3s;
+          white-space: nowrap;
+          transition: background 0.25s;
         }
-        .uv-right::before {
-          content: '';
-          position: absolute; inset: 0;
-          background: rgba(255,255,255,0);
-          border-radius: 50%;
-          top: 50%; left: 50%;
-          transform: translate(-50%,-50%);
-          pointer-events: none;
-          transition: all 0.4s ease-out;
-        }
-        .uv-btn-container:hover .uv-right::before {
-          background: rgba(255,255,255,0.04);
-          width: 300px; height: 300px;
+        .uv-btn-container:hover .uv-right {
+          background: rgba(255,255,255,0.02);
         }
         .uv-label {
           font-size: 14px;
           font-weight: 700;
-          color: rgba(255,255,255,0.9);
+          color: rgba(255,255,255,0.88);
           letter-spacing: .01em;
           white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
           transition: color 0.2s;
         }
         .uv-btn-container:hover .uv-label { color: #fff; }
         .uv-arrow {
-          width: 16px; height: 16px;
-          color: rgba(255,255,255,0.5);
+          width: 15px; height: 15px;
+          color: rgba(255,255,255,0.45);
           flex-shrink: 0;
+          margin-left: 10px;
           transition: transform 0.3s ease, color 0.2s;
         }
         .uv-btn-container:hover .uv-arrow {
           transform: translateX(5px);
-          color: #fff;
+          color: rgba(255,255,255,0.9);
         }
 
-        /* Purple variant for payment button */
+        /* Purple variant */
         .uv-btn-purple { --uv-grad: #7c3aed; --uv-glow: rgba(109,40,217,0.4); }
-        .uv-btn-purple .uv-left {
-          background: linear-gradient(135deg, #7c3aed, #5b21b6);
-        }
+        .uv-btn-purple .uv-left { background: linear-gradient(135deg,#7c3aed,#5b21b6); }
 
         /* Copy pill button */
         .ab-copy-btn {
